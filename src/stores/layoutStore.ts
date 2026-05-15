@@ -2,23 +2,24 @@ import { create } from 'zustand'
 import { LayoutObject } from '@/types'
 
 type LayoutStore = {
-  // Placed objects on the canvas
   layoutObjects: LayoutObject[]
-
-  // Currently selected object id
   selectedObjectId: string | null
-
-  // Grid snap toggle
   snapToGrid: boolean
-  gridSizeCm: number  // how big each grid cell is in cm (default 50cm)
+  gridSizeCm: number
+  projectId: string | null
+  isSaving: boolean
+  lastSaved: Date | null
 
-  // Actions
   addObject: (object: LayoutObject) => void
   updateObject: (id: string, changes: Partial<LayoutObject>) => void
   removeObject: (id: string) => void
   selectObject: (id: string | null) => void
   toggleSnapToGrid: () => void
   setGridSize: (sizeCm: number) => void
+  setProjectId: (id: string) => void
+  setLayoutObjects: (objects: LayoutObject[]) => void
+  setIsSaving: (saving: boolean) => void
+  setLastSaved: (date: Date) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -26,6 +27,9 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   selectedObjectId: null,
   snapToGrid: true,
   gridSizeCm: 50,
+  projectId: null,
+  isSaving: false,
+  lastSaved: null,
 
   addObject: (object) =>
     set((state) => ({
@@ -47,9 +51,10 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
     })),
 
   selectObject: (id) => set({ selectedObjectId: id }),
-
-  toggleSnapToGrid: () =>
-    set((state) => ({ snapToGrid: !state.snapToGrid })),
-
-  setGridSize: (sizeCm) => set({ gridSizeCm: sizeCm })
+  toggleSnapToGrid: () => set((state) => ({ snapToGrid: !state.snapToGrid })),
+  setGridSize: (sizeCm) => set({ gridSizeCm: sizeCm }),
+  setProjectId: (id) => set({ projectId: id }),
+  setLayoutObjects: (objects) => set({ layoutObjects: objects }),
+  setIsSaving: (saving) => set({ isSaving: saving }),
+  setLastSaved: (date) => set({ lastSaved: date }),
 }))

@@ -1,48 +1,33 @@
 'use client'
 
-import { CatalogItem } from '@/types'
 import { useLayoutStore } from '@/stores/layoutStore'
 
-// Placeholder catalog items
-const PLACEHOLDER_ITEMS: CatalogItem[] = [
-  {
-    id: 'round-table',
-    name: 'Round Table',
-    category: 'tables',
-    ownedBy: { type: 'venue', venueId: 'venue-1' },
-    dimensions: { widthCm: 120, depthCm: 120, heightCm: 75 },
-    modelUrl: '',
-    imageUrl: '',
-    pricePerUnit: null,
-  },
-  {
-    id: 'rect-table',
-    name: 'Rectangular Table',
-    category: 'tables',
-    ownedBy: { type: 'venue', venueId: 'venue-1' },
-    dimensions: { widthCm: 180, depthCm: 90, heightCm: 75 },
-    modelUrl: '',
-    imageUrl: '',
-    pricePerUnit: null,
-  },
-  {
-    id: 'chair',
-    name: 'Chair',
-    category: 'chairs',
-    ownedBy: { type: 'venue', venueId: 'venue-1' },
-    dimensions: { widthCm: 45, depthCm: 45, heightCm: 90 },
-    modelUrl: '',
-    imageUrl: '',
-    pricePerUnit: null,
-  },
-]
+type CatalogItem = {
+  id: string
+  name: string
+  category: string
+  width_cm: number
+  depth_cm: number
+  price_per_unit: number | null
+  owner_type: string
+}
 
-export default function CatalogSidebar() {
+type Props = {
+  catalogItems: CatalogItem[]
+}
+
+export default function CatalogSidebar({ catalogItems }: Props) {
   const { snapToGrid, toggleSnapToGrid, gridSizeCm, setGridSize } = useLayoutStore()
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: CatalogItem) => {
     e.dataTransfer.setData('catalogItem', JSON.stringify(item))
   }
+
+  const grouped = catalogItems.reduce<Record<string, CatalogItem[]>>((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = []
+    acc[item.category].push(item)
+    return acc
+  }, {})
 
   return (
     <div className="w-64 h-full bg-white border-r border-gray-200 flex flex-col">
@@ -53,30 +38,48 @@ export default function CatalogSidebar() {
         </h2>
       </div>
 
-      {/* Items */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {PLACEHOLDER_ITEMS.map((item) => (
-          <div
-            key={item.id}
-            draggable
-            onDragStart={(e) => handleDragStart(e, item)}
-            className="p-3 border border-gray-200 rounded-lg cursor-grab
-                       hover:border-blue-400 hover:bg-blue-50 transition-colors
-                       select-none"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-lg">
-                {item.category === 'tables' ? '🪑' : '💺'}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">{item.name}</p>
-                <p className="text-xs text-gray-500">
-                  {item.dimensions.widthCm} × {item.dimensions.depthCm} cm
-                </p>
-              </div>
+      {/* Items grouped by category */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {Object.entries(grouped).map(([category, items]) => (
+          <div key={category}>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
+              {category}
+            </p>
+            <div className="space-y-2">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, item)}
+                  className="p-3 border border-gray-200 rounded-lg cursor-grab
+                             hover:border-blue-400 hover:bg-blue-50 transition-colors
+                             select-none"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-lg">
+                      {category === 'tables' ? '🪑' : '💺'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{item.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {item.width_cm} × {item.depth_cm} cm
+                      </p>
+                      {item.owner_type === 'rental' && (
+                        <p className="text-xs text-amber-500">Rental item</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
+
+        {catalogItems.length === 0 && (
+          <p className="text-xs text-gray-400 text-center mt-8">
+            No items in catalog
+          </p>
+        )}
       </div>
 
       {/* Grid Controls */}

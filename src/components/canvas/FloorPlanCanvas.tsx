@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer } from 'react-konva'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
-import { CatalogItem, LayoutObject } from '@/types'
+import { LayoutObject } from '@/types'
 import Konva from 'konva'
 
 const BASE_SCALE = 2
@@ -14,30 +14,20 @@ const CANVAS_PADDING = 60
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3
 
-const PLACEHOLDER_CATALOG = [
-  {
-    id: 'round-table',
-    name: 'Round Table',
-    dimensions: { widthCm: 120, depthCm: 120 },
-  },
-  {
-    id: 'rect-table',
-    name: 'Rectangular Table',
-    dimensions: { widthCm: 180, depthCm: 90 },
-  },
-  {
-    id: 'chair',
-    name: 'Chair',
-    dimensions: { widthCm: 45, depthCm: 45 },
-  },
-]
+type DbCatalogItem = {
+  id: string
+  name: string
+  width_cm: number
+  depth_cm: number
+}
 
 type Props = {
   onObjectSelect?: (object: LayoutObject | null) => void
   onZoomChange?: (zoom: number) => void
+  catalogItems: DbCatalogItem[]
 }
 
-export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props) {
+export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogItems }: Props) {
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -206,10 +196,10 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     const y = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
     const isSelected = obj.id === selectedObjectId
 
-    const catalogItem = PLACEHOLDER_CATALOG.find((i) => i.id === obj.catalogItemId)
-    const widthPx = cmToPixels(catalogItem?.dimensions.widthCm ?? 50, BASE_SCALE)
-    const depthPx = cmToPixels(catalogItem?.dimensions.depthCm ?? 50, BASE_SCALE)
-    const isRound = obj.catalogItemId === 'round-table'
+    const catalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+    const widthPx = cmToPixels(catalogItem?.width_cm ?? 50, BASE_SCALE)
+    const depthPx = cmToPixels(catalogItem?.depth_cm ?? 50, BASE_SCALE)
+    const isRound = catalogItem?.name?.toLowerCase().includes('round') ?? false
     const radius = widthPx / 2
 
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -298,7 +288,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     const itemData = e.dataTransfer.getData('catalogItem')
     if (!itemData) return
 
-    const item: CatalogItem = JSON.parse(itemData)
+    const item: DbCatalogItem = JSON.parse(itemData)
     const stage = stageRef.current
     if (!stage) return
 

@@ -3,26 +3,24 @@
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject } from '@/types'
 
-const ITEM_NAMES: Record<string, string> = {
-  'round-table': 'Round Table',
-  'rect-table': 'Rectangular Table',
-  'chair': 'Chair',
-}
-
-const ITEM_DIMENSIONS: Record<string, { widthCm: number; depthCm: number }> = {
-  'round-table': { widthCm: 120, depthCm: 120 },
-  'rect-table': { widthCm: 180, depthCm: 90 },
-  'chair': { widthCm: 45, depthCm: 45 },
+type DbCatalogItem = {
+  id: string
+  name: string
+  width_cm: number
+  depth_cm: number
 }
 
 type Props = {
   object: LayoutObject | null
+  catalogItems: DbCatalogItem[]
 }
 
-export default function PropertiesPanel({ object }: Props) {
+export default function PropertiesPanel({ object, catalogItems }: Props) {
   const { updateObject, removeObject, selectObject } = useLayoutStore()
 
   if (!object) return null
+
+  const catalogItem = catalogItems.find((i) => i.id === object.catalogItemId)
 
   const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value)
@@ -52,7 +50,7 @@ export default function PropertiesPanel({ object }: Props) {
       <div className="p-4 border-b border-gray-200">
         <p className="text-xs text-gray-400 uppercase tracking-wide">Selected</p>
         <h3 className="font-semibold text-gray-800 mt-0.5">
-          {ITEM_NAMES[object.catalogItemId] ?? object.catalogItemId}
+          {catalogItem?.name ?? object.catalogItemId}
         </h3>
       </div>
 
@@ -95,7 +93,7 @@ export default function PropertiesPanel({ object }: Props) {
               <span className="text-xs text-gray-500 w-4">W</span>
               <div className="flex-1 text-sm bg-gray-50 border border-gray-200
                               rounded px-2 py-1 text-gray-600">
-                {ITEM_DIMENSIONS[object.catalogItemId]?.widthCm ?? '—'}
+                {catalogItem?.width_cm ?? '—'}
               </div>
               <span className="text-xs text-gray-400">cm</span>
             </div>
@@ -103,7 +101,7 @@ export default function PropertiesPanel({ object }: Props) {
               <span className="text-xs text-gray-500 w-4">D</span>
               <div className="flex-1 text-sm bg-gray-50 border border-gray-200
                               rounded px-2 py-1 text-gray-600">
-                {ITEM_DIMENSIONS[object.catalogItemId]?.depthCm ?? '—'}
+                {catalogItem?.depth_cm ?? '—'}
               </div>
               <span className="text-xs text-gray-400">cm</span>
             </div>
@@ -125,7 +123,6 @@ export default function PropertiesPanel({ object }: Props) {
             />
             <span className="text-xs text-gray-400">deg</span>
           </div>
-          {/* Rotation slider */}
           <input
             type="range"
             min={0}
