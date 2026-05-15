@@ -1,0 +1,172 @@
+'use client'
+
+import { useLayoutStore } from '@/stores/layoutStore'
+import { LayoutObject } from '@/types'
+
+const ITEM_NAMES: Record<string, string> = {
+  'round-table': 'Round Table',
+  'rect-table': 'Rectangular Table',
+  'chair': 'Chair',
+}
+
+const ITEM_DIMENSIONS: Record<string, { widthCm: number; depthCm: number }> = {
+  'round-table': { widthCm: 120, depthCm: 120 },
+  'rect-table': { widthCm: 180, depthCm: 90 },
+  'chair': { widthCm: 45, depthCm: 45 },
+}
+
+type Props = {
+  object: LayoutObject | null
+}
+
+export default function PropertiesPanel({ object }: Props) {
+  const { updateObject, removeObject, selectObject } = useLayoutStore()
+
+  if (!object) return null
+
+  const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value)
+    if (isNaN(value)) return
+    updateObject(object.id, { rotationDeg: value % 360 })
+  }
+
+  const handlePositionChange = (axis: 'x' | 'y', e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value)
+    if (isNaN(value)) return
+    updateObject(object.id, {
+      positionCm: {
+        ...object.positionCm,
+        [axis]: value,
+      }
+    })
+  }
+
+  const handleDelete = () => {
+    removeObject(object.id)
+    selectObject(null)
+  }
+
+  return (
+    <div className="w-56 h-full bg-white border-l border-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <p className="text-xs text-gray-400 uppercase tracking-wide">Selected</p>
+        <h3 className="font-semibold text-gray-800 mt-0.5">
+          {ITEM_NAMES[object.catalogItemId] ?? object.catalogItemId}
+        </h3>
+      </div>
+
+      {/* Properties */}
+      <div className="flex-1 p-4 space-y-4">
+        {/* Position */}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Position</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-4">X</span>
+              <input
+                type="number"
+                value={Math.round(object.positionCm.x)}
+                onChange={(e) => handlePositionChange('x', e)}
+                className="flex-1 text-sm border border-gray-200 rounded px-2 py-1
+                           focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-400">cm</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-4">Y</span>
+              <input
+                type="number"
+                value={Math.round(object.positionCm.y)}
+                onChange={(e) => handlePositionChange('y', e)}
+                className="flex-1 text-sm border border-gray-200 rounded px-2 py-1
+                           focus:outline-none focus:border-blue-400"
+              />
+              <span className="text-xs text-gray-400">cm</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Size */}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Size</p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-4">W</span>
+              <div className="flex-1 text-sm bg-gray-50 border border-gray-200
+                              rounded px-2 py-1 text-gray-600">
+                {ITEM_DIMENSIONS[object.catalogItemId]?.widthCm ?? '—'}
+              </div>
+              <span className="text-xs text-gray-400">cm</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-4">D</span>
+              <div className="flex-1 text-sm bg-gray-50 border border-gray-200
+                              rounded px-2 py-1 text-gray-600">
+                {ITEM_DIMENSIONS[object.catalogItemId]?.depthCm ?? '—'}
+              </div>
+              <span className="text-xs text-gray-400">cm</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Rotation */}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Rotation</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              value={Math.round(object.rotationDeg)}
+              onChange={handleRotationChange}
+              min={0}
+              max={359}
+              className="flex-1 text-sm border border-gray-200 rounded px-2 py-1
+                         focus:outline-none focus:border-blue-400"
+            />
+            <span className="text-xs text-gray-400">deg</span>
+          </div>
+          {/* Rotation slider */}
+          <input
+            type="range"
+            min={0}
+            max={359}
+            value={Math.round(object.rotationDeg)}
+            onChange={handleRotationChange}
+            className="w-full mt-2"
+          />
+        </div>
+
+        {/* Quick rotate buttons */}
+        <div>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Quick Rotate</p>
+          <div className="grid grid-cols-4 gap-1">
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+              <button
+                key={angle}
+                onClick={() => updateObject(object.id, { rotationDeg: angle })}
+                className={`text-xs py-1 rounded border transition-colors ${
+                  Math.round(object.rotationDeg) === angle
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {angle}°
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Delete */}
+      <div className="p-4 border-t border-gray-200">
+        <button
+          onClick={handleDelete}
+          className="w-full py-2 text-sm text-red-500 border border-red-200
+                     rounded-lg hover:bg-red-50 transition-colors"
+        >
+          Remove from layout
+        </button>
+      </div>
+    </div>
+  )
+}

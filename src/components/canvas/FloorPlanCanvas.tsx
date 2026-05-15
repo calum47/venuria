@@ -199,6 +199,11 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     const isRound = obj.catalogItemId === 'round-table'
     const halfW = 40
     const halfH = isRound ? 40 : 30
+    const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
+      updateObject(obj.id, {
+        rotationDeg: e.target.rotation(),
+      })
+    }
 
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       let newX = e.target.x()
@@ -236,6 +241,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
         onDragEnd={handleDragEnd}
         onClick={handleClick}
         onTap={handleClick}
+        onTransformEnd={handleTransformEnd}
       >
         {isRound ? (
           <Circle
@@ -393,7 +399,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
             <Transformer
               ref={transformerRef}
               rotateEnabled={true}
-              enabledAnchors={['top-left', 'top-right', 'bottom-left', 'bottom-right']}
+              resizeEnabled={false}
+              enabledAnchors={[]}
             />
           </Layer>
         </Stage>
