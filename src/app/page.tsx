@@ -12,6 +12,7 @@ import {
   saveLayoutObjects,
   getLayoutObjects,
 } from '@/lib/supabase/queries'
+import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
 
 // Hardcoded for now — will come from routing/auth later
 const VENUE_ID = '00000000-0000-0000-0000-000000000001'
@@ -50,6 +51,7 @@ export default function Home() {
   const [zoom, setZoom] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [show3D, setShow3D] = useState(false)
 
   // Load catalog and create/restore project on mount
   useEffect(() => {
@@ -157,8 +159,16 @@ export default function Home() {
               : 'Scroll to zoom · Right click drag to pan'}
           </span>
 
+          <button
+            onClick={() => setShow3D(true)}
+            className="ml-auto text-xs bg-gray-800 text-white px-3 py-1.5
+                       rounded-lg hover:bg-gray-700 transition-colors"
+          >
+            View in 3D
+          </button>
+
           {/* Save status */}
-          <div className="ml-auto text-xs text-gray-400">
+          <div className="text-xs text-gray-400">
             {isSaving && 'Saving...'}
             {!isSaving && lastSaved && (
               `Saved at ${lastSaved.toLocaleTimeString()}`
@@ -186,6 +196,12 @@ export default function Home() {
           )}
         </div>
       </div>
+      {show3D && (
+        <ThreeSixtyViewer
+          imageUrl="/assets/360-placeholder.jpg"
+          onClose={() => setShow3D(false)}
+        />
+      )}
     </main>
   )
 }
