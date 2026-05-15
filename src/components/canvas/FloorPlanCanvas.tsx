@@ -14,6 +14,24 @@ const CANVAS_PADDING = 60
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3
 
+const PLACEHOLDER_CATALOG = [
+  {
+    id: 'round-table',
+    name: 'Round Table',
+    dimensions: { widthCm: 120, depthCm: 120 },
+  },
+  {
+    id: 'rect-table',
+    name: 'Rectangular Table',
+    dimensions: { widthCm: 180, depthCm: 90 },
+  },
+  {
+    id: 'chair',
+    name: 'Chair',
+    dimensions: { widthCm: 45, depthCm: 45 },
+  },
+]
+
 type Props = {
   onObjectSelect?: (object: LayoutObject | null) => void
   onZoomChange?: (zoom: number) => void
@@ -55,7 +73,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
       width: container.offsetWidth,
       height: container.offsetHeight,
     })
-
     const handleResize = () => {
       setStageSize({
         width: container.offsetWidth,
@@ -80,7 +97,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     }
   }, [selectedObjectId])
 
-  // Zoom handler — wheel
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
     const stage = stageRef.current
@@ -94,7 +110,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     const factor = 0.1
     const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom + direction * factor))
 
-    // Zoom toward mouse pointer
     const mousePointTo = {
       x: (pointer.x - stage.x()) / oldZoom,
       y: (pointer.y - stage.y()) / oldZoom,
@@ -110,7 +125,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     onZoomChange?.(newZoom)
   }, [zoom, onZoomChange])
 
-  // Zoom buttons
   const handleZoomIn = () => {
     const newZoom = Math.min(MAX_ZOOM, zoom + 0.1)
     setZoom(newZoom)
@@ -129,31 +143,26 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     onZoomChange?.(1)
   }
 
-  // Pan — middle mouse or right click drag
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const isMiddle = e.evt.button === 1
     const isRight = e.evt.button === 2
     if (!isMiddle && !isRight) return
-
     e.evt.preventDefault()
     isPanning.current = true
     lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
-
     const stage = stageRef.current
     if (stage) stage.container().style.cursor = 'grabbing'
   }
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!isPanning.current) return
-
     const dx = e.evt.clientX - lastPointerPos.current.x
     const dy = e.evt.clientY - lastPointerPos.current.y
     lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
-
     setStagePos((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
   }
 
-  const handleMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  const handleMouseUp = () => {
     if (!isPanning.current) return
     isPanning.current = false
     const stage = stageRef.current
@@ -196,14 +205,12 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     const x = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
     const y = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
     const isSelected = obj.id === selectedObjectId
+
+    const catalogItem = PLACEHOLDER_CATALOG.find((i) => i.id === obj.catalogItemId)
+    const widthPx = cmToPixels(catalogItem?.dimensions.widthCm ?? 50, BASE_SCALE)
+    const depthPx = cmToPixels(catalogItem?.dimensions.depthCm ?? 50, BASE_SCALE)
     const isRound = obj.catalogItemId === 'round-table'
-    const halfW = 40
-    const halfH = isRound ? 40 : 30
-    const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
-      updateObject(obj.id, {
-        rotationDeg: e.target.rotation(),
-      })
-    }
+    const radius = widthPx / 2
 
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       let newX = e.target.x()
@@ -214,7 +221,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
         newY = snapToGrid(newY - roomOffsetY, gridSizePx) + roomOffsetY
       }
 
-      const clamped = clampToRoom(newX, newY, halfW, halfH)
+      const clamped = clampToRoom(newX, newY, widthPx / 2, depthPx / 2)
       e.target.position(clamped)
 
       updateObject(obj.id, {
@@ -222,6 +229,12 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
           x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE),
           y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
         }
+      })
+    }
+
+    const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
+      updateObject(obj.id, {
+        rotationDeg: e.target.rotation(),
       })
     }
 
@@ -245,28 +258,28 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
       >
         {isRound ? (
           <Circle
-            radius={40}
+            radius={radius}
             fill={isSelected ? '#bfdbfe' : '#dbeafe'}
             stroke={isSelected ? '#2563eb' : '#93c5fd'}
-            strokeWidth={2}
+            strokeWidth={1}
           />
         ) : (
           <Rect
-            width={80}
-            height={60}
-            offsetX={40}
-            offsetY={30}
+            width={widthPx}
+            height={depthPx}
+            offsetX={widthPx / 2}
+            offsetY={depthPx / 2}
             fill={isSelected ? '#bbf7d0' : '#dcfce7'}
             stroke={isSelected ? '#16a34a' : '#86efac'}
-            strokeWidth={2}
+            strokeWidth={1}
           />
         )}
         <Text
-          text={obj.catalogItemId}
-          fontSize={8}
+          text={catalogItem?.name ?? obj.catalogItemId}
+          fontSize={Math.max(8, widthPx * 0.1)}
           fill="#374151"
-          offsetX={20}
-          offsetY={5}
+          offsetX={isRound ? radius * 0.5 : widthPx * 0.3}
+          offsetY={isRound ? 5 : depthPx * 0.1}
         />
       </Group>
     )
@@ -290,8 +303,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange }: Props)
     if (!stage) return
 
     const stageBox = stage.container().getBoundingClientRect()
-
-    // Account for zoom and pan
     const x = (e.clientX - stageBox.left - stagePos.x) / zoom
     const y = (e.clientY - stageBox.top - stagePos.y) / zoom
 
