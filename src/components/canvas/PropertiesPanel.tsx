@@ -18,7 +18,7 @@ type Props = {
 }
 
 export default function PropertiesPanel({ object, catalogItems }: Props) {
-  const { updateObject, removeObjectWithChairs, selectObject } = useLayoutStore()
+  const { updateObject, removeObjectWithChairs, selectObject, rotateObjectWithChairs } = useLayoutStore()
 
   if (!object) return null
 
@@ -27,7 +27,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
   const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = Number(e.target.value)
     if (isNaN(value)) return
-    updateObject(object.id, { rotationDeg: value % 360 })
+    rotateObjectWithChairs(object.id, value % 360)
   }
 
   const handlePositionChange = (axis: 'x' | 'y', e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,6 +86,33 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Table Label — only for tables */}
+        {!object.isChairFor && (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
+              Table Label
+            </p>
+            <input
+              type="text"
+              placeholder="e.g. Table 1, Bride & Groom..."
+              value={object.tableLabel ?? ''}
+              onChange={(e) =>
+                updateObject(object.id, { tableLabel: e.target.value || undefined })
+              }
+              className="w-full text-sm border border-gray-200 rounded px-2 py-1.5
+                         focus:outline-none focus:border-blue-400 placeholder:text-gray-300"
+            />
+            {object.tableLabel && (
+              <button
+                onClick={() => updateObject(object.id, { tableLabel: undefined })}
+                className="text-xs text-gray-400 hover:text-gray-600 mt-1"
+              >
+                Clear label
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Size */}
         <div>
@@ -173,6 +200,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
                       updateObject(chair.id, {
                         positionCm: chair.positionCm,
                         rotationDeg: chair.rotationDeg,
+                        chairEdge: chair.chairEdge,
                       })
                     )
                     updateObject(object.id, { chairArrangement: opt })
@@ -199,7 +227,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
             {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
               <button
                 key={angle}
-                onClick={() => updateObject(object.id, { rotationDeg: angle })}
+                onClick={() => rotateObjectWithChairs(object.id, angle)}
                 className={`text-xs py-1 rounded border transition-colors ${
                   Math.round(object.rotationDeg) === angle
                     ? 'bg-blue-600 text-white border-blue-600'

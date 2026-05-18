@@ -22,6 +22,7 @@ type LayoutStore = {
   setLayoutObjects: (objects: LayoutObject[]) => void
   setIsSaving: (saving: boolean) => void
   setLastSaved: (date: Date) => void
+  rotateObjectWithChairs: (id: string, newRotationDeg: number) => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -65,6 +66,37 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       selectedObjectId:
         state.selectedObjectId === id ? null : state.selectedObjectId
     })),
+
+  rotateObjectWithChairs: (id, newRotationDeg) =>
+    set((state) => {
+      const obj = state.layoutObjects.find((o) => o.id === id)
+      if (!obj) return state
+
+      const oldRotation = obj.rotationDeg
+      const deltaRad = ((newRotationDeg - oldRotation) * Math.PI) / 180
+      const tx = obj.positionCm.x
+      const ty = obj.positionCm.y
+
+      const updated = state.layoutObjects.map((o) => {
+        if (o.id === id) return { ...o, rotationDeg: newRotationDeg }
+
+        if (o.isChairFor === id) {
+          const dx = o.positionCm.x - tx
+          const dy = o.positionCm.y - ty
+          const rotatedX = dx * Math.cos(deltaRad) - dy * Math.sin(deltaRad)
+          const rotatedY = dx * Math.sin(deltaRad) + dy * Math.cos(deltaRad)
+          return {
+            ...o,
+            positionCm: { x: tx + rotatedX, y: ty + rotatedY },
+            rotationDeg: o.rotationDeg + (newRotationDeg - oldRotation),
+          }
+        }
+
+        return o
+      })
+
+      return { layoutObjects: updated }
+    }),
 
   selectObject: (id) => set({ selectedObjectId: id }),
   toggleSnapToGrid: () => set((state) => ({ snapToGrid: !state.snapToGrid })),

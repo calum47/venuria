@@ -6,7 +6,7 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
 import { LayoutObject } from '@/types'
 import Konva from 'konva'
-import { mirrorDragRound, mirrorDragRect } from '@/lib/utils/seating'
+import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable } from '@/lib/utils/seating'
 
 const BASE_SCALE = 2
 const ROOM_WIDTH_CM = 1500
@@ -240,17 +240,14 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
         const angleRad = (angleDeg * Math.PI) / 180
 
-        // Lock dragged chair to orbit
         const lockedXCm = parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad)
         const lockedYCm = parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad)
         const lockedXPx = cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX
         const lockedYPx = cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY
         e.target.position({ x: lockedXPx, y: lockedYPx })
 
-        // Live update rotation of dragged chair
         updateObject(obj.id, { rotationDeg: angleDeg + 90 })
 
-        // Live mirror opposite chair only
         const updated = mirrorDragRound(
           obj.id,
           angleDeg,
@@ -270,21 +267,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       } else {
         const currentXCm = pixelsToCm(currentX - roomOffsetX, BASE_SCALE)
         const currentYCm = pixelsToCm(currentY - roomOffsetY, BASE_SCALE)
-
         const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+
         const updated = mirrorDragRect(
           obj,
           { x: currentXCm, y: currentYCm },
           parentTable,
           parentTableItem.width_cm,
           parentTableItem.depth_cm,
-          chairCatalogItem?.depth_cm ?? 45,  // ← correct
+          chairCatalogItem?.depth_cm ?? 45,
           existingChairs
         )
-
         updated.forEach((chair) => {
           if (chair.id === obj.id) {
-            // Lock dragged chair visually to its edge
             const lockedXPx = cmToPixels(chair.positionCm.x, BASE_SCALE) + roomOffsetX
             const lockedYPx = cmToPixels(chair.positionCm.y, BASE_SCALE) + roomOffsetY
             e.target.position({ x: lockedXPx, y: lockedYPx })
@@ -313,7 +308,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
       }
 
-      // Chair drag — final position save
       if (isChair && parentTable && parentTableItem) {
         const existingChairs = layoutObjects.filter(
           (o) => o.isChairFor === parentTable.id
@@ -348,7 +342,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
               parentTable,
               parentTableItem.width_cm,
               parentTableItem.depth_cm,
-              chairCatalogItem?.depth_cm ?? 45,  // ← correct chair depth
+              chairCatalogItem?.depth_cm ?? 45,
               existingChairs
             )
             updated.forEach((chair) =>
@@ -361,7 +355,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         return
       }
 
-      // Table drag — move chairs by same delta
       updateObject(obj.id, { positionCm: newPosCm })
 
       if (obj.chairIds && obj.chairIds.length > 0) {
@@ -382,13 +375,40 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     }
 
     const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
-      updateObject(obj.id, { rotationDeg: e.target.rotation() })
+      const newRotation = e.target.rotation()
+      const oldRotation = obj.rotationDeg
+
+      updateObject(obj.id, { rotationDeg: newRotation })
+
+      if (obj.chairIds && obj.chairIds.length > 0) {
+        const existingChairs = layoutObjects.filter((o) => o.isChairFor === obj.id)
+        if (existingChairs.length > 0) {
+          const updated = rotateChairsWithTable(
+            obj,
+            newRotation,
+            oldRotation,
+            existingChairs
+          )
+          updated.forEach((chair) =>
+            updateObject(chair.id, {
+              positionCm: chair.positionCm,
+              rotationDeg: chair.rotationDeg,
+            })
+          )
+        }
+      }
     }
 
     const handleClick = () => {
       selectObject(obj.id)
       onObjectSelect?.(obj)
     }
+
+    const rawRot = obj.rotationDeg % 360
+    const normalizedRot = rawRot > 90 && rawRot <= 270 ? rawRot + 180 : rawRot
+    const label = obj.tableLabel
+      ? obj.tableLabel
+      : catalogItem?.name ?? obj.catalogItemId
 
     return (
       <Group
@@ -423,11 +443,12 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           />
         )}
         <Text
-          text={catalogItem?.name ?? obj.catalogItemId}
+          text={label}
           fontSize={Math.max(8, widthPx * 0.1)}
           fill="#374151"
           offsetX={isRound ? radius * 0.5 : widthPx * 0.3}
           offsetY={isRound ? 5 : depthPx * 0.1}
+          rotation={-obj.rotationDeg + normalizedRot}
         />
       </Group>
     )
@@ -487,7 +508,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
 
   return (
     <div className="relative w-full h-full">
-      {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
         <button
           onClick={handleZoomOut}
@@ -509,7 +529,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         </button>
       </div>
 
-      {/* Canvas container */}
       <div
         ref={containerRef}
         className="w-full h-full overflow-hidden bg-gray-100"

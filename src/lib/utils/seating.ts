@@ -40,15 +40,12 @@ export function calculateChairPositions(
     let rightCount = 0
 
     if (arrangement === 'long-only') {
-      // Chairs only on top and bottom (long sides)
       topCount = Math.floor(chairCount / 2)
       bottomCount = chairCount - topCount
     } else if (arrangement === 'short-only') {
-      // Chairs only on left and right (short sides)
       leftCount = Math.floor(chairCount / 2)
       rightCount = chairCount - leftCount
     } else {
-      // All sides — distribute proportionally
       const longSide = tableWidthCm
       const shortSide = tableDepthCm
       const totalLength = 2 * longSide + 2 * shortSide
@@ -73,7 +70,6 @@ export function calculateChairPositions(
       }
     }
 
-    // Top side
     for (let i = 0; i < topCount; i++) {
       const spacing = tableWidthCm / (topCount + 1)
       positions.push({
@@ -83,7 +79,6 @@ export function calculateChairPositions(
       })
     }
 
-    // Bottom side
     for (let i = 0; i < bottomCount; i++) {
       const spacing = tableWidthCm / (bottomCount + 1)
       positions.push({
@@ -93,7 +88,6 @@ export function calculateChairPositions(
       })
     }
 
-    // Left side
     for (let i = 0; i < leftCount; i++) {
       const spacing = tableDepthCm / (leftCount + 1)
       positions.push({
@@ -103,7 +97,6 @@ export function calculateChairPositions(
       })
     }
 
-    // Right side
     for (let i = 0; i < rightCount; i++) {
       const spacing = tableDepthCm / (rightCount + 1)
       positions.push({
@@ -115,6 +108,93 @@ export function calculateChairPositions(
   }
 
   return positions
+}
+
+function rotatePoint(
+  px: number,
+  py: number,
+  cx: number,
+  cy: number,
+  angleDeg: number
+): { x: number; y: number } {
+  const rad = (angleDeg * Math.PI) / 180
+  const dx = px - cx
+  const dy = py - cy
+  return {
+    x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
+    y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
+  }
+}
+
+function lockToEdge(
+  posCm: { x: number; y: number },
+  edge: ChairEdge,
+  tx: number,
+  ty: number,
+  distLong: number,
+  distShort: number,
+  halfW: number,
+  halfD: number,
+  tableRotationDeg: number = 0
+): { x: number; y: number } {
+  // Project drag position into unrotated table space
+  const unrotatedDrag = rotatePoint(posCm.x, posCm.y, tx, ty, -tableRotationDeg)
+
+  let unrotated: { x: number; y: number }
+
+  if (edge === 'top') {
+    unrotated = {
+      x: Math.max(tx - halfW, Math.min(tx + halfW, unrotatedDrag.x)),
+      y: ty - distLong,
+    }
+  } else if (edge === 'bottom') {
+    unrotated = {
+      x: Math.max(tx - halfW, Math.min(tx + halfW, unrotatedDrag.x)),
+      y: ty + distLong,
+    }
+  } else if (edge === 'left') {
+    unrotated = {
+      x: tx - distShort,
+      y: Math.max(ty - halfD, Math.min(ty + halfD, unrotatedDrag.y)),
+    }
+  } else if (edge === 'right') {
+    unrotated = {
+      x: tx + distShort,
+      y: Math.max(ty - halfD, Math.min(ty + halfD, unrotatedDrag.y)),
+    }
+  } else {
+    return posCm
+  }
+
+  // Rotate back to table's actual orientation
+  return rotatePoint(unrotated.x, unrotated.y, tx, ty, tableRotationDeg)
+}
+
+export function rotateChairsWithTable(
+  tableObject: LayoutObject,
+  newRotationDeg: number,
+  oldRotationDeg: number,
+  existingChairs: LayoutObject[]
+): LayoutObject[] {
+  const deltaRad = ((newRotationDeg - oldRotationDeg) * Math.PI) / 180
+  const tx = tableObject.positionCm.x
+  const ty = tableObject.positionCm.y
+
+  return existingChairs.map((chair) => {
+    const dx = chair.positionCm.x - tx
+    const dy = chair.positionCm.y - ty
+    const rotatedX = dx * Math.cos(deltaRad) - dy * Math.sin(deltaRad)
+    const rotatedY = dx * Math.sin(deltaRad) + dy * Math.cos(deltaRad)
+
+    return {
+      ...chair,
+      positionCm: {
+        x: tx + rotatedX,
+        y: ty + rotatedY,
+      },
+      rotationDeg: chair.rotationDeg + (newRotationDeg - oldRotationDeg),
+    }
+  })
 }
 
 export function generateChairObjects(
@@ -141,8 +221,7 @@ export function generateChairObjects(
     arrangement
   )
 
-  return positions.map((pos, i) => {
-    // Determine edge based on rotation
+  return positions.map((pos) => {
     let chairEdge: ChairEdge = 'orbit'
     if (!isRound) {
       if (pos.rotationDeg === 180) chairEdge = 'top'
@@ -187,19 +266,16 @@ export function recalculateChairPositions(
     arrangement
   )
 
-  // Map new positions back to existing chair ids
+  // Map new positions to existing chair IDs in order
+  // Critically: also update chairEdge so drag locking uses the new edge
   return existingChairs.map((chair, i) => ({
     ...chair,
     positionCm: newChairs[i]?.positionCm ?? chair.positionCm,
     rotationDeg: newChairs[i]?.rotationDeg ?? chair.rotationDeg,
-    chairEdge: newChairs[i]?.chairEdge ?? chair.chairEdge,
+    chairEdge: newChairs[i]?.chairEdge ?? chair.chairEdge, // ← must update edge
   }))
 }
 
-/**
- * Mirror drag for round tables — locks chair to orbit radius,
- * mirrors opposite chair, redistributes the rest evenly.
- */
 export function mirrorDragRound(
   draggedChairId: string,
   newAngleDeg: number,
@@ -221,8 +297,6 @@ export function mirrorDragRound(
   const oppositeIndex = (draggedIndex + count / 2) % count
   const oppositeAngleDeg = newAngleDeg + 180
 
-  // Build angle array — only update dragged and its opposite
-  // Keep all other chairs at their current angles
   const currentAngles = existingChairs.map((chair) => {
     const dx = chair.positionCm.x - tableObject.positionCm.x
     const dy = chair.positionCm.y - tableObject.positionCm.y
@@ -245,9 +319,6 @@ export function mirrorDragRound(
   })
 }
 
-/**
- * Mirror drag for rectangular tables — mirrors chair along opposite edge.
- */
 export function mirrorDragRect(
   draggedChair: LayoutObject,
   newPosCm: { x: number; y: number },
@@ -265,6 +336,7 @@ export function mirrorDragRect(
 
   const tx = tableObject.positionCm.x
   const ty = tableObject.positionCm.y
+  const tableRot = tableObject.rotationDeg ?? 0
 
   const draggedEdge = draggedChair.chairEdge
   if (!draggedEdge || draggedEdge === 'orbit') return existingChairs
@@ -274,7 +346,6 @@ export function mirrorDragRect(
     draggedEdge === 'bottom' ? 'top' :
     draggedEdge === 'left' ? 'right' : 'left'
 
-  // Get all chairs on the dragged edge and opposite edge, sorted by position
   const draggedEdgeChairs = existingChairs
     .filter((c) => c.chairEdge === draggedEdge)
     .sort((a, b) =>
@@ -291,67 +362,41 @@ export function mirrorDragRect(
         : a.positionCm.y - b.positionCm.y
     )
 
-  // Find the index of the dragged chair within its edge
   const draggedIndexInEdge = draggedEdgeChairs.findIndex((c) => c.id === draggedChair.id)
   if (draggedIndexInEdge === -1) return existingChairs
 
-  // Find the paired chair on the opposite edge (same index)
   const pairedChair = oppositeEdgeChairs[draggedIndexInEdge]
   if (!pairedChair) return existingChairs
 
-  // Lock dragged chair to its edge
-  const lockedPos = lockToEdge(newPosCm, draggedEdge, tx, ty, distLong, distShort, halfW, halfD)
+  // Lock dragged chair to its edge accounting for table rotation
+  const lockedPos = lockToEdge(
+    newPosCm, draggedEdge, tx, ty,
+    distLong, distShort, halfW, halfD, tableRot
+  )
 
-  // Calculate mirrored position for paired chair
-  let mirroredPos: { x: number; y: number }
+  // Calculate mirrored position in unrotated space then rotate back
+  const unrotatedLocked = rotatePoint(lockedPos.x, lockedPos.y, tx, ty, -tableRot)
+
+  let unrotatedMirrored: { x: number; y: number }
   if (draggedEdge === 'top' || draggedEdge === 'bottom') {
-    mirroredPos = {
-      x: lockedPos.x, // same X
+    unrotatedMirrored = {
+      x: unrotatedLocked.x,
       y: draggedEdge === 'top' ? ty + distLong : ty - distLong,
     }
   } else {
-    mirroredPos = {
+    unrotatedMirrored = {
       x: draggedEdge === 'left' ? tx + distShort : tx - distShort,
-      y: lockedPos.y, // same Y
+      y: unrotatedLocked.y,
     }
   }
+
+  const mirroredPos = rotatePoint(
+    unrotatedMirrored.x, unrotatedMirrored.y, tx, ty, tableRot
+  )
 
   return existingChairs.map((chair) => {
-    if (chair.id === draggedChair.id) {
-      return { ...chair, positionCm: lockedPos }
-    }
-    if (chair.id === pairedChair.id) {
-      return { ...chair, positionCm: mirroredPos }
-    }
+    if (chair.id === draggedChair.id) return { ...chair, positionCm: lockedPos }
+    if (chair.id === pairedChair.id) return { ...chair, positionCm: mirroredPos }
     return chair
   })
-}
-
-function lockToEdge(
-  posCm: { x: number; y: number },
-  edge: ChairEdge,
-  tx: number,
-  ty: number,
-  distLong: number,
-  distShort: number,
-  halfW: number,
-  halfD: number
-): { x: number; y: number } {
-  if (edge === 'top') return {
-    x: Math.max(tx - halfW, Math.min(tx + halfW, posCm.x)),
-    y: ty - distLong,
-  }
-  if (edge === 'bottom') return {
-    x: Math.max(tx - halfW, Math.min(tx + halfW, posCm.x)),
-    y: ty + distLong,
-  }
-  if (edge === 'left') return {
-    x: tx - distShort,
-    y: Math.max(ty - halfD, Math.min(ty + halfD, posCm.y)),
-  }
-  if (edge === 'right') return {
-    x: tx + distShort,
-    y: Math.max(ty - halfD, Math.min(ty + halfD, posCm.y)),
-  }
-  return posCm
 }

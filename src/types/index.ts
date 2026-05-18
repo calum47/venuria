@@ -76,6 +76,7 @@ export type LayoutObject = {
   isChairFor?: string // id of the table this chair belongs to
   chairArrangement?: ChairArrangement
   chairEdge?: ChairEdge
+  tableLabel?: string  // e.g. "Table 1", "Bride & Groom", "Family"
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────
