@@ -6,6 +6,7 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
 import { LayoutObject } from '@/types'
 import Konva from 'konva'
+import { recalculateChairPositions } from '@/lib/utils/seating'
 
 const BASE_SCALE = 2
 const ROOM_WIDTH_CM = 1500
@@ -19,15 +20,18 @@ type DbCatalogItem = {
   name: string
   width_cm: number
   depth_cm: number
+  category: string
 }
 
 type Props = {
   onObjectSelect?: (object: LayoutObject | null) => void
   onZoomChange?: (zoom: number) => void
   catalogItems: DbCatalogItem[]
+  onTableDropped?: (tableObject: LayoutObject, tableItem: DbCatalogItem) => void
 }
 
-export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogItems }: Props) {
+export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogItems, onTableDropped }: Props) {
+
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -214,12 +218,38 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       const clamped = clampToRoom(newX, newY, widthPx / 2, depthPx / 2)
       e.target.position(clamped)
 
-      updateObject(obj.id, {
-        positionCm: {
-          x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE),
-          y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
+      const newPosCm = {
+        x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE),
+        y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
+      }
+
+      updateObject(obj.id, { positionCm: newPosCm })
+
+      // If this is a table with chairs, move chairs too
+      if (obj.chairIds && obj.chairIds.length > 0) {
+        const updatedTable = { ...obj, positionCm: newPosCm }
+        const existingChairs = layoutObjects.filter(
+          (o) => o.isChairFor === obj.id
+        )
+        const chairItem = catalogItems.find(
+          (i) => i.id === obj.chairCatalogItemId
+        )
+
+        if (chairItem && existingChairs.length > 0) {
+          const updated = recalculateChairPositions(
+            updatedTable,
+            widthPx / BASE_SCALE,
+            depthPx / BASE_SCALE,
+            isRound,
+            chairItem.width_cm,
+            chairItem.depth_cm,
+            existingChairs
+          )
+          updated.forEach((chair) => {
+            updateObject(chair.id, { positionCm: chair.positionCm })
+          })
         }
-      })
+      }
     }
 
     const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
@@ -309,7 +339,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       snappedY = snapToGrid(y - roomOffsetY, gridSizePx) + roomOffsetY
     }
 
-    addObject({
+    const newObject: LayoutObject = {
       id: generateId(),
       catalogItemId: item.id,
       positionCm: {
@@ -318,7 +348,13 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       },
       rotationDeg: 0,
       quantity: 1,
-    })
+    }
+
+    if (item.category === 'tables' && onTableDropped) {
+      onTableDropped(newObject, item)
+    } else {
+      addObject(newObject)
+    }
   }
 
   return (

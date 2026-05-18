@@ -16,7 +16,7 @@ type Props = {
 }
 
 export default function PropertiesPanel({ object, catalogItems }: Props) {
-  const { updateObject, removeObject, selectObject } = useLayoutStore()
+  const { updateObject, removeObjectWithChairs, selectObject } = useLayoutStore()
 
   if (!object) return null
 
@@ -40,7 +40,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
   }
 
   const handleDelete = () => {
-    removeObject(object.id)
+    removeObjectWithChairs(object.id)
     selectObject(null)
   }
 

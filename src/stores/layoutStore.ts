@@ -11,8 +11,10 @@ type LayoutStore = {
   lastSaved: Date | null
 
   addObject: (object: LayoutObject) => void
+  addObjects: (objects: LayoutObject[]) => void
   updateObject: (id: string, changes: Partial<LayoutObject>) => void
   removeObject: (id: string) => void
+  removeObjectWithChairs: (id: string) => void
   selectObject: (id: string | null) => void
   toggleSnapToGrid: () => void
   setGridSize: (sizeCm: number) => void
@@ -36,6 +38,11 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       layoutObjects: [...state.layoutObjects, object]
     })),
 
+  addObjects: (objects) =>
+    set((state) => ({
+      layoutObjects: [...state.layoutObjects, ...objects]
+    })),
+
   updateObject: (id, changes) =>
     set((state) => ({
       layoutObjects: state.layoutObjects.map((obj) =>
@@ -46,6 +53,15 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
   removeObject: (id) =>
     set((state) => ({
       layoutObjects: state.layoutObjects.filter((obj) => obj.id !== id),
+      selectedObjectId:
+        state.selectedObjectId === id ? null : state.selectedObjectId
+    })),
+
+  removeObjectWithChairs: (id) =>
+    set((state) => ({
+      layoutObjects: state.layoutObjects.filter(
+        (obj) => obj.id !== id && obj.isChairFor !== id
+      ),
       selectedObjectId:
         state.selectedObjectId === id ? null : state.selectedObjectId
     })),

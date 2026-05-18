@@ -65,9 +65,14 @@ export type CatalogItem = {
 export type LayoutObject = {
   id: string
   catalogItemId: string
-  positionCm: Point2D           // real-world position in the room
+  positionCm: Point2D
   rotationDeg: number
   quantity: number
+  // Smart seating
+  chairCount?: number        // number of chairs around this table (if it's a table)
+  chairCatalogItemId?: string // which chair item to use
+  chairIds?: string[]        // ids of the auto-placed chair objects
+  isChairFor?: string // id of the table this chair belongs to
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────
@@ -116,3 +121,4 @@ export type RentalCompany = {
   name: string
   contactEmail: string
 }
+

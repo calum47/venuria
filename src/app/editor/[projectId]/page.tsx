@@ -6,8 +6,10 @@ import FloorPlanCanvas from '@/components/canvas/FloorPlanCanvas'
 import CatalogSidebar from '@/components/canvas/CatalogSidebar'
 import PropertiesPanel from '@/components/canvas/PropertiesPanel'
 import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
+import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject } from '@/types'
+import { generateChairObjects } from '@/lib/utils/seating'
 import {
   getCatalogItems,
   getProject,
@@ -51,12 +53,15 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [show3D, setShow3D] = useState(false)
   const [venueId, setVenueId] = useState<string | null>(null)
+  const [pendingTableDrop, setPendingTableDrop] = useState<{
+    tableObject: LayoutObject
+    tableItem: DbCatalogItem
+  } | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     async function init() {
       try {
-        // Load project from Supabase
         const project = await getProject(projectId)
         if (!project) {
           router.push('/')
@@ -66,11 +71,9 @@ export default function EditorPage() {
         setProjectId(projectId)
         setVenueId(project.venue_id)
 
-        // Load catalog items for this venue
         const items = await getCatalogItems(project.venue_id)
         setCatalogItems(items)
 
-        // Load saved layout objects
         const objects = await getLayoutObjects(projectId)
         const mapped: LayoutObject[] = objects.map((obj: any) => ({
           id: obj.id,
@@ -121,6 +124,53 @@ export default function EditorPage() {
     if (!projectId || isLoading) return
     triggerSave()
   }, [layoutObjects, projectId, isLoading])
+
+  // Called when a table is dropped onto the canvas
+  const handleTableDropped = (tableObject: LayoutObject, tableItem: DbCatalogItem) => {
+    setPendingTableDrop({ tableObject, tableItem })
+  }
+
+  // Called when user picks a chair count from the popover
+  const handleChairCountConfirm = (chairCount: number) => {
+    if (!pendingTableDrop) return
+    const { tableObject, tableItem } = pendingTableDrop
+
+    const chairItem = catalogItems.find((i) => i.category === 'chairs')
+    const isRound = tableItem.name.toLowerCase().includes('round')
+
+    // Add the table first
+    useLayoutStore.getState().addObject(tableObject)
+
+    if (chairItem) {
+      const chairs = generateChairObjects(
+        tableObject,
+        tableItem.width_cm,
+        tableItem.depth_cm,
+        isRound,
+        chairCount,
+        chairItem.id,
+        chairItem.width_cm,
+        chairItem.depth_cm
+      )
+
+      useLayoutStore.getState().updateObject(tableObject.id, {
+        chairCount,
+        chairCatalogItemId: chairItem.id,
+        chairIds: chairs.map((c) => c.id),
+      })
+
+      useLayoutStore.getState().addObjects(chairs)
+    }
+
+    setPendingTableDrop(null)
+  }
+
+  // Called when user skips chairs
+  const handleChairSkip = () => {
+    if (!pendingTableDrop) return
+    useLayoutStore.getState().addObject(pendingTableDrop.tableObject)
+    setPendingTableDrop(null)
+  }
 
   const liveObject = selectedObjectId
     ? layoutObjects.find((o) => o.id === selectedObjectId) ?? null
@@ -184,6 +234,7 @@ export default function EditorPage() {
               onObjectSelect={() => {}}
               onZoomChange={setZoom}
               catalogItems={catalogItems}
+              onTableDropped={handleTableDropped}
             />
           </div>
 
@@ -202,6 +253,15 @@ export default function EditorPage() {
         <ThreeSixtyViewer
           imageUrl="/assets/360-placeholder.jpg"
           onClose={() => setShow3D(false)}
+        />
+      )}
+
+      {pendingTableDrop && (
+        <ChairCountPopover
+          tableId={pendingTableDrop.tableObject.id}
+          tableName={pendingTableDrop.tableItem.name}
+          onConfirm={handleChairCountConfirm}
+          onSkip={handleChairSkip}
         />
       )}
     </main>
