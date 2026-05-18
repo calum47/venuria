@@ -6,7 +6,7 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
 import { LayoutObject } from '@/types'
 import Konva from 'konva'
-import { recalculateChairPositions } from '@/lib/utils/seating'
+import { mirrorDragRound, mirrorDragRect } from '@/lib/utils/seating'
 
 const BASE_SCALE = 2
 const ROOM_WIDTH_CM = 1500
@@ -31,7 +31,6 @@ type Props = {
 }
 
 export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogItems, onTableDropped }: Props) {
-
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -206,11 +205,102 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     const isRound = catalogItem?.name?.toLowerCase().includes('round') ?? false
     const radius = widthPx / 2
 
+    const parentTable = obj.isChairFor
+      ? layoutObjects.find((o) => o.id === obj.isChairFor)
+      : null
+    const parentTableItem = parentTable
+      ? catalogItems.find((i) => i.id === parentTable.catalogItemId)
+      : null
+    const parentIsRound = parentTableItem?.name?.toLowerCase().includes('round') ?? false
+    const isChair = !!obj.isChairFor
+
+    const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+      if (!isChair || !parentTable || !parentTableItem) return
+
+      const existingChairs = layoutObjects.filter(
+        (o) => o.isChairFor === parentTable.id
+      )
+      const isEven = existingChairs.length % 2 === 0
+      if (!isEven) return
+
+      const currentX = e.target.x()
+      const currentY = e.target.y()
+
+      if (parentIsRound) {
+        const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+        const gapCm = 5
+        const distanceFromCenter =
+          parentTableItem.width_cm / 2 + gapCm + (chairCatalogItem?.depth_cm ?? 45) / 2
+
+        const currentXCm = pixelsToCm(currentX - roomOffsetX, BASE_SCALE)
+        const currentYCm = pixelsToCm(currentY - roomOffsetY, BASE_SCALE)
+
+        const dx = currentXCm - parentTable.positionCm.x
+        const dy = currentYCm - parentTable.positionCm.y
+        const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
+        const angleRad = (angleDeg * Math.PI) / 180
+
+        // Lock dragged chair to orbit
+        const lockedXCm = parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad)
+        const lockedYCm = parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad)
+        const lockedXPx = cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX
+        const lockedYPx = cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY
+        e.target.position({ x: lockedXPx, y: lockedYPx })
+
+        // Live update rotation of dragged chair
+        updateObject(obj.id, { rotationDeg: angleDeg + 90 })
+
+        // Live mirror opposite chair only
+        const updated = mirrorDragRound(
+          obj.id,
+          angleDeg,
+          parentTable,
+          parentTableItem.width_cm,
+          chairCatalogItem?.depth_cm ?? 45,
+          existingChairs
+        )
+        updated.forEach((chair) => {
+          if (chair.id !== obj.id) {
+            updateObject(chair.id, {
+              positionCm: chair.positionCm,
+              rotationDeg: chair.rotationDeg,
+            })
+          }
+        })
+      } else {
+        const currentXCm = pixelsToCm(currentX - roomOffsetX, BASE_SCALE)
+        const currentYCm = pixelsToCm(currentY - roomOffsetY, BASE_SCALE)
+
+        const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+        const updated = mirrorDragRect(
+          obj,
+          { x: currentXCm, y: currentYCm },
+          parentTable,
+          parentTableItem.width_cm,
+          parentTableItem.depth_cm,
+          chairCatalogItem?.depth_cm ?? 45,  // ← correct
+          existingChairs
+        )
+
+        updated.forEach((chair) => {
+          if (chair.id === obj.id) {
+            // Lock dragged chair visually to its edge
+            const lockedXPx = cmToPixels(chair.positionCm.x, BASE_SCALE) + roomOffsetX
+            const lockedYPx = cmToPixels(chair.positionCm.y, BASE_SCALE) + roomOffsetY
+            e.target.position({ x: lockedXPx, y: lockedYPx })
+            updateObject(chair.id, { positionCm: chair.positionCm })
+          } else {
+            updateObject(chair.id, { positionCm: chair.positionCm })
+          }
+        })
+      }
+    }
+
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       let newX = e.target.x()
       let newY = e.target.y()
 
-      if (snapEnabled) {
+      if (snapEnabled && !isChair) {
         newX = snapToGrid(newX - roomOffsetX, gridSizePx) + roomOffsetX
         newY = snapToGrid(newY - roomOffsetY, gridSizePx) + roomOffsetY
       }
@@ -223,39 +313,76 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
       }
 
+      // Chair drag — final position save
+      if (isChair && parentTable && parentTableItem) {
+        const existingChairs = layoutObjects.filter(
+          (o) => o.isChairFor === parentTable.id
+        )
+        const isEven = existingChairs.length % 2 === 0
+
+        if (isEven) {
+          if (parentIsRound) {
+            const dx = newPosCm.x - parentTable.positionCm.x
+            const dy = newPosCm.y - parentTable.positionCm.y
+            const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
+            const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+            const updated = mirrorDragRound(
+              obj.id,
+              angleDeg,
+              parentTable,
+              parentTableItem.width_cm,
+              chairCatalogItem?.depth_cm ?? 45,
+              existingChairs
+            )
+            updated.forEach((chair) =>
+              updateObject(chair.id, {
+                positionCm: chair.positionCm,
+                rotationDeg: chair.rotationDeg,
+              })
+            )
+          } else {
+            const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
+            const updated = mirrorDragRect(
+              obj,
+              newPosCm,
+              parentTable,
+              parentTableItem.width_cm,
+              parentTableItem.depth_cm,
+              chairCatalogItem?.depth_cm ?? 45,  // ← correct chair depth
+              existingChairs
+            )
+            updated.forEach((chair) =>
+              updateObject(chair.id, { positionCm: chair.positionCm })
+            )
+          }
+        } else {
+          updateObject(obj.id, { positionCm: newPosCm })
+        }
+        return
+      }
+
+      // Table drag — move chairs by same delta
       updateObject(obj.id, { positionCm: newPosCm })
 
-      // If this is a table with chairs, move chairs too
       if (obj.chairIds && obj.chairIds.length > 0) {
-        const updatedTable = { ...obj, positionCm: newPosCm }
-        const existingChairs = layoutObjects.filter(
-          (o) => o.isChairFor === obj.id
-        )
-        const chairItem = catalogItems.find(
-          (i) => i.id === obj.chairCatalogItemId
-        )
-
-        if (chairItem && existingChairs.length > 0) {
-          const updated = recalculateChairPositions(
-            updatedTable,
-            widthPx / BASE_SCALE,
-            depthPx / BASE_SCALE,
-            isRound,
-            chairItem.width_cm,
-            chairItem.depth_cm,
-            existingChairs
-          )
-          updated.forEach((chair) => {
-            updateObject(chair.id, { positionCm: chair.positionCm })
+        const existingChairs = layoutObjects.filter((o) => o.isChairFor === obj.id)
+        if (existingChairs.length > 0) {
+          const deltaX = newPosCm.x - obj.positionCm.x
+          const deltaY = newPosCm.y - obj.positionCm.y
+          existingChairs.forEach((chair) => {
+            updateObject(chair.id, {
+              positionCm: {
+                x: chair.positionCm.x + deltaX,
+                y: chair.positionCm.y + deltaY,
+              }
+            })
           })
         }
       }
     }
 
     const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
-      updateObject(obj.id, {
-        rotationDeg: e.target.rotation(),
-      })
+      updateObject(obj.id, { rotationDeg: e.target.rotation() })
     }
 
     const handleClick = () => {
@@ -271,6 +398,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         y={y}
         rotation={obj.rotationDeg}
         draggable
+        onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
         onClick={handleClick}
         onTap={handleClick}

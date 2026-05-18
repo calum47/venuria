@@ -61,6 +61,7 @@ export type CatalogItem = {
 }
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
+export type ChairEdge = 'top' | 'bottom' | 'left' | 'right' | 'orbit'
 
 export type LayoutObject = {
   id: string
@@ -73,6 +74,8 @@ export type LayoutObject = {
   chairCatalogItemId?: string // which chair item to use
   chairIds?: string[]        // ids of the auto-placed chair objects
   isChairFor?: string // id of the table this chair belongs to
+  chairArrangement?: ChairArrangement
+  chairEdge?: ChairEdge
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────

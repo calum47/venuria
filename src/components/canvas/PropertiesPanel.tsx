@@ -2,6 +2,8 @@
 
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject } from '@/types'
+import { ChairArrangement } from '@/types'
+import { recalculateChairPositions } from '@/lib/utils/seating'
 
 type DbCatalogItem = {
   id: string
@@ -132,6 +134,63 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
             className="w-full mt-2"
           />
         </div>
+
+        {/* Chair Arrangement — rectangular tables only */}
+        {object.chairCount && !catalogItem?.name.toLowerCase().includes('round') && (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
+              Chair Arrangement
+            </p>
+            <div className="space-y-1">
+              {(['all-sides', 'long-only', 'short-only'] as ChairArrangement[]).map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => {
+                    const chairs = useLayoutStore.getState().layoutObjects.filter(
+                      (o) => o.isChairFor === object.id
+                    )
+                    const chairItem = useLayoutStore.getState().layoutObjects
+                      .find((o) => o.isChairFor === object.id)
+
+                    if (!chairItem || !catalogItem) return
+
+                    const chairCatalogItem = catalogItems.find(
+                      (i) => i.id === object.chairCatalogItemId
+                    )
+                    if (!chairCatalogItem) return
+
+                    const updated = recalculateChairPositions(
+                      { ...object, chairArrangement: opt },
+                      catalogItem.width_cm,
+                      catalogItem.depth_cm,
+                      false,
+                      chairCatalogItem.width_cm,
+                      chairCatalogItem.depth_cm,
+                      chairs,
+                      opt
+                    )
+                    updated.forEach((chair) =>
+                      updateObject(chair.id, {
+                        positionCm: chair.positionCm,
+                        rotationDeg: chair.rotationDeg,
+                      })
+                    )
+                    updateObject(object.id, { chairArrangement: opt })
+                  }}
+                  className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition-colors ${
+                    (object.chairArrangement ?? 'all-sides') === opt
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {opt === 'all-sides' && 'All sides'}
+                  {opt === 'long-only' && 'Long sides only'}
+                  {opt === 'short-only' && 'Short sides only'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Quick rotate buttons */}
         <div>
