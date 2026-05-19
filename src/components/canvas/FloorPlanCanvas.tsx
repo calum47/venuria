@@ -50,6 +50,11 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 })
   const [zoom, setZoom] = useState(1)
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
+  const [tooltip, setTooltip] = useState<{
+    text: string
+    x: number
+    y: number
+  } | null>(null)
 
   const gridSizePx = cmToPixels(gridSizeCm, BASE_SCALE)
   const roomWidthPx = cmToPixels(ROOM_WIDTH_CM, BASE_SCALE)
@@ -450,12 +455,45 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           offsetY={isRound ? 5 : depthPx * 0.1}
           rotation={-obj.rotationDeg + normalizedRot}
         />
+        {/* Note icon — shown when table has a note */}
+        {obj.tableNote && !isChair && (
+          <Text
+            text="📝"
+            fontSize={28}
+            x={isRound ? -14 : widthPx / 2 - 36}
+            y={isRound ? -radius * 0.6 : -depthPx / 2 + 6}
+            rotation={-obj.rotationDeg + normalizedRot}
+            onMouseEnter={() => {
+              const stage = stageRef.current
+              if (!stage) return
+              const pointer = stage.getPointerPosition()
+              if (!pointer) return
+              setTooltip({
+                text: obj.tableNote!,
+                x: pointer.x,
+                y: pointer.y,
+              })
+              stage.container().style.cursor = 'default'
+            }}
+            onMouseMove={() => {
+              const stage = stageRef.current
+              if (!stage) return
+              const pointer = stage.getPointerPosition()
+              if (!pointer) return
+              setTooltip((prev) =>
+                prev ? { ...prev, x: pointer.x, y: pointer.y } : null
+              )
+            }}
+            onMouseLeave={() => setTooltip(null)}
+          />
+        )}
       </Group>
     )
   }
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isPanning.current) return
+    setTooltip(null)
     if (e.target === e.target.getStage()) {
       selectObject(null)
       onObjectSelect?.(null)
@@ -508,6 +546,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
 
   return (
     <div className="relative w-full h-full">
+      {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
         <button
           onClick={handleZoomOut}
@@ -529,6 +568,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         </button>
       </div>
 
+      {/* Canvas container */}
       <div
         ref={containerRef}
         className="w-full h-full overflow-hidden bg-gray-100"
@@ -589,6 +629,21 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           </Layer>
         </Stage>
       </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          className="fixed z-50 max-w-[280px] bg-gray-900 text-white text-xs
+                     rounded-lg px-3 py-2 shadow-lg pointer-events-none
+                     whitespace-pre-wrap leading-relaxed"
+          style={{
+            left: tooltip.x + 16,
+            top: tooltip.y - 8,
+          }}
+        >
+          {tooltip.text}
+        </div>
+      )}
     </div>
   )
 }

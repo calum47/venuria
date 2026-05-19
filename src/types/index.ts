@@ -77,6 +77,7 @@ export type LayoutObject = {
   chairArrangement?: ChairArrangement
   chairEdge?: ChairEdge
   tableLabel?: string  // e.g. "Table 1", "Bride & Groom", "Family"
+  tableNote?: string
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────

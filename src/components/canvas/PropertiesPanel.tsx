@@ -114,6 +114,34 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
           </div>
         )}
 
+        {/* Table Note — only for tables */}
+        {!object.isChairFor && (
+          <div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
+              Note
+            </p>
+            <textarea
+              placeholder="e.g. Vegetarian table, 2 high chairs needed..."
+              value={object.tableNote ?? ''}
+              onChange={(e) =>
+                updateObject(object.id, { tableNote: e.target.value || undefined })
+              }
+              rows={3}
+              className="w-full text-sm border border-gray-200 rounded px-2 py-1.5
+                         focus:outline-none focus:border-blue-400 placeholder:text-gray-300
+                         resize-none"
+            />
+            {object.tableNote && (
+              <button
+                onClick={() => updateObject(object.id, { tableNote: undefined })}
+                className="text-xs text-gray-400 hover:text-gray-600 mt-1"
+              >
+                Clear note
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Size */}
         <div>
           <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Size</p>
