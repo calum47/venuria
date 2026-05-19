@@ -61,7 +61,17 @@ export type CatalogItem = {
 }
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
+
 export type ChairEdge = 'top' | 'bottom' | 'left' | 'right' | 'orbit'
+
+export type ChairArrangement = 'all-sides' | 'long-only' | 'short-only'
+
+export type ChairSides = {
+  top: boolean
+  bottom: boolean
+  left: boolean
+  right: boolean
+}
 
 export type LayoutObject = {
   id: string
@@ -70,13 +80,16 @@ export type LayoutObject = {
   rotationDeg: number
   quantity: number
   // Smart seating
-  chairCount?: number        // number of chairs around this table (if it's a table)
-  chairCatalogItemId?: string // which chair item to use
-  chairIds?: string[]        // ids of the auto-placed chair objects
-  isChairFor?: string // id of the table this chair belongs to
+  chairCount?: number
+  chairCatalogItemId?: string
+  chairIds?: string[]
+  isChairFor?: string
   chairArrangement?: ChairArrangement
   chairEdge?: ChairEdge
-  tableLabel?: string  // e.g. "Table 1", "Bride & Groom", "Family"
+  chairSides?: ChairSides
+  mirrorEnabled?: boolean  // default true — controls mirror drag behaviour
+  // Labels & notes
+  tableLabel?: string
   tableNote?: string
 }
 
@@ -93,11 +106,11 @@ export type Project = {
   id: string
   venueId: string
   roomId: string
-  clientId: string | null       // null if guest
-  plannerId: string | null      // null if unlinked
+  clientId: string | null
+  plannerId: string | null
   status: ProjectStatus
-  eventDate: string | null      // ISO date string
-  dueBy: string | null          // ISO date string
+  eventDate: string | null
+  dueBy: string | null
   guestCount: number | null
   layoutObjects: LayoutObject[]
   createdAt: string
@@ -110,13 +123,13 @@ export type Planner = {
   id: string
   name: string
   email: string
-  plannerCode: string           // unique code shared with clients
+  plannerCode: string
 }
 
 export type Client = {
   id: string
   name: string
-  email: string | null          // null if guest
+  email: string | null
   linkedPlannerId: string | null
   partnerName: string | null
 }
@@ -126,4 +139,3 @@ export type RentalCompany = {
   name: string
   contactEmail: string
 }
-

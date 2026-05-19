@@ -16,6 +16,20 @@ type Props = {
   catalogItems: CatalogItem[]
 }
 
+const CATEGORY_ORDER = ['tables', 'chairs', 'decorations']
+
+const CATEGORY_ICONS: Record<string, string> = {
+  tables: '🪵',
+  chairs: '💺',
+  decorations: '🌸',
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  tables: 'Tables',
+  chairs: 'Chairs',
+  decorations: 'Decorations',
+}
+
 export default function CatalogSidebar({ catalogItems }: Props) {
   const { snapToGrid, toggleSnapToGrid, gridSizeCm, setGridSize } = useLayoutStore()
 
@@ -29,6 +43,16 @@ export default function CatalogSidebar({ catalogItems }: Props) {
     return acc
   }, {})
 
+  // Sort categories in defined order, then alphabetically for any extras
+  const sortedCategories = Object.keys(grouped).sort((a, b) => {
+    const ai = CATEGORY_ORDER.indexOf(a)
+    const bi = CATEGORY_ORDER.indexOf(b)
+    if (ai === -1 && bi === -1) return a.localeCompare(b)
+    if (ai === -1) return 1
+    if (bi === -1) return -1
+    return ai - bi
+  })
+
   return (
     <div className="w-64 h-full bg-white border-r border-gray-200 flex flex-col">
       {/* Header */}
@@ -36,36 +60,51 @@ export default function CatalogSidebar({ catalogItems }: Props) {
         <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
           Catalog
         </h2>
+        <p className="text-xs text-gray-400 mt-0.5">
+          {catalogItems.length} items
+        </p>
       </div>
 
       {/* Items grouped by category */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {Object.entries(grouped).map(([category, items]) => (
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        {sortedCategories.map((category) => (
           <div key={category}>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
-              {category}
-            </p>
-            <div className="space-y-2">
-              {items.map((item) => (
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm">{CATEGORY_ICONS[category] ?? '📦'}</span>
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">
+                {CATEGORY_LABELS[category] ?? category}
+              </p>
+              <span className="text-xs text-gray-300 ml-auto">
+                {grouped[category].length}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {grouped[category].map((item) => (
                 <div
                   key={item.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, item)}
-                  className="p-3 border border-gray-200 rounded-lg cursor-grab
+                  className="p-2.5 border border-gray-200 rounded-lg cursor-grab
                              hover:border-blue-400 hover:bg-blue-50 transition-colors
                              select-none"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gray-100 rounded flex items-center justify-center text-lg">
-                      {category === 'tables' ? '🪑' : '💺'}
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded flex items-center justify-center text-sm flex-shrink-0 ${
+                      category === 'tables' ? 'bg-blue-50' :
+                      category === 'chairs' ? 'bg-green-50' :
+                      category === 'decorations' ? 'bg-amber-50' : 'bg-gray-100'
+                    }`}>
+                      {CATEGORY_ICONS[category] ?? '📦'}
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{item.name}</p>
-                      <p className="text-xs text-gray-500">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-gray-800 truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-xs text-gray-400">
                         {item.width_cm} × {item.depth_cm} cm
                       </p>
                       {item.owner_type === 'rental' && (
-                        <p className="text-xs text-amber-500">Rental item</p>
+                        <p className="text-xs text-amber-500">Rental</p>
                       )}
                     </div>
                   </div>

@@ -9,7 +9,8 @@ import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
 import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject } from '@/types'
-import { generateChairObjects } from '@/lib/utils/seating'
+import { generateChairObjects, getTableChairConfig } from '@/lib/utils/seating'
+
 import {
   getCatalogItems,
   getProject,
@@ -56,6 +57,7 @@ export default function EditorPage() {
   const [pendingTableDrop, setPendingTableDrop] = useState<{
     tableObject: LayoutObject
     tableItem: DbCatalogItem
+    maxChairs: number
   } | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -127,7 +129,13 @@ export default function EditorPage() {
 
   // Called when a table is dropped onto the canvas
   const handleTableDropped = (tableObject: LayoutObject, tableItem: DbCatalogItem) => {
-    setPendingTableDrop({ tableObject, tableItem })
+    const { acceptsChairs, maxChairs } = getTableChairConfig(tableItem.name)
+    if (!acceptsChairs) {
+      // Cocktail or standing table — add directly with no chair popover
+      useLayoutStore.getState().addObject(tableObject)
+      return
+    }
+    setPendingTableDrop({ tableObject, tableItem, maxChairs })
   }
 
   // Called when user picks a chair count from the popover
@@ -260,6 +268,7 @@ export default function EditorPage() {
         <ChairCountPopover
           tableId={pendingTableDrop.tableObject.id}
           tableName={pendingTableDrop.tableItem.name}
+          maxChairs={pendingTableDrop.maxChairs}
           onConfirm={handleChairCountConfirm}
           onSkip={handleChairSkip}
         />

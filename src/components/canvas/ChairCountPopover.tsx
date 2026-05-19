@@ -3,21 +3,25 @@
 type Props = {
   tableId: string
   tableName: string
+  maxChairs: number
   onConfirm: (chairCount: number) => void
   onSkip: () => void
 }
 
-export default function ChairCountPopover({ tableName, onConfirm, onSkip }: Props) {
+export default function ChairCountPopover({ tableName, maxChairs, onConfirm, onSkip }: Props) {
+  const options = [2, 4, 6, 8, 10, 12, 14, 16].filter((n) => n <= maxChairs)
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl p-6 w-80 space-y-4">
         <div>
           <h3 className="font-semibold text-gray-900">Chairs around this table?</h3>
           <p className="text-sm text-gray-500 mt-0.5">{tableName}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Max {maxChairs} chairs</p>
         </div>
 
         <div className="grid grid-cols-4 gap-2">
-          {[2, 4, 6, 8, 10, 12, 14, 16].map((count) => (
+          {options.map((count) => (
             <button
               key={count}
               onClick={() => onConfirm(count)}
