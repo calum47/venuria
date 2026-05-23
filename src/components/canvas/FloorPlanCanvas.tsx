@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer } from 'react-konva'
 import { useLayoutStore } from '@/stores/layoutStore'
+import { useGuestStore } from '@/stores/guestStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
 import { LayoutObject } from '@/types'
 import Konva from 'konva'
@@ -28,9 +29,23 @@ type Props = {
   onZoomChange?: (zoom: number) => void
   catalogItems: DbCatalogItem[]
   onTableDropped?: (tableObject: LayoutObject, tableItem: DbCatalogItem) => void
+  // Guest mode props
+  isGuestMode?: boolean
+  onChairClickInGuestMode?: (chairId: string) => void
+  onGuestDropOnChair?: (chairId: string, guestId: string) => void
+  draggingGuestId?: string | null
 }
 
-export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogItems, onTableDropped }: Props) {
+export default function FloorPlanCanvas({
+  onObjectSelect,
+  onZoomChange,
+  catalogItems,
+  onTableDropped,
+  isGuestMode = false,
+  onChairClickInGuestMode,
+  onGuestDropOnChair,
+  draggingGuestId,
+}: Props) {
   const stageRef = useRef<Konva.Stage>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -41,7 +56,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const zoomRef = useRef(1)
   const selectionStart = useRef<{ x: number; y: number } | null>(null)
   const isSelecting = useRef(false)
-  // Track drag start positions for multi-select move
   const multiDragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map())
   const multiDragStartPosCm = useRef<{ x: number; y: number } | null>(null)
 
@@ -57,6 +71,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     setSelectedObjectIds,
     deleteSelection,
   } = useLayoutStore()
+
+  const { getGuestForChair } = useGuestStore()
 
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 })
   const [zoom, setZoom] = useState(1)
@@ -86,7 +102,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
 
   useEffect(() => {
     if (!transformerRef.current || !stageRef.current) return
-    if (selectedObjectId) {
+    if (selectedObjectId && !isGuestMode) {
       const shape = stageRef.current.findOne(`#${selectedObjectId}`)
       if (shape) {
         transformerRef.current.nodes([shape])
@@ -96,17 +112,17 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       transformerRef.current.nodes([])
       transformerRef.current.getLayer()?.batchDraw()
     }
-  }, [selectedObjectId])
+  }, [selectedObjectId, isGuestMode])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0 && !isGuestMode) {
         deleteSelection()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedObjectIds, deleteSelection])
+  }, [selectedObjectIds, deleteSelection, isGuestMode])
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
@@ -135,15 +151,10 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       stageRef.current?.container().style.setProperty('cursor', 'grabbing')
       return
     }
-
-    if (e.evt.button === 0) {
+    if (e.evt.button === 0 && !isGuestMode) {
       const target = e.target
-      const isOnObject =
-        target.getType() === 'Group' ||
-        (target.getParent() !== null && target.getParent()?.getType() === 'Group')
-
+      const isOnObject = target.getType() === 'Group' || (target.getParent() !== null && target.getParent()?.getType() === 'Group')
       if (isOnObject) return
-
       const stage = stageRef.current
       if (!stage) return
       const pos = stage.getPointerPosition()
@@ -166,7 +177,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       setStagePos((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
       return
     }
-
     if (isSelecting.current && selectionStart.current) {
       const stage = stageRef.current
       if (!stage) return
@@ -189,7 +199,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       stageRef.current?.container().style.setProperty('cursor', 'default')
       return
     }
-
     if (isSelecting.current && selectionStart.current) {
       const stage = stageRef.current
       if (stage) {
@@ -251,56 +260,58 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     const parentIsRound = parentTableItem?.name?.toLowerCase().includes('round') ?? false
     const isChair = !!obj.isChairFor
 
-    const fillColor = isSelected
-      ? category === 'decorations' ? '#fde68a' : category === 'chairs' ? '#bbf7d0' : '#bfdbfe'
-      : isMultiSelected
-        ? category === 'decorations' ? '#ede9fe' : category === 'chairs' ? '#e9d5ff' : '#ede9fe'
-        : category === 'decorations' ? '#fef3c7' : category === 'chairs' ? '#dcfce7' : '#dbeafe'
+    // In guest mode, show assigned guest name on chair
+    const assignedGuest = isChair ? getGuestForChair(obj.id) : null
 
-    const strokeColor = isSelected
-      ? category === 'decorations' ? '#d97706' : category === 'chairs' ? '#16a34a' : '#2563eb'
-      : isMultiSelected
-        ? '#7c3aed'
-        : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
+    // Chair index for seat number label
+    const chairIndex = isChair
+      ? layoutObjects.filter((o) => o.isChairFor === obj.isChairFor).findIndex((o) => o.id === obj.id) + 1
+      : null
+
+    const fillColor = isGuestMode && isChair
+      ? assignedGuest ? '#fef3c7' : '#f9fafb'  // amber if assigned, light gray if empty
+      : isSelected
+        ? category === 'decorations' ? '#fde68a' : category === 'chairs' ? '#bbf7d0' : '#bfdbfe'
+        : isMultiSelected
+          ? category === 'decorations' ? '#ede9fe' : category === 'chairs' ? '#e9d5ff' : '#ede9fe'
+          : category === 'decorations' ? '#fef3c7' : category === 'chairs' ? '#dcfce7' : '#dbeafe'
+
+    const strokeColor = isGuestMode && isChair
+      ? assignedGuest ? '#f59e0b' : '#d1d5db'
+      : isSelected
+        ? category === 'decorations' ? '#d97706' : category === 'chairs' ? '#16a34a' : '#2563eb'
+        : isMultiSelected
+          ? '#7c3aed'
+          : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
 
     const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+      if (isGuestMode) return  // No dragging objects in guest mode
       const store = useLayoutStore.getState()
       const currentSelectedIds = store.selectedObjectIds
 
-      // Multi-select drag: move all selected objects together
       if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
         const currentXPx = e.target.x()
         const currentYPx = e.target.y()
         const currentXCm = pixelsToCm(currentXPx - roomOffsetX, BASE_SCALE)
         const currentYCm = pixelsToCm(currentYPx - roomOffsetY, BASE_SCALE)
-
         const startPos = multiDragStartPositions.current.get(obj.id)
         const startCm = multiDragStartPosCm.current
-
         if (startPos && startCm) {
           const deltaCmX = currentXCm - startCm.x
           const deltaCmY = currentYCm - startCm.y
-
           const allObjects = store.layoutObjects
           currentSelectedIds.forEach((id) => {
             if (id === obj.id) return
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            store.updateObject(id, {
-              positionCm: {
-                x: otherStart.x + deltaCmX,
-                y: otherStart.y + deltaCmY,
-              },
-            })
+            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY } })
           })
         }
         return
       }
 
-      // Single object drag (original logic below)
       if (!isChair || !parentTable || !parentTableItem) return
-
       const existingChairs = layoutObjects.filter((o) => o.isChairFor === parentTable.id)
       const currentX = e.target.x()
       const currentY = e.target.y()
@@ -316,12 +327,10 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         const dy = currentYCm - parentTable.positionCm.y
         const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
         const angleRad = (angleDeg * Math.PI) / 180
-
         const lockedXCm = parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad)
         const lockedYCm = parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad)
         e.target.position({ x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX, y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY })
         updateObject(obj.id, { rotationDeg: angleDeg + 90 })
-
         if (existingChairs.length % 2 === 0 && mirrorOn) {
           const updated = mirrorDragRound(obj.id, angleDeg, parentTable, parentTableItem.width_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
           updated.forEach((chair) => { if (chair.id !== obj.id) updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg }) })
@@ -330,18 +339,14 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         const currentXCm = pixelsToCm(currentX - roomOffsetX, BASE_SCALE)
         const currentYCm = pixelsToCm(currentY - roomOffsetY, BASE_SCALE)
         const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
-
         if (mirrorOn) {
           const updated = mirrorDragRect(obj, { x: currentXCm, y: currentYCm }, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
           updated.forEach((chair) => {
-            if (chair.id === obj.id) {
-              e.target.position({ x: cmToPixels(chair.positionCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(chair.positionCm.y, BASE_SCALE) + roomOffsetY })
-            }
+            if (chair.id === obj.id) e.target.position({ x: cmToPixels(chair.positionCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(chair.positionCm.y, BASE_SCALE) + roomOffsetY })
             updateObject(chair.id, { positionCm: chair.positionCm })
           })
         } else {
           rawDragPosCm.current = { x: currentXCm, y: currentYCm }
-
           const halfW = parentTableItem.width_cm / 2
           const halfD = parentTableItem.depth_cm / 2
           const gapCm = 5
@@ -351,106 +356,76 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           const tx = parentTable.positionCm.x
           const ty = parentTable.positionCm.y
           const edge = obj.chairEdge as 'top' | 'bottom' | 'left' | 'right'
-
           const cos = Math.cos((-tableRot * Math.PI) / 180)
           const sin = Math.sin((-tableRot * Math.PI) / 180)
           const dx = currentXCm - tx
           const dy = currentYCm - ty
           const ux = tx + dx * cos - dy * sin
           const uy = ty + dx * sin + dy * cos
-
           let lockedU: { x: number; y: number }
-          if (edge === 'top') {
-            lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
-          } else if (edge === 'bottom') {
-            lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty + distLong }
-          } else if (edge === 'left') {
-            lockedU = { x: tx - distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
-          } else {
-            lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
-          }
-
+          if (edge === 'top') lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
+          else if (edge === 'bottom') lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty + distLong }
+          else if (edge === 'left') lockedU = { x: tx - distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
+          else lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
           const cos2 = Math.cos((tableRot * Math.PI) / 180)
           const sin2 = Math.sin((tableRot * Math.PI) / 180)
           const dx2 = lockedU.x - tx
           const dy2 = lockedU.y - ty
           const lockedXCm = tx + dx2 * cos2 - dy2 * sin2
           const lockedYCm = ty + dx2 * sin2 + dy2 * cos2
-
-          e.target.position({
-            x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX,
-            y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY,
-          })
+          e.target.position({ x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX, y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY })
           updateObject(obj.id, { positionCm: { x: lockedXCm, y: lockedYCm } })
         }
       }
     }
 
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+      if (isGuestMode) return
       const store = useLayoutStore.getState()
       const currentSelectedIds = store.selectedObjectIds
 
-      // Multi-select drag end: snap/clamp all selected objects
       if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
         const currentXPx = e.target.x()
         const currentYPx = e.target.y()
         const currentXCm = pixelsToCm(currentXPx - roomOffsetX, BASE_SCALE)
         const currentYCm = pixelsToCm(currentYPx - roomOffsetY, BASE_SCALE)
-
         const startCm = multiDragStartPosCm.current
         const startPos = multiDragStartPositions.current.get(obj.id)
-
         if (startCm && startPos) {
           const deltaCmX = currentXCm - startCm.x
           const deltaCmY = currentYCm - startCm.y
-
           const allObjects = store.layoutObjects
           currentSelectedIds.forEach((id) => {
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            store.updateObject(id, {
-              positionCm: {
-                x: otherStart.x + deltaCmX,
-                y: otherStart.y + deltaCmY,
-              },
-            })
+            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY } })
           })
         }
-
         multiDragStartPositions.current.clear()
         multiDragStartPosCm.current = null
         return
       }
 
-      // Single object drag end (original logic)
       let newX = e.target.x()
       let newY = e.target.y()
-
       if (snapEnabled && !isChair) {
         newX = snapToGrid(newX - roomOffsetX, gridSizePx) + roomOffsetX
         newY = snapToGrid(newY - roomOffsetY, gridSizePx) + roomOffsetY
       }
-
       const clamped = clampToRoom(newX, newY, widthPx / 2, depthPx / 2)
       e.target.position(clamped)
-
-      const newPosCm = {
-        x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE),
-        y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE),
-      }
+      const newPosCm = { x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE), y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE) }
 
       if (isChair && parentTable && parentTableItem) {
         const existingChairs = layoutObjects.filter((o) => o.isChairFor === parentTable.id)
         const isEven = existingChairs.length % 2 === 0
         const mirrorOn = parentTable.mirrorEnabled ?? true
-
         if (parentIsRound) {
           const dx = newPosCm.x - parentTable.positionCm.x
           const dy = newPosCm.y - parentTable.positionCm.y
           const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
-
           if (isEven && mirrorOn) {
             const updated = mirrorDragRound(obj.id, angleDeg, parentTable, parentTableItem.width_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
             updated.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg }))
@@ -458,45 +433,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             const gapCm = 5
             const distanceFromCenter = parentTableItem.width_cm / 2 + gapCm + (chairCatalogItem?.depth_cm ?? 45) / 2
             const angleRad = (angleDeg * Math.PI) / 180
-            updateObject(obj.id, {
-              positionCm: {
-                x: parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad),
-                y: parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad),
-              },
-              rotationDeg: angleDeg + 90,
-            })
+            updateObject(obj.id, { positionCm: { x: parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad), y: parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad) }, rotationDeg: angleDeg + 90 })
           }
         } else {
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
           const reassignPos = rawDragPosCm.current ?? newPosCm
           rawDragPosCm.current = null
-
-          const reassigned = reassignChairEdge(
-            obj,
-            reassignPos,
-            parentTable,
-            parentTableItem.width_cm,
-            parentTableItem.depth_cm,
-            chairCatalogItem?.depth_cm ?? 45,
-            existingChairs
-          )
-
+          const reassigned = reassignChairEdge(obj, reassignPos, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
           const draggedResult = reassigned.find((c) => c.id === obj.id)
           const edgeChanged = draggedResult?.chairEdge !== obj.chairEdge
-
           if (edgeChanged) {
-            reassigned.forEach((chair) =>
-              updateObject(chair.id, {
-                positionCm: chair.positionCm,
-                rotationDeg: chair.rotationDeg,
-                chairEdge: chair.chairEdge,
-              })
-            )
+            reassigned.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg, chairEdge: chair.chairEdge }))
             const draggedFinal = reassigned.find((c) => c.id === obj.id)!
-            e.target.position({
-              x: cmToPixels(draggedFinal.positionCm.x, BASE_SCALE) + roomOffsetX,
-              y: cmToPixels(draggedFinal.positionCm.y, BASE_SCALE) + roomOffsetY,
-            })
+            e.target.position({ x: cmToPixels(draggedFinal.positionCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(draggedFinal.positionCm.y, BASE_SCALE) + roomOffsetY })
           } else if (isEven && mirrorOn) {
             const updated = mirrorDragRect(obj, newPosCm, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
             updated.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm }))
@@ -508,7 +457,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       }
 
       updateObject(obj.id, { positionCm: newPosCm })
-
       if (obj.chairIds && obj.chairIds.length > 0) {
         const existingChairs = layoutObjects.filter((o) => o.isChairFor === obj.id)
         if (existingChairs.length > 0) {
@@ -520,10 +468,9 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     }
 
     const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
+      if (isGuestMode) { e.target.stopDrag(); return }
       const store = useLayoutStore.getState()
       const currentSelectedIds = store.selectedObjectIds
-
-      // Record start positions for all selected objects when multi-drag begins
       if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
         multiDragStartPositions.current.clear()
         const allObjects = store.layoutObjects
@@ -531,7 +478,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           const o = allObjects.find((lo) => lo.id === id)
           if (o) multiDragStartPositions.current.set(id, { x: o.positionCm.x, y: o.positionCm.y })
         })
-        // Record dragged object's start in cm
         multiDragStartPosCm.current = {
           x: pixelsToCm(e.target.x() - roomOffsetX, BASE_SCALE),
           y: pixelsToCm(e.target.y() - roomOffsetY, BASE_SCALE),
@@ -552,11 +498,25 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       }
     }
 
-    const handleClick = () => { selectObject(obj.id); onObjectSelect?.(obj) }
+    const handleClick = () => {
+      if (isGuestMode && isChair) {
+        // In guest mode, clicking a chair opens the assignment popover
+        onChairClickInGuestMode?.(obj.id)
+        return
+      }
+      selectObject(obj.id)
+      onObjectSelect?.(obj)
+    }
 
     const rawRot = obj.rotationDeg % 360
     const normalizedRot = rawRot > 90 && rawRot <= 270 ? rawRot + 180 : rawRot
-    const label = obj.tableLabel ? obj.tableLabel : catalogItem?.name ?? obj.catalogItemId
+
+    // Label: in guest mode show guest name on chair, otherwise show table label / item name
+    const label = isGuestMode && isChair
+      ? assignedGuest ? assignedGuest.name : String(chairIndex ?? '')
+      : obj.tableLabel
+        ? obj.tableLabel
+        : catalogItem?.name ?? obj.catalogItemId
 
     return (
       <Group
@@ -565,7 +525,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         x={x}
         y={y}
         rotation={obj.rotationDeg}
-        draggable
+        draggable={!isGuestMode}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -574,9 +534,9 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         onTransformEnd={handleTransformEnd}
       >
         {isRound ? (
-          <Circle radius={radius} fill={fillColor} stroke={strokeColor} strokeWidth={1} />
+          <Circle radius={radius} fill={fillColor} stroke={strokeColor} strokeWidth={isGuestMode && isChair ? 1.5 : 1} />
         ) : category === 'chairs' ? (
-          <Rect width={widthPx} height={depthPx} offsetX={widthPx / 2} offsetY={depthPx / 2} fill={fillColor} stroke={strokeColor} strokeWidth={1} cornerRadius={3} />
+          <Rect width={widthPx} height={depthPx} offsetX={widthPx / 2} offsetY={depthPx / 2} fill={fillColor} stroke={strokeColor} strokeWidth={isGuestMode && isChair ? 1.5 : 1} cornerRadius={3} />
         ) : category === 'decorations' ? (
           <Rect width={widthPx} height={depthPx} offsetX={widthPx / 2} offsetY={depthPx / 2} fill={fillColor} stroke={strokeColor} strokeWidth={1} cornerRadius={2} />
         ) : (
@@ -584,8 +544,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         )}
         <Text
           text={label}
-          fontSize={Math.max(8, widthPx * 0.1)}
-          fill="#374151"
+          fontSize={Math.max(6, Math.min(widthPx * 0.18, 11))}
+          fill={isGuestMode && isChair && assignedGuest ? '#92400e' : '#374151'}
           width={isRound ? radius * 1.2 : widthPx * 0.9}
           height={isRound ? radius * 1.2 : depthPx * 0.9}
           offsetX={isRound ? radius * 0.6 : widthPx * 0.45}
@@ -627,13 +587,41 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isPanning.current) return
     setTooltip(null)
-    if (e.target === e.target.getStage()) { selectObject(null); onObjectSelect?.(null) }
+    if (e.target === e.target.getStage() && !isGuestMode) { selectObject(null); onObjectSelect?.(null) }
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
+
+    // Guest drag onto canvas — find which chair is under the drop point
+    const guestId = e.dataTransfer.getData('guestId')
+    if (guestId && isGuestMode) {
+      const stage = stageRef.current
+      if (!stage) return
+      const stageBox = stage.container().getBoundingClientRect()
+      const dropX = (e.clientX - stageBox.left - stagePosRef.current.x) / zoomRef.current
+      const dropY = (e.clientY - stageBox.top - stagePosRef.current.y) / zoomRef.current
+
+      // Find the chair closest to the drop point (within 30px)
+      let closestChair: LayoutObject | null = null
+      let closestDist = 30 / zoomRef.current  // threshold in canvas px
+      layoutObjects.forEach((obj) => {
+        if (!obj.isChairFor) return
+        const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
+        const oy = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
+        const dist = Math.sqrt((ox - dropX) ** 2 + (oy - dropY) ** 2)
+        if (dist < closestDist) { closestDist = dist; closestChair = obj }
+      })
+
+      if (closestChair) {
+        onGuestDropOnChair?.(closestChair.id, guestId)
+      }
+      return
+    }
+
+    // Normal catalog item drop
     const itemData = e.dataTransfer.getData('catalogItem')
-    if (!itemData) return
+    if (!itemData || isGuestMode) return
     const item: DbCatalogItem = JSON.parse(itemData)
     const stage = stageRef.current
     if (!stage) return
@@ -662,8 +650,33 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         <button onClick={handleZoomIn} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">+</button>
       </div>
 
-      <div ref={containerRef} className="w-full h-full overflow-hidden bg-gray-100" onDrop={handleDrop} onDragOver={(e) => e.preventDefault()} onContextMenu={(e) => e.preventDefault()}>
-        <Stage ref={stageRef} width={stageSize.width} height={stageSize.height} scaleX={zoom} scaleY={zoom} x={stagePos.x} y={stagePos.y} onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onClick={handleStageClick}>
+      {isGuestMode && (
+        <div className="absolute top-3 left-3 z-10 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+          <p className="text-xs text-amber-700 font-medium">👥 Guest Mode — click a chair to assign, or drag from the guest list</p>
+        </div>
+      )}
+
+      <div
+        ref={containerRef}
+        className="w-full h-full overflow-hidden bg-gray-100"
+        onDrop={handleDrop}
+        onDragOver={(e) => e.preventDefault()}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <Stage
+          ref={stageRef}
+          width={stageSize.width}
+          height={stageSize.height}
+          scaleX={zoom}
+          scaleY={zoom}
+          x={stagePos.x}
+          y={stagePos.y}
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onClick={handleStageClick}
+        >
           <Layer>
             <Rect x={0} y={0} width={totalWidth} height={totalHeight} fill="#f3f4f6" />
             <Rect x={roomOffsetX} y={roomOffsetY} width={roomWidthPx} height={roomDepthPx} fill="#ffffff" stroke="#374151" strokeWidth={3} shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2} />
@@ -671,17 +684,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             {renderGrid()}
             {layoutObjects.map(renderObject)}
             {selectionRect && (
-              <Rect
-                x={selectionRect.x}
-                y={selectionRect.y}
-                width={selectionRect.w}
-                height={selectionRect.h}
-                fill="rgba(99, 102, 241, 0.08)"
-                stroke="#6366f1"
-                strokeWidth={1}
-                dash={[4, 3]}
-                listening={false}
-              />
+              <Rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.w} height={selectionRect.h} fill="rgba(99, 102, 241, 0.08)" stroke="#6366f1" strokeWidth={1} dash={[4, 3]} listening={false} />
             )}
             <Transformer ref={transformerRef} rotateEnabled={true} resizeEnabled={false} enabledAnchors={[]} />
           </Layer>
