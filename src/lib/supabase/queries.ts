@@ -63,6 +63,7 @@ export async function saveLayoutObjects(
   projectId: string,
   roomId: string,
   objects: {
+    id: string
     catalog_item_id: string
     position_x_cm: number
     position_y_cm: number
@@ -71,6 +72,7 @@ export async function saveLayoutObjects(
     extra_data: Record<string, any>
   }[]
 ) {
+  // Delete existing objects for this room only
   const { error: deleteError } = await supabase
     .from('layout_objects')
     .delete()
@@ -82,7 +84,19 @@ export async function saveLayoutObjects(
 
   const { data, error } = await supabase
     .from('layout_objects')
-    .insert(objects.map((obj) => ({ ...obj, project_id: projectId, room_id: roomId })))
+    .insert(
+      objects.map((obj) => ({
+        id: obj.id,           // preserve the original ID so isChairFor links stay valid
+        project_id: projectId,
+        room_id: roomId,
+        catalog_item_id: obj.catalog_item_id,
+        position_x_cm: obj.position_x_cm,
+        position_y_cm: obj.position_y_cm,
+        rotation_deg: obj.rotation_deg,
+        quantity: obj.quantity,
+        extra_data: obj.extra_data,
+      }))
+    )
     .select()
 
   if (error) throw error

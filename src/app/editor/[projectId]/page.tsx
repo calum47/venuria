@@ -44,6 +44,7 @@ type DbRoom = {
 
 function buildSavePayload(objects: LayoutObject[]) {
   return objects.map((obj) => ({
+    id: obj.id,
     catalog_item_id: obj.catalogItemId,
     position_x_cm: Math.round(obj.positionCm.x),
     position_y_cm: Math.round(obj.positionCm.y),
@@ -108,9 +109,13 @@ export default function EditorPage() {
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentRoomIdRef = useRef<string | null>(null)
   const layoutObjectsRef = useRef<LayoutObject[]>([])
+  // Ref version of isSwitchingRoom so the auto-save effect can check it
+  // without needing it in the dependency array
+  const isSwitchingRoomRef = useRef(false)
 
   useEffect(() => { currentRoomIdRef.current = currentRoomId }, [currentRoomId])
   useEffect(() => { layoutObjectsRef.current = layoutObjects }, [layoutObjects])
+  useEffect(() => { isSwitchingRoomRef.current = isSwitchingRoom }, [isSwitchingRoom])
 
   useEffect(() => {
     async function init() {
@@ -153,9 +158,16 @@ export default function EditorPage() {
 
   const triggerSave = useCallback(() => {
     if (!projectId) return
+    // Never start an auto-save while we're in the middle of switching rooms —
+    // layoutObjects will be mid-transition and we'd save the wrong data
+    if (isSwitchingRoomRef.current) return
+
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
 
     saveTimerRef.current = setTimeout(async () => {
+      // Double-check we're still not switching rooms when the timer fires
+      if (isSwitchingRoomRef.current) return
+
       const roomId = currentRoomIdRef.current
       if (!roomId) return
 
@@ -179,36 +191,37 @@ export default function EditorPage() {
   const handleRoomSwitch = async (roomId: string) => {
     if (roomId === currentRoomId || isSwitchingRoom) return
 
-    setIsSwitchingRoom(true)
+    // Cancel any pending auto-save immediately
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = null
+    }
 
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    // Mark as switching BEFORE touching layoutObjects so auto-save effect is blocked
+    setIsSwitchingRoom(true)
+    isSwitchingRoomRef.current = true
+
+    // Save the current room using the ref (has the latest objects)
     if (currentRoomId && projectId) {
       try {
         await saveLayoutObjects(projectId, currentRoomId, buildSavePayload(layoutObjectsRef.current))
-        console.log('Saved room', currentRoomId, 'with', layoutObjectsRef.current.length, 'objects')
-        // Debug: log a sample object to verify extra_data is populated
-        if (layoutObjectsRef.current.length > 0) {
-          const sample = layoutObjectsRef.current[0]
-          console.log('Sample object isChairFor:', sample.isChairFor, 'chairIds:', sample.chairIds)
-        }
       } catch (err) {
         console.error('Failed to save before room switch:', err)
       }
     }
 
+    // Load the new room
     try {
       const objects = await getLayoutObjects(projectId, roomId)
-      console.log('Loaded room', roomId, 'with', objects.length, 'objects')
-      // Debug: log a sample row to verify extra_data came back
-      if (objects.length > 0) {
-        console.log('Sample DB row extra_data:', objects[0].extra_data)
-      }
       setLayoutObjects(mapDbObjects(objects))
       setCurrentRoomId(roomId)
+      currentRoomIdRef.current = roomId
     } catch (err) {
       console.error('Failed to load room:', err)
     } finally {
+      // Only clear switching flag after everything is done
       setIsSwitchingRoom(false)
+      isSwitchingRoomRef.current = false
     }
   }
 

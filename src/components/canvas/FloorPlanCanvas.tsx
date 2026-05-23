@@ -41,6 +41,9 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const zoomRef = useRef(1)
   const selectionStart = useRef<{ x: number; y: number } | null>(null)
   const isSelecting = useRef(false)
+  // Track drag start positions for multi-select move
+  const multiDragStartPositions = useRef<Map<string, { x: number; y: number }>>(new Map())
+  const multiDragStartPosCm = useRef<{ x: number; y: number } | null>(null)
 
   const {
     layoutObjects,
@@ -134,7 +137,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     }
 
     if (e.evt.button === 0) {
-      // Check if click landed on a placed object (Group or child of Group)
       const target = e.target
       const isOnObject =
         target.getType() === 'Group' ||
@@ -262,6 +264,41 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
 
     const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
+      const store = useLayoutStore.getState()
+      const currentSelectedIds = store.selectedObjectIds
+
+      // Multi-select drag: move all selected objects together
+      if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
+        const currentXPx = e.target.x()
+        const currentYPx = e.target.y()
+        const currentXCm = pixelsToCm(currentXPx - roomOffsetX, BASE_SCALE)
+        const currentYCm = pixelsToCm(currentYPx - roomOffsetY, BASE_SCALE)
+
+        const startPos = multiDragStartPositions.current.get(obj.id)
+        const startCm = multiDragStartPosCm.current
+
+        if (startPos && startCm) {
+          const deltaCmX = currentXCm - startCm.x
+          const deltaCmY = currentYCm - startCm.y
+
+          const allObjects = store.layoutObjects
+          currentSelectedIds.forEach((id) => {
+            if (id === obj.id) return
+            const other = allObjects.find((o) => o.id === id)
+            const otherStart = multiDragStartPositions.current.get(id)
+            if (!other || !otherStart) return
+            store.updateObject(id, {
+              positionCm: {
+                x: otherStart.x + deltaCmX,
+                y: otherStart.y + deltaCmY,
+              },
+            })
+          })
+        }
+        return
+      }
+
+      // Single object drag (original logic below)
       if (!isChair || !parentTable || !parentTableItem) return
 
       const existingChairs = layoutObjects.filter((o) => o.isChairFor === parentTable.id)
@@ -350,6 +387,43 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     }
 
     const handleDragEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
+      const store = useLayoutStore.getState()
+      const currentSelectedIds = store.selectedObjectIds
+
+      // Multi-select drag end: snap/clamp all selected objects
+      if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
+        const currentXPx = e.target.x()
+        const currentYPx = e.target.y()
+        const currentXCm = pixelsToCm(currentXPx - roomOffsetX, BASE_SCALE)
+        const currentYCm = pixelsToCm(currentYPx - roomOffsetY, BASE_SCALE)
+
+        const startCm = multiDragStartPosCm.current
+        const startPos = multiDragStartPositions.current.get(obj.id)
+
+        if (startCm && startPos) {
+          const deltaCmX = currentXCm - startCm.x
+          const deltaCmY = currentYCm - startCm.y
+
+          const allObjects = store.layoutObjects
+          currentSelectedIds.forEach((id) => {
+            const other = allObjects.find((o) => o.id === id)
+            const otherStart = multiDragStartPositions.current.get(id)
+            if (!other || !otherStart) return
+            store.updateObject(id, {
+              positionCm: {
+                x: otherStart.x + deltaCmX,
+                y: otherStart.y + deltaCmY,
+              },
+            })
+          })
+        }
+
+        multiDragStartPositions.current.clear()
+        multiDragStartPosCm.current = null
+        return
+      }
+
+      // Single object drag end (original logic)
       let newX = e.target.x()
       let newY = e.target.y()
 
@@ -445,6 +519,26 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       }
     }
 
+    const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
+      const store = useLayoutStore.getState()
+      const currentSelectedIds = store.selectedObjectIds
+
+      // Record start positions for all selected objects when multi-drag begins
+      if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
+        multiDragStartPositions.current.clear()
+        const allObjects = store.layoutObjects
+        currentSelectedIds.forEach((id) => {
+          const o = allObjects.find((lo) => lo.id === id)
+          if (o) multiDragStartPositions.current.set(id, { x: o.positionCm.x, y: o.positionCm.y })
+        })
+        // Record dragged object's start in cm
+        multiDragStartPosCm.current = {
+          x: pixelsToCm(e.target.x() - roomOffsetX, BASE_SCALE),
+          y: pixelsToCm(e.target.y() - roomOffsetY, BASE_SCALE),
+        }
+      }
+    }
+
     const handleTransformEnd = (e: Konva.KonvaEventObject<Event>) => {
       const newRotation = e.target.rotation()
       const oldRotation = obj.rotationDeg
@@ -465,7 +559,20 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     const label = obj.tableLabel ? obj.tableLabel : catalogItem?.name ?? obj.catalogItemId
 
     return (
-      <Group key={obj.id} id={obj.id} x={x} y={y} rotation={obj.rotationDeg} draggable onDragMove={handleDragMove} onDragEnd={handleDragEnd} onClick={handleClick} onTap={handleClick} onTransformEnd={handleTransformEnd}>
+      <Group
+        key={obj.id}
+        id={obj.id}
+        x={x}
+        y={y}
+        rotation={obj.rotationDeg}
+        draggable
+        onDragStart={handleDragStart}
+        onDragMove={handleDragMove}
+        onDragEnd={handleDragEnd}
+        onClick={handleClick}
+        onTap={handleClick}
+        onTransformEnd={handleTransformEnd}
+      >
         {isRound ? (
           <Circle radius={radius} fill={fillColor} stroke={strokeColor} strokeWidth={1} />
         ) : category === 'chairs' ? (
