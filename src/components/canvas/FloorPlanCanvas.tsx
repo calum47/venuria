@@ -37,7 +37,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const isPanning = useRef(false)
   const lastPointerPos = useRef({ x: 0, y: 0 })
   const rawDragPosCm = useRef<{ x: number; y: number } | null>(null)
-  // Refs so mouse handlers always see the latest stagePos/zoom — state values are stale in handlers
   const stagePosRef = useRef({ x: 0, y: 0 })
   const zoomRef = useRef(1)
   const selectionStart = useRef<{ x: number; y: number } | null>(null)
@@ -70,7 +69,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const totalWidth = roomWidthPx + CANVAS_PADDING * 2
   const totalHeight = roomDepthPx + CANVAS_PADDING * 2
 
-  // Keep refs in sync so mouse handlers always have fresh values
   useEffect(() => { stagePosRef.current = stagePos }, [stagePos])
   useEffect(() => { zoomRef.current = zoom }, [zoom])
 
@@ -127,7 +125,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Middle or right click = pan
     if (e.evt.button === 1 || e.evt.button === 2) {
       e.evt.preventDefault()
       isPanning.current = true
@@ -136,17 +133,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       return
     }
 
-    // Left click — only start selection if NOT clicking on a placed object
     if (e.evt.button === 0) {
-      const clickedGroup = e.target.findAncestor('Group')
-      const isObject = clickedGroup !== null || e.target.getClassName() === 'Group'
-      if (isObject) return // let the object's own click handler fire
+      // Check if click landed on a placed object (Group or child of Group)
+      const target = e.target
+      const isOnObject =
+        target.getType() === 'Group' ||
+        (target.getParent() !== null && target.getParent()?.getType() === 'Group')
+
+      if (isOnObject) return
 
       const stage = stageRef.current
       if (!stage) return
       const pos = stage.getPointerPosition()
       if (!pos) return
-      // Use refs — state values are stale inside event handlers
       const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
       const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
       selectionStart.current = { x: canvasX, y: canvasY }
@@ -171,7 +170,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       if (!stage) return
       const pos = stage.getPointerPosition()
       if (!pos) return
-      // Use refs — state values are stale inside event handlers
       const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
       const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
       setSelectionRect({
@@ -195,7 +193,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       if (stage) {
         const pos = stage.getPointerPosition()
         if (pos) {
-          // Recalculate rect from refs at mouseUp time — don't rely on stale selectionRect state
           const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
           const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
           const rect = {

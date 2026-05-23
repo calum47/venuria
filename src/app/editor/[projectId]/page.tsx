@@ -106,7 +106,6 @@ export default function EditorPage() {
   } | null>(null)
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Refs so async functions always read the latest values, not stale closures
   const currentRoomIdRef = useRef<string | null>(null)
   const layoutObjectsRef = useRef<LayoutObject[]>([])
 
@@ -162,7 +161,6 @@ export default function EditorPage() {
 
       setIsSaving(true)
       try {
-        // Use ref so we always get the latest objects, not a stale closure
         await saveLayoutObjects(projectId, roomId, buildSavePayload(layoutObjectsRef.current))
         setLastSaved(new Date())
       } catch (err) {
@@ -183,12 +181,16 @@ export default function EditorPage() {
 
     setIsSwitchingRoom(true)
 
-    // Cancel any pending auto-save and flush immediately using the ref
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     if (currentRoomId && projectId) {
       try {
-        // layoutObjectsRef.current always has the latest — never stale
         await saveLayoutObjects(projectId, currentRoomId, buildSavePayload(layoutObjectsRef.current))
+        console.log('Saved room', currentRoomId, 'with', layoutObjectsRef.current.length, 'objects')
+        // Debug: log a sample object to verify extra_data is populated
+        if (layoutObjectsRef.current.length > 0) {
+          const sample = layoutObjectsRef.current[0]
+          console.log('Sample object isChairFor:', sample.isChairFor, 'chairIds:', sample.chairIds)
+        }
       } catch (err) {
         console.error('Failed to save before room switch:', err)
       }
@@ -196,6 +198,11 @@ export default function EditorPage() {
 
     try {
       const objects = await getLayoutObjects(projectId, roomId)
+      console.log('Loaded room', roomId, 'with', objects.length, 'objects')
+      // Debug: log a sample row to verify extra_data came back
+      if (objects.length > 0) {
+        console.log('Sample DB row extra_data:', objects[0].extra_data)
+      }
       setLayoutObjects(mapDbObjects(objects))
       setCurrentRoomId(roomId)
     } catch (err) {
@@ -272,7 +279,6 @@ export default function EditorPage() {
       </div>
 
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Toolbar */}
         <div className="flex-shrink-0 h-12 bg-white border-b border-gray-200
                         flex items-center px-4 gap-4">
           <button
@@ -285,7 +291,6 @@ export default function EditorPage() {
           <h1 className="text-sm font-semibold text-gray-800">Venuria</h1>
           <span className="text-gray-300">|</span>
 
-          {/* Room switcher tabs */}
           <div className="flex items-center gap-1">
             {rooms.map((room) => (
               <button
@@ -328,7 +333,6 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* Canvas + properties panel */}
         <div className="flex-1 flex min-w-0 min-h-0">
           <div className="flex-1 overflow-hidden min-w-0">
             <FloorPlanCanvas
