@@ -36,6 +36,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const containerRef = useRef<HTMLDivElement>(null)
   const isPanning = useRef(false)
   const lastPointerPos = useRef({ x: 0, y: 0 })
+  const rawDragPosCm = useRef<{ x: number; y: number } | null>(null)
 
   const {
     layoutObjects,
@@ -204,8 +205,55 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             }
             updateObject(chair.id, { positionCm: chair.positionCm })
           })
+        } else {
+          // Store raw pointer position before locking — used by dragEnd for edge reassignment
+          rawDragPosCm.current = { x: currentXCm, y: currentYCm }
+
+          // Mirror off — still lock to edge, just no mirroring of paired chair
+          const halfW = parentTableItem.width_cm / 2
+          const halfD = parentTableItem.depth_cm / 2
+          const gapCm = 5
+          const distLong = halfD + gapCm + (chairCatalogItem?.depth_cm ?? 45) / 2
+          const distShort = halfW + gapCm + (chairCatalogItem?.depth_cm ?? 45) / 2
+          const tableRot = parentTable.rotationDeg ?? 0
+          const tx = parentTable.positionCm.x
+          const ty = parentTable.positionCm.y
+          const edge = obj.chairEdge as 'top' | 'bottom' | 'left' | 'right'
+
+          // Rotate drag position into unrotated table space
+          const cos = Math.cos((-tableRot * Math.PI) / 180)
+          const sin = Math.sin((-tableRot * Math.PI) / 180)
+          const dx = currentXCm - tx
+          const dy = currentYCm - ty
+          const ux = tx + dx * cos - dy * sin
+          const uy = ty + dx * sin + dy * cos
+
+          // Lock to edge in unrotated space
+          let lockedU: { x: number; y: number }
+          if (edge === 'top') {
+            lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
+          } else if (edge === 'bottom') {
+            lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty + distLong }
+          } else if (edge === 'left') {
+            lockedU = { x: tx - distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
+          } else {
+            lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
+          }
+
+          // Rotate back to world space
+          const cos2 = Math.cos((tableRot * Math.PI) / 180)
+          const sin2 = Math.sin((tableRot * Math.PI) / 180)
+          const dx2 = lockedU.x - tx
+          const dy2 = lockedU.y - ty
+          const lockedXCm = tx + dx2 * cos2 - dy2 * sin2
+          const lockedYCm = ty + dx2 * sin2 + dy2 * cos2
+
+          e.target.position({
+            x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX,
+            y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY,
+          })
+          updateObject(obj.id, { positionCm: { x: lockedXCm, y: lockedYCm } })
         }
-        // When mirror is off, Konva handles the visual drag freely — no locking during move
       }
     }
 
@@ -255,10 +303,13 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
         } else {
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
 
-          // Always try edge reassignment first
+          // Use raw drag position for edge reassignment (not the locked position)
+          const reassignPos = rawDragPosCm.current ?? newPosCm
+          rawDragPosCm.current = null
+
           const reassigned = reassignChairEdge(
             obj,
-            newPosCm,
+            reassignPos,
             parentTable,
             parentTableItem.width_cm,
             parentTableItem.depth_cm,
@@ -277,6 +328,11 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
                 chairEdge: chair.chairEdge,
               })
             )
+            const draggedFinal = reassigned.find((c) => c.id === obj.id)!
+            e.target.position({
+              x: cmToPixels(draggedFinal.positionCm.x, BASE_SCALE) + roomOffsetX,
+              y: cmToPixels(draggedFinal.positionCm.y, BASE_SCALE) + roomOffsetY,
+            })
           } else if (isEven && mirrorOn) {
             const updated = mirrorDragRect(obj, newPosCm, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
             updated.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm }))

@@ -61,19 +61,22 @@ export async function getProject(projectId: string) {
 
 export async function saveLayoutObjects(
   projectId: string,
+  roomId: string,
   objects: {
     catalog_item_id: string
     position_x_cm: number
     position_y_cm: number
     rotation_deg: number
     quantity: number
+    extra_data: Record<string, any>
   }[]
 ) {
-  // Delete existing objects for this project first
+  // Delete existing objects for this room only (not the whole project)
   const { error: deleteError } = await supabase
     .from('layout_objects')
     .delete()
     .eq('project_id', projectId)
+    .eq('room_id', roomId)
 
   if (deleteError) throw deleteError
 
@@ -81,18 +84,30 @@ export async function saveLayoutObjects(
 
   const { data, error } = await supabase
     .from('layout_objects')
-    .insert(objects.map((obj) => ({ ...obj, project_id: projectId })))
+    .insert(objects.map((obj) => ({ ...obj, project_id: projectId, room_id: roomId, extra_data: obj.extra_data ?? {}, })))
     .select()
 
   if (error) throw error
   return data
 }
 
-export async function getLayoutObjects(projectId: string) {
+export async function getLayoutObjects(projectId: string, roomId: string) {
   const { data, error } = await supabase
     .from('layout_objects')
     .select('*')
     .eq('project_id', projectId)
+    .eq('room_id', roomId)
+
+  if (error) throw error
+  return data
+}
+
+export async function getRoomsForVenue(venueId: string) {
+  const { data, error } = await supabase
+    .from('rooms')
+    .select('*')
+    .eq('venue_id', venueId)
+    .order('created_at')
 
   if (error) throw error
   return data

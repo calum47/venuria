@@ -9,6 +9,7 @@ type LayoutStore = {
   projectId: string | null
   isSaving: boolean
   lastSaved: Date | null
+  selectedObjectIds: string[]   // the multi-select set
 
   addObject: (object: LayoutObject) => void
   addObjects: (objects: LayoutObject[]) => void
@@ -23,6 +24,11 @@ type LayoutStore = {
   setIsSaving: (saving: boolean) => void
   setLastSaved: (date: Date) => void
   rotateObjectWithChairs: (id: string, newRotationDeg: number) => void
+  setSelectedObjectIds: (ids: string[]) => void
+  addToSelection: (id: string) => void
+  moveSelection: (deltaX: number, deltaY: number) => void
+  rotateSelection: (deltaDeg: number) => void
+  deleteSelection: () => void
 }
 
 export const useLayoutStore = create<LayoutStore>((set) => ({
@@ -66,6 +72,72 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
       selectedObjectId:
         state.selectedObjectId === id ? null : state.selectedObjectId
     })),
+
+  // In the store implementation:
+  selectedObjectIds: [],
+
+  setSelectedObjectIds: (ids) => set({ selectedObjectIds: ids }),
+
+  addToSelection: (id) =>
+    set((state) => ({
+      selectedObjectIds: state.selectedObjectIds.includes(id)
+        ? state.selectedObjectIds.filter((i) => i !== id)
+        : [...state.selectedObjectIds, id],
+    })),
+
+  moveSelection: (deltaX, deltaY) =>
+    set((state) => ({
+      layoutObjects: state.layoutObjects.map((obj) =>
+        state.selectedObjectIds.includes(obj.id)
+          ? { ...obj, positionCm: { x: obj.positionCm.x + deltaX, y: obj.positionCm.y + deltaY } }
+          : obj
+      ),
+    })),
+
+  rotateSelection: (deltaDeg) =>
+    set((state) => {
+      // Rotate all selected objects around their collective center
+      const selected = state.layoutObjects.filter((o) =>
+        state.selectedObjectIds.includes(o.id)
+      )
+      if (selected.length === 0) return state
+
+      const cx = selected.reduce((s, o) => s + o.positionCm.x, 0) / selected.length
+      const cy = selected.reduce((s, o) => s + o.positionCm.y, 0) / selected.length
+      const rad = (deltaDeg * Math.PI) / 180
+
+      return {
+        layoutObjects: state.layoutObjects.map((obj) => {
+          if (!state.selectedObjectIds.includes(obj.id)) return obj
+          const dx = obj.positionCm.x - cx
+          const dy = obj.positionCm.y - cy
+          return {
+            ...obj,
+            positionCm: {
+              x: cx + dx * Math.cos(rad) - dy * Math.sin(rad),
+              y: cy + dx * Math.sin(rad) + dy * Math.cos(rad),
+            },
+            rotationDeg: obj.rotationDeg + deltaDeg,
+          }
+        }),
+      }
+    }),
+
+  deleteSelection: () =>
+    set((state) => {
+      // Also delete any chairs that belong to selected tables
+      const idsToDelete = new Set(state.selectedObjectIds)
+      state.layoutObjects.forEach((obj) => {
+        if (obj.isChairFor && idsToDelete.has(obj.isChairFor)) {
+          idsToDelete.add(obj.id)
+        }
+      })
+      return {
+        layoutObjects: state.layoutObjects.filter((o) => !idsToDelete.has(o.id)),
+        selectedObjectIds: [],
+        selectedObjectId: null,
+      }
+    }),
 
   rotateObjectWithChairs: (id, newRotationDeg) =>
     set((state) => {

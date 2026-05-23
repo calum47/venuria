@@ -283,11 +283,13 @@ export function reassignChairEdge(
   // Project drag position into unrotated table space
   const unrotatedPos = rotatePoint(newPosCm.x, newPosCm.y, tx, ty, -tableRot)
 
-  // Find closest edge based on unrotated position
-  const distToTop = Math.abs(unrotatedPos.y - (ty - distLong))
-  const distToBottom = Math.abs(unrotatedPos.y - (ty + distLong))
-  const distToLeft = Math.abs(unrotatedPos.x - (tx - distShort))
-  const distToRight = Math.abs(unrotatedPos.x - (tx + distShort))
+  const dist2D = (ax: number, ay: number, bx: number, by: number) =>
+    Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2)
+
+  const distToTop    = dist2D(unrotatedPos.x, unrotatedPos.y, unrotatedPos.x, ty - distLong)
+  const distToBottom = dist2D(unrotatedPos.x, unrotatedPos.y, unrotatedPos.x, ty + distLong)
+  const distToLeft   = dist2D(unrotatedPos.x, unrotatedPos.y, tx - distShort, unrotatedPos.y)
+  const distToRight  = dist2D(unrotatedPos.x, unrotatedPos.y, tx + distShort, unrotatedPos.y)
 
   const minDist = Math.min(distToTop, distToBottom, distToLeft, distToRight)
   const newEdge: 'top' | 'bottom' | 'left' | 'right' =
