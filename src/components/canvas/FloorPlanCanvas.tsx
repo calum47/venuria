@@ -46,12 +46,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     addObject,
     updateObject,
     selectObject,
+    selectedObjectIds,       // ADD
+    setSelectedObjectIds,    // ADD
+    deleteSelection,         // ADD
+    moveSelection,           // ADD
   } = useLayoutStore()
 
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 })
   const [zoom, setZoom] = useState(1)
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  const selectionStart = useRef<{ x: number; y: number } | null>(null)
+  const isSelecting = useRef(false)
 
   const gridSizePx = cmToPixels(gridSizeCm, BASE_SCALE)
   const roomWidthPx = cmToPixels(ROOM_WIDTH_CM, BASE_SCALE)
@@ -84,6 +91,18 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     }
   }, [selectedObjectId])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedObjectIds.length > 0) {
+          deleteSelection()
+        }
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedObjectIds, deleteSelection])
+
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
     const stage = stageRef.current
@@ -104,25 +123,85 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.evt.button !== 1 && e.evt.button !== 2) return
-    e.evt.preventDefault()
-    isPanning.current = true
-    lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
-    stageRef.current?.container().style.setProperty('cursor', 'grabbing')
+    // Right/middle click = pan
+    if (e.evt.button === 1 || e.evt.button === 2) {
+      e.evt.preventDefault()
+      isPanning.current = true
+      lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
+      stageRef.current?.container().style.setProperty('cursor', 'grabbing')
+      return
+    }
+
+    // Left click on empty stage = start selection rect
+    if (e.evt.button === 0 && e.target === e.target.getStage()) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pos = stage.getPointerPosition()
+      if (!pos) return
+      // Convert to canvas space
+      const canvasX = (pos.x - stagePos.x) / zoom
+      const canvasY = (pos.y - stagePos.y) / zoom
+      selectionStart.current = { x: canvasX, y: canvasY }
+      isSelecting.current = true
+      setSelectionRect({ x: canvasX, y: canvasY, w: 0, h: 0 })
+      setSelectedObjectIds([])
+      selectObject(null)
+    }
   }
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (!isPanning.current) return
-    const dx = e.evt.clientX - lastPointerPos.current.x
-    const dy = e.evt.clientY - lastPointerPos.current.y
-    lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
-    setStagePos((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+    // Pan
+    if (isPanning.current) {
+      const dx = e.evt.clientX - lastPointerPos.current.x
+      const dy = e.evt.clientY - lastPointerPos.current.y
+      lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
+      setStagePos((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
+      return
+    }
+
+    // Draw selection rectangle
+    if (isSelecting.current && selectionStart.current) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pos = stage.getPointerPosition()
+      if (!pos) return
+      const canvasX = (pos.x - stagePos.x) / zoom
+      const canvasY = (pos.y - stagePos.y) / zoom
+      setSelectionRect({
+        x: Math.min(selectionStart.current.x, canvasX),
+        y: Math.min(selectionStart.current.y, canvasY),
+        w: Math.abs(canvasX - selectionStart.current.x),
+        h: Math.abs(canvasY - selectionStart.current.y),
+      })
+    }
   }
 
   const handleMouseUp = () => {
-    if (!isPanning.current) return
-    isPanning.current = false
-    stageRef.current?.container().style.setProperty('cursor', 'default')
+    // End pan
+    if (isPanning.current) {
+      isPanning.current = false
+      stageRef.current?.container().style.setProperty('cursor', 'default')
+      return
+    }
+
+    // End selection — find all objects inside the rect
+    if (isSelecting.current && selectionRect && selectionRect.w > 5 && selectionRect.h > 5) {
+      const selected = layoutObjects.filter((obj) => {
+        const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
+        const oy = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
+        return (
+          ox >= selectionRect.x &&
+          ox <= selectionRect.x + selectionRect.w &&
+          oy >= selectionRect.y &&
+          oy <= selectionRect.y + selectionRect.h
+        )
+      })
+      setSelectedObjectIds(selected.map((o) => o.id))
+    }
+
+    isSelecting.current = false
+    selectionStart.current = null
+    setSelectionRect(null)
   }
 
   const clampToRoom = (x: number, y: number, halfW: number, halfH: number) => ({
@@ -143,6 +222,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     const x = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
     const y = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
     const isSelected = obj.id === selectedObjectId
+    const isMultiSelected = selectedObjectIds.includes(obj.id)
 
     const catalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
     const widthPx = cmToPixels(catalogItem?.width_cm ?? 50, BASE_SCALE)
@@ -161,8 +241,12 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       : category === 'decorations' ? '#fef3c7' : category === 'chairs' ? '#dcfce7' : '#dbeafe'
 
     const strokeColor = isSelected
-      ? category === 'decorations' ? '#d97706' : category === 'chairs' ? '#16a34a' : '#2563eb'
-      : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
+      ? '#2563eb'
+      : isMultiSelected
+        ? '#7c3aed'   // purple for multi-select
+        : category === 'chairs'
+          ? '#6b7280'
+          : '#374151'
 
     const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
       if (!isChair || !parentTable || !parentTableItem) return
@@ -473,6 +557,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={`Test Venue — Main Hall  (${ROOM_WIDTH_CM / 100}m × ${ROOM_DEPTH_CM / 100}m)`} fontSize={11} fill="#9ca3af" />
             {renderGrid()}
             {layoutObjects.map(renderObject)}
+            {selectionRect && (
+              <Rect
+                x={selectionRect.x}
+                y={selectionRect.y}
+                width={selectionRect.w}
+                height={selectionRect.h}
+                fill="rgba(99, 102, 241, 0.08)"
+                stroke="#6366f1"
+                strokeWidth={1}
+                dash={[4, 3]}
+                listening={false}
+              />
+            )}
             <Transformer ref={transformerRef} rotateEnabled={true} resizeEnabled={false} enabledAnchors={[]} />
           </Layer>
         </Stage>

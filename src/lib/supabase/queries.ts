@@ -71,7 +71,6 @@ export async function saveLayoutObjects(
     extra_data: Record<string, any>
   }[]
 ) {
-  // Delete existing objects for this room only (not the whole project)
   const { error: deleteError } = await supabase
     .from('layout_objects')
     .delete()
@@ -79,12 +78,11 @@ export async function saveLayoutObjects(
     .eq('room_id', roomId)
 
   if (deleteError) throw deleteError
-
   if (objects.length === 0) return []
 
   const { data, error } = await supabase
     .from('layout_objects')
-    .insert(objects.map((obj) => ({ ...obj, project_id: projectId, room_id: roomId, extra_data: obj.extra_data ?? {}, })))
+    .insert(objects.map((obj) => ({ ...obj, project_id: projectId, room_id: roomId })))
     .select()
 
   if (error) throw error
