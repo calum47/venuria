@@ -37,6 +37,11 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const isPanning = useRef(false)
   const lastPointerPos = useRef({ x: 0, y: 0 })
   const rawDragPosCm = useRef<{ x: number; y: number } | null>(null)
+  // Refs so mouse handlers always see the latest stagePos/zoom — state values are stale in handlers
+  const stagePosRef = useRef({ x: 0, y: 0 })
+  const zoomRef = useRef(1)
+  const selectionStart = useRef<{ x: number; y: number } | null>(null)
+  const isSelecting = useRef(false)
 
   const {
     layoutObjects,
@@ -46,10 +51,9 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     addObject,
     updateObject,
     selectObject,
-    selectedObjectIds,       // ADD
-    setSelectedObjectIds,    // ADD
-    deleteSelection,         // ADD
-    moveSelection,           // ADD
+    selectedObjectIds,
+    setSelectedObjectIds,
+    deleteSelection,
   } = useLayoutStore()
 
   const [stageSize, setStageSize] = useState({ width: 800, height: 600 })
@@ -57,8 +61,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
-  const selectionStart = useRef<{ x: number; y: number } | null>(null)
-  const isSelecting = useRef(false)
 
   const gridSizePx = cmToPixels(gridSizeCm, BASE_SCALE)
   const roomWidthPx = cmToPixels(ROOM_WIDTH_CM, BASE_SCALE)
@@ -67,6 +69,10 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   const roomOffsetY = CANVAS_PADDING
   const totalWidth = roomWidthPx + CANVAS_PADDING * 2
   const totalHeight = roomDepthPx + CANVAS_PADDING * 2
+
+  // Keep refs in sync so mouse handlers always have fresh values
+  useEffect(() => { stagePosRef.current = stagePos }, [stagePos])
+  useEffect(() => { zoomRef.current = zoom }, [zoom])
 
   useEffect(() => {
     const container = containerRef.current
@@ -93,10 +99,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedObjectIds.length > 0) {
-          deleteSelection()
-        }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0) {
+        deleteSelection()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -107,7 +111,7 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     e.evt.preventDefault()
     const stage = stageRef.current
     if (!stage) return
-    const oldZoom = zoom
+    const oldZoom = zoomRef.current
     const pointer = stage.getPointerPosition()
     if (!pointer) return
     const direction = e.evt.deltaY > 0 ? -1 : 1
@@ -116,14 +120,14 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     setZoom(newZoom)
     setStagePos({ x: pointer.x - mousePointTo.x * newZoom, y: pointer.y - mousePointTo.y * newZoom })
     onZoomChange?.(newZoom)
-  }, [zoom, onZoomChange])
+  }, [onZoomChange])
 
-  const handleZoomIn = () => { const z = Math.min(MAX_ZOOM, zoom + 0.1); setZoom(z); onZoomChange?.(z) }
-  const handleZoomOut = () => { const z = Math.max(MIN_ZOOM, zoom - 0.1); setZoom(z); onZoomChange?.(z) }
+  const handleZoomIn = () => { const z = Math.min(MAX_ZOOM, zoomRef.current + 0.1); setZoom(z); onZoomChange?.(z) }
+  const handleZoomOut = () => { const z = Math.max(MIN_ZOOM, zoomRef.current - 0.1); setZoom(z); onZoomChange?.(z) }
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Right/middle click = pan
+    // Middle or right click = pan
     if (e.evt.button === 1 || e.evt.button === 2) {
       e.evt.preventDefault()
       isPanning.current = true
@@ -132,15 +136,19 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       return
     }
 
-    // Left click on empty stage = start selection rect
-    if (e.evt.button === 0 && e.target === e.target.getStage()) {
+    // Left click — only start selection if NOT clicking on a placed object
+    if (e.evt.button === 0) {
+      const clickedGroup = e.target.findAncestor('Group')
+      const isObject = clickedGroup !== null || e.target.getClassName() === 'Group'
+      if (isObject) return // let the object's own click handler fire
+
       const stage = stageRef.current
       if (!stage) return
       const pos = stage.getPointerPosition()
       if (!pos) return
-      // Convert to canvas space
-      const canvasX = (pos.x - stagePos.x) / zoom
-      const canvasY = (pos.y - stagePos.y) / zoom
+      // Use refs — state values are stale inside event handlers
+      const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
+      const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
       selectionStart.current = { x: canvasX, y: canvasY }
       isSelecting.current = true
       setSelectionRect({ x: canvasX, y: canvasY, w: 0, h: 0 })
@@ -150,7 +158,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   }
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Pan
     if (isPanning.current) {
       const dx = e.evt.clientX - lastPointerPos.current.x
       const dy = e.evt.clientY - lastPointerPos.current.y
@@ -159,14 +166,14 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
       return
     }
 
-    // Draw selection rectangle
     if (isSelecting.current && selectionStart.current) {
       const stage = stageRef.current
       if (!stage) return
       const pos = stage.getPointerPosition()
       if (!pos) return
-      const canvasX = (pos.x - stagePos.x) / zoom
-      const canvasY = (pos.y - stagePos.y) / zoom
+      // Use refs — state values are stale inside event handlers
+      const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
+      const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
       setSelectionRect({
         x: Math.min(selectionStart.current.x, canvasX),
         y: Math.min(selectionStart.current.y, canvasY),
@@ -177,31 +184,40 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
   }
 
   const handleMouseUp = () => {
-    // End pan
     if (isPanning.current) {
       isPanning.current = false
       stageRef.current?.container().style.setProperty('cursor', 'default')
       return
     }
 
-    // End selection — find all objects inside the rect
-    if (isSelecting.current && selectionRect && selectionRect.w > 5 && selectionRect.h > 5) {
-      const selected = layoutObjects.filter((obj) => {
-        const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
-        const oy = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
-        return (
-          ox >= selectionRect.x &&
-          ox <= selectionRect.x + selectionRect.w &&
-          oy >= selectionRect.y &&
-          oy <= selectionRect.y + selectionRect.h
-        )
-      })
-      setSelectedObjectIds(selected.map((o) => o.id))
+    if (isSelecting.current && selectionStart.current) {
+      const stage = stageRef.current
+      if (stage) {
+        const pos = stage.getPointerPosition()
+        if (pos) {
+          // Recalculate rect from refs at mouseUp time — don't rely on stale selectionRect state
+          const canvasX = (pos.x - stagePosRef.current.x) / zoomRef.current
+          const canvasY = (pos.y - stagePosRef.current.y) / zoomRef.current
+          const rect = {
+            x: Math.min(selectionStart.current.x, canvasX),
+            y: Math.min(selectionStart.current.y, canvasY),
+            w: Math.abs(canvasX - selectionStart.current.x),
+            h: Math.abs(canvasY - selectionStart.current.y),
+          }
+          if (rect.w > 5 && rect.h > 5) {
+            const selected = layoutObjects.filter((obj) => {
+              const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
+              const oy = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
+              return ox >= rect.x && ox <= rect.x + rect.w && oy >= rect.y && oy <= rect.y + rect.h
+            })
+            setSelectedObjectIds(selected.map((o) => o.id))
+          }
+        }
+      }
+      isSelecting.current = false
+      selectionStart.current = null
+      setSelectionRect(null)
     }
-
-    isSelecting.current = false
-    selectionStart.current = null
-    setSelectionRect(null)
   }
 
   const clampToRoom = (x: number, y: number, halfW: number, halfH: number) => ({
@@ -238,15 +254,15 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
 
     const fillColor = isSelected
       ? category === 'decorations' ? '#fde68a' : category === 'chairs' ? '#bbf7d0' : '#bfdbfe'
-      : category === 'decorations' ? '#fef3c7' : category === 'chairs' ? '#dcfce7' : '#dbeafe'
+      : isMultiSelected
+        ? category === 'decorations' ? '#ede9fe' : category === 'chairs' ? '#e9d5ff' : '#ede9fe'
+        : category === 'decorations' ? '#fef3c7' : category === 'chairs' ? '#dcfce7' : '#dbeafe'
 
     const strokeColor = isSelected
-      ? '#2563eb'
+      ? category === 'decorations' ? '#d97706' : category === 'chairs' ? '#16a34a' : '#2563eb'
       : isMultiSelected
-        ? '#7c3aed'   // purple for multi-select
-        : category === 'chairs'
-          ? '#6b7280'
-          : '#374151'
+        ? '#7c3aed'
+        : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
 
     const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
       if (!isChair || !parentTable || !parentTableItem) return
@@ -290,10 +306,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             updateObject(chair.id, { positionCm: chair.positionCm })
           })
         } else {
-          // Store raw pointer position before locking — used by dragEnd for edge reassignment
           rawDragPosCm.current = { x: currentXCm, y: currentYCm }
 
-          // Mirror off — still lock to edge, just no mirroring of paired chair
           const halfW = parentTableItem.width_cm / 2
           const halfD = parentTableItem.depth_cm / 2
           const gapCm = 5
@@ -304,7 +318,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           const ty = parentTable.positionCm.y
           const edge = obj.chairEdge as 'top' | 'bottom' | 'left' | 'right'
 
-          // Rotate drag position into unrotated table space
           const cos = Math.cos((-tableRot * Math.PI) / 180)
           const sin = Math.sin((-tableRot * Math.PI) / 180)
           const dx = currentXCm - tx
@@ -312,7 +325,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           const ux = tx + dx * cos - dy * sin
           const uy = ty + dx * sin + dy * cos
 
-          // Lock to edge in unrotated space
           let lockedU: { x: number; y: number }
           if (edge === 'top') {
             lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
@@ -324,7 +336,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
             lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
           }
 
-          // Rotate back to world space
           const cos2 = Math.cos((tableRot * Math.PI) / 180)
           const sin2 = Math.sin((tableRot * Math.PI) / 180)
           const dx2 = lockedU.x - tx
@@ -386,8 +397,6 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
           }
         } else {
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
-
-          // Use raw drag position for edge reassignment (not the locked position)
           const reassignPos = rawDragPosCm.current ?? newPosCm
           rawDragPosCm.current = null
 
@@ -525,8 +534,8 @@ export default function FloorPlanCanvas({ onObjectSelect, onZoomChange, catalogI
     const stage = stageRef.current
     if (!stage) return
     const stageBox = stage.container().getBoundingClientRect()
-    const x = (e.clientX - stageBox.left - stagePos.x) / zoom
-    const y = (e.clientY - stageBox.top - stagePos.y) / zoom
+    const x = (e.clientX - stageBox.left - stagePosRef.current.x) / zoomRef.current
+    const y = (e.clientY - stageBox.top - stagePosRef.current.y) / zoomRef.current
     if (x < roomOffsetX || x > roomOffsetX + roomWidthPx || y < roomOffsetY || y > roomOffsetY + roomDepthPx) return
     const snappedX = snapEnabled ? snapToGrid(x - roomOffsetX, gridSizePx) + roomOffsetX : x
     const snappedY = snapEnabled ? snapToGrid(y - roomOffsetY, gridSizePx) + roomOffsetY : y

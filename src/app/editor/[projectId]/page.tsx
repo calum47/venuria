@@ -42,6 +42,39 @@ type DbRoom = {
   bounding_box_depth_cm: number
 }
 
+function buildSavePayload(objects: LayoutObject[]) {
+  return objects.map((obj) => ({
+    catalog_item_id: obj.catalogItemId,
+    position_x_cm: Math.round(obj.positionCm.x),
+    position_y_cm: Math.round(obj.positionCm.y),
+    rotation_deg: obj.rotationDeg,
+    quantity: obj.quantity,
+    extra_data: {
+      isChairFor:         obj.isChairFor,
+      chairIds:           obj.chairIds,
+      chairCount:         obj.chairCount,
+      chairCatalogItemId: obj.chairCatalogItemId,
+      chairEdge:          obj.chairEdge,
+      chairSides:         obj.chairSides,
+      chairArrangement:   obj.chairArrangement,
+      tableLabel:         obj.tableLabel,
+      tableNote:          obj.tableNote,
+      mirrorEnabled:      obj.mirrorEnabled,
+    },
+  }))
+}
+
+function mapDbObjects(objects: any[]): LayoutObject[] {
+  return objects.map((obj) => ({
+    id: obj.id,
+    catalogItemId: obj.catalog_item_id,
+    positionCm: { x: obj.position_x_cm, y: obj.position_y_cm },
+    rotationDeg: obj.rotation_deg,
+    quantity: obj.quantity,
+    ...(obj.extra_data ?? {}),
+  }))
+}
+
 export default function EditorPage() {
   const params = useParams()
   const router = useRouter()
@@ -73,12 +106,12 @@ export default function EditorPage() {
   } | null>(null)
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Refs so async functions always read the latest values, not stale closures
   const currentRoomIdRef = useRef<string | null>(null)
+  const layoutObjectsRef = useRef<LayoutObject[]>([])
 
-  // Keep ref in sync so triggerSave always has the latest roomId
-  useEffect(() => {
-    currentRoomIdRef.current = currentRoomId
-  }, [currentRoomId])
+  useEffect(() => { currentRoomIdRef.current = currentRoomId }, [currentRoomId])
+  useEffect(() => { layoutObjectsRef.current = layoutObjects }, [layoutObjects])
 
   useEffect(() => {
     async function init() {
@@ -100,22 +133,13 @@ export default function EditorPage() {
         setCatalogItems(items)
         setRooms(venueRooms)
 
-        // Default to first room
         const firstRoom = venueRooms[0]
         if (firstRoom) {
           setCurrentRoomId(firstRoom.id)
           currentRoomIdRef.current = firstRoom.id
 
           const objects = await getLayoutObjects(projectId, firstRoom.id)
-          const mapped: LayoutObject[] = objects.map((obj: any) => ({
-            id: obj.id,
-            catalogItemId: obj.catalog_item_id,
-            positionCm: { x: obj.position_x_cm, y: obj.position_y_cm },
-            rotationDeg: obj.rotation_deg,
-            quantity: obj.quantity,
-            ...(obj.extra_data ?? {}),
-          }))
-          setLayoutObjects(mapped)
+          setLayoutObjects(mapDbObjects(objects))
         }
       } catch (err) {
         console.error('Failed to initialise editor:', err)
@@ -138,29 +162,8 @@ export default function EditorPage() {
 
       setIsSaving(true)
       try {
-        await saveLayoutObjects(
-          projectId,
-          roomId,
-          layoutObjects.map((obj) => ({
-            catalog_item_id: obj.catalogItemId,
-            position_x_cm: Math.round(obj.positionCm.x),
-            position_y_cm: Math.round(obj.positionCm.y),
-            rotation_deg: obj.rotationDeg,
-            quantity: obj.quantity,
-            extra_data: {
-              isChairFor:       obj.isChairFor,
-              chairIds:         obj.chairIds,
-              chairCount:       obj.chairCount,
-              chairCatalogItemId: obj.chairCatalogItemId,
-              chairEdge:        obj.chairEdge,
-              chairSides:       obj.chairSides,
-              chairArrangement: obj.chairArrangement,
-              tableLabel:       obj.tableLabel,
-              tableNote:        obj.tableNote,
-              mirrorEnabled:    obj.mirrorEnabled,
-            },
-          }))
-        )
+        // Use ref so we always get the latest objects, not a stale closure
+        await saveLayoutObjects(projectId, roomId, buildSavePayload(layoutObjectsRef.current))
         setLastSaved(new Date())
       } catch (err) {
         console.error('Failed to save:', err)
@@ -168,63 +171,32 @@ export default function EditorPage() {
         setIsSaving(false)
       }
     }, 2000)
-  }, [projectId, layoutObjects])
+  }, [projectId])
 
   useEffect(() => {
     if (!projectId || isLoading) return
     triggerSave()
   }, [layoutObjects, projectId, isLoading])
 
-  // Switch rooms: save current, load new
   const handleRoomSwitch = async (roomId: string) => {
     if (roomId === currentRoomId || isSwitchingRoom) return
 
     setIsSwitchingRoom(true)
 
-    // Cancel pending auto-save and save immediately
+    // Cancel any pending auto-save and flush immediately using the ref
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     if (currentRoomId && projectId) {
       try {
-        await saveLayoutObjects(
-          projectId,
-          currentRoomId,
-          layoutObjects.map((obj) => ({
-            catalog_item_id: obj.catalogItemId,
-            position_x_cm: Math.round(obj.positionCm.x),
-            position_y_cm: Math.round(obj.positionCm.y),
-            rotation_deg: obj.rotationDeg,
-            quantity: obj.quantity,
-            extra_data: {
-              isChairFor:       obj.isChairFor,
-              chairIds:         obj.chairIds,
-              chairCount:       obj.chairCount,
-              chairCatalogItemId: obj.chairCatalogItemId,
-              chairEdge:        obj.chairEdge,
-              chairSides:       obj.chairSides,
-              chairArrangement: obj.chairArrangement,
-              tableLabel:       obj.tableLabel,
-              tableNote:        obj.tableNote,
-              mirrorEnabled:    obj.mirrorEnabled,
-            },
-          }))
-        )
+        // layoutObjectsRef.current always has the latest — never stale
+        await saveLayoutObjects(projectId, currentRoomId, buildSavePayload(layoutObjectsRef.current))
       } catch (err) {
         console.error('Failed to save before room switch:', err)
       }
     }
 
-    // Load the new room's objects
     try {
       const objects = await getLayoutObjects(projectId, roomId)
-      const mapped: LayoutObject[] = objects.map((obj: any) => ({
-        id: obj.id,
-        catalogItemId: obj.catalog_item_id,
-        positionCm: { x: obj.position_x_cm, y: obj.position_y_cm },
-        rotationDeg: obj.rotation_deg,
-        quantity: obj.quantity,
-        ...(obj.extra_data ?? {}),
-      }))
-      setLayoutObjects(mapped)
+      setLayoutObjects(mapDbObjects(objects))
       setCurrentRoomId(roomId)
     } catch (err) {
       console.error('Failed to load room:', err)
@@ -284,8 +256,6 @@ export default function EditorPage() {
   const liveObject = selectedObjectId
     ? layoutObjects.find((o) => o.id === selectedObjectId) ?? null
     : null
-
-  const currentRoom = rooms.find((r) => r.id === currentRoomId)
 
   if (isLoading) {
     return (
