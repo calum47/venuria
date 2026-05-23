@@ -11,7 +11,7 @@ type Props = {
 }
 
 export default function GuestPanel({ projectId, onDragStart }: Props) {
-  const { guests, seatAssignments, addGuest: addGuestLocal, removeGuest, getAssignmentForGuest } = useGuestStore()
+  const { guests, seatAssignments, addGuest: addGuestLocal, removeGuest } = useGuestStore()
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
   const [isImporting, setIsImporting] = useState(false)
@@ -124,7 +124,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-800">Guest List</h2>
-          <span className="text-xs text-gray-400">{assignedCount}/{totalCount} seated</span>
+          <span className="text-xs text-gray-400">{guests.filter(g => seatAssignments.some(a => a.guestId === g.id)).length}/{totalCount} guests seated</span>
         </div>
 
         {/* Search */}
@@ -145,7 +145,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
           </p>
         )}
         {filtered.map((guest) => {
-          const assignment = getAssignmentForGuest(guest.id)
+          const assignmentCount = seatAssignments.filter((a) => a.guestId === guest.id).length
           return (
             <div
               key={guest.id}
@@ -156,16 +156,17 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
               }}
               className="flex items-center gap-2 px-4 py-2.5 hover:bg-gray-50 cursor-grab active:cursor-grabbing group border-b border-gray-50"
             >
-              {/* Colour dot — green if seated, gray if not */}
-              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${assignment ? 'bg-green-400' : 'bg-gray-300'}`} />
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${assignmentCount > 0 ? 'bg-green-400' : 'bg-gray-300'}`} />
 
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-800 truncate">{guest.name}</p>
                 {guest.notes && (
                   <p className="text-[10px] text-gray-400 truncate">{guest.notes}</p>
                 )}
-                {assignment && (
-                  <p className="text-[10px] text-green-500">Seated</p>
+                {assignmentCount > 0 && (
+                  <p className="text-[10px] text-green-500">
+                    Seated in {assignmentCount} room{assignmentCount > 1 ? 's' : ''}
+                  </p>
                 )}
               </div>
 

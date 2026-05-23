@@ -134,24 +134,20 @@ export async function getSeatAssignments(projectId: string) {
 }
 
 export async function assignSeat(projectId: string, guestId: string, layoutObjectId: string) {
-  // Upsert by guest_id — removes old assignment for this guest automatically via unique constraint
-  const { data, error } = await supabase
-    .from('seat_assignments')
-    .upsert(
-      { project_id: projectId, guest_id: guestId, layout_object_id: layoutObjectId },
-      { onConflict: 'guest_id' }
-    )
-    .select()
-    .single()
-  if (error) throw error
-
-  // Also clear any other guest who was in this chair
+  // Clear whoever was previously in this chair
   await supabase
     .from('seat_assignments')
     .delete()
     .eq('layout_object_id', layoutObjectId)
-    .neq('guest_id', guestId)
 
+  // Insert the new assignment
+  const { data, error } = await supabase
+    .from('seat_assignments')
+    .insert({ project_id: projectId, guest_id: guestId, layout_object_id: layoutObjectId })
+    .select()
+    .single()
+
+  if (error) throw error
   return data
 }
 

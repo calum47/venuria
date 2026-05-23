@@ -60,13 +60,13 @@ export const useGuestStore = create<GuestStore>((set, get) => ({
   setGuestMode: (on) => set({ isGuestMode: on }),
 
   assignGuest: (assignment) =>
-    set((state) => {
-      // Remove any existing assignment for this guest or this chair
-      const filtered = state.seatAssignments.filter(
-        (a) => a.guestId !== assignment.guestId && a.layoutObjectId !== assignment.layoutObjectId
-      )
-      return { seatAssignments: [...filtered, assignment] }
-    }),
+    set((state) => ({
+      seatAssignments: [
+        // Only remove whoever was previously in THIS chair, not all assignments for this guest
+        ...state.seatAssignments.filter((a) => a.layoutObjectId !== assignment.layoutObjectId),
+        assignment,
+      ],
+    })),
 
   unassignGuest: (guestId) =>
     set((state) => ({
