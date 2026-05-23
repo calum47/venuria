@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+
 import FloorPlanCanvas from '@/components/canvas/FloorPlanCanvas'
 import CatalogSidebar from '@/components/canvas/CatalogSidebar'
 import PropertiesPanel from '@/components/canvas/PropertiesPanel'
@@ -9,11 +10,12 @@ import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
 import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
+
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { LayoutObject } from '@/types'
+import { DbCatalogItem, DbRoom } from '@/types/db'
 import { generateChairObjects, getTableChairConfig } from '@/lib/utils/seating'
-
 import {
   getCatalogItems,
   getProject,
@@ -25,67 +27,14 @@ import {
   assignSeat,
 } from '@/lib/supabase/queries'
 
-type DbCatalogItem = {
-  id: string
-  name: string
-  category: string
-  owner_type: string
-  width_cm: number
-  depth_cm: number
-  height_cm: number
-  price_per_unit: number | null
-  image_url: string | null
-  model_url: string | null
-  venue_id: string | null
-  rental_company_id: string | null
-}
-
-type DbRoom = {
-  id: string
-  name: string
-  type: 'indoor' | 'outdoor'
-  bounding_box_width_cm: number
-  bounding_box_depth_cm: number
-}
-
-function buildSavePayload(objects: LayoutObject[]) {
-  return objects.map((obj) => ({
-    id: obj.id,
-    catalog_item_id: obj.catalogItemId,
-    position_x_cm: Math.round(obj.positionCm.x),
-    position_y_cm: Math.round(obj.positionCm.y),
-    rotation_deg: obj.rotationDeg,
-    quantity: obj.quantity,
-    extra_data: {
-      isChairFor: obj.isChairFor,
-      chairIds: obj.chairIds,
-      chairCount: obj.chairCount,
-      chairCatalogItemId: obj.chairCatalogItemId,
-      chairEdge: obj.chairEdge,
-      chairSides: obj.chairSides,
-      chairArrangement: obj.chairArrangement,
-      tableLabel: obj.tableLabel,
-      tableNote: obj.tableNote,
-      mirrorEnabled: obj.mirrorEnabled,
-    },
-  }))
-}
-
-function mapDbObjects(objects: any[]): LayoutObject[] {
-  return objects.map((obj) => ({
-    id: obj.id,
-    catalogItemId: obj.catalog_item_id,
-    positionCm: { x: obj.position_x_cm, y: obj.position_y_cm },
-    rotationDeg: obj.rotation_deg,
-    quantity: obj.quantity,
-    ...(obj.extra_data ?? {}),
-  }))
-}
+// ─── Editor page ──────────────────────────────────────────────────────────────
 
 export default function EditorPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
+
+  // ── Store slices ────────────────────────────────────────────────────────────
 
   const {
     selectedObjectId,
@@ -106,41 +55,52 @@ export default function EditorPage() {
     assignGuest,
   } = useGuestStore()
 
+  // ── Local state ─────────────────────────────────────────────────────────────
+
   const [catalogItems, setCatalogItems] = useState<DbCatalogItem[]>([])
-  const [zoom, setZoom] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
-  const [show3D, setShow3D] = useState(false)
-  const [venueId, setVenueId] = useState<string | null>(null)
   const [rooms, setRooms] = useState<DbRoom[]>([])
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSwitchingRoom, setIsSwitchingRoom] = useState(false)
+  const [show3D, setShow3D] = useState(false)
+
+  // Table dropped — waiting for the user to choose chair count
   const [pendingTableDrop, setPendingTableDrop] = useState<{
     tableObject: LayoutObject
     tableItem: DbCatalogItem
     maxChairs: number
   } | null>(null)
-  // Chair clicked in guest mode — shows assignment popover
+
+  // Chair clicked in guest mode — triggers assignment popover
   const [assigningChairId, setAssigningChairId] = useState<string | null>(null)
-  // Guest being dragged from panel
+
+  // Guest being dragged from the guest panel onto the canvas
   const [draggingGuestId, setDraggingGuestId] = useState<string | null>(null)
+
+  // ── Refs (keep stable values accessible inside async callbacks) ─────────────
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentRoomIdRef = useRef<string | null>(null)
   const layoutObjectsRef = useRef<LayoutObject[]>([])
   const isSwitchingRoomRef = useRef(false)
 
+  // Keep refs in sync with state
   useEffect(() => { currentRoomIdRef.current = currentRoomId }, [currentRoomId])
   useEffect(() => { layoutObjectsRef.current = layoutObjects }, [layoutObjects])
   useEffect(() => { isSwitchingRoomRef.current = isSwitchingRoom }, [isSwitchingRoom])
 
+  // ── Initialise project ──────────────────────────────────────────────────────
+
   useEffect(() => {
+    if (!projectId) return
+
     async function init() {
       try {
         const project = await getProject(projectId)
         if (!project) { router.push('/'); return }
 
         setProjectId(projectId)
-        setVenueId(project.venue_id)
 
         const [items, venueRooms, guestList, assignments] = await Promise.all([
           getCatalogItems(project.venue_id),
@@ -152,21 +112,16 @@ export default function EditorPage() {
         setCatalogItems(items)
         setRooms(venueRooms)
         setGuests(guestList)
-        setSeatAssignments(
-          assignments.map((a: any) => ({
-            id: a.id,
-            projectId: a.project_id,
-            guestId: a.guest_id,
-            layoutObjectId: a.layout_object_id,
-          }))
-        )
+        // getSeatAssignments already returns the correct shape including roomId — no remapping needed
+        setSeatAssignments(assignments)
 
+        // Load the first room's layout
         const firstRoom = venueRooms[0]
         if (firstRoom) {
           setCurrentRoomId(firstRoom.id)
           currentRoomIdRef.current = firstRoom.id
           const objects = await getLayoutObjects(projectId, firstRoom.id)
-          setLayoutObjects(mapDbObjects(objects))
+          setLayoutObjects(objects)
         }
       } catch (err) {
         console.error('Failed to initialise editor:', err)
@@ -175,22 +130,27 @@ export default function EditorPage() {
         setIsLoading(false)
       }
     }
-    if (projectId) init()
+
+    init()
   }, [projectId])
+
+  // ── Auto-save ───────────────────────────────────────────────────────────────
 
   const triggerSave = useCallback(() => {
     if (!projectId || isSwitchingRoomRef.current) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+
     saveTimerRef.current = setTimeout(async () => {
       if (isSwitchingRoomRef.current) return
       const roomId = currentRoomIdRef.current
       if (!roomId) return
+
       setIsSaving(true)
       try {
-        await saveLayoutObjects(projectId, roomId, buildSavePayload(layoutObjectsRef.current))
+        await saveLayoutObjects(projectId, roomId, layoutObjectsRef.current)
         setLastSaved(new Date())
       } catch (err) {
-        console.error('Failed to save:', err)
+        console.error('Auto-save failed:', err)
       } finally {
         setIsSaving(false)
       }
@@ -202,18 +162,27 @@ export default function EditorPage() {
     triggerSave()
   }, [layoutObjects, projectId, isLoading])
 
+  // ── Room switching ──────────────────────────────────────────────────────────
+
   const handleRoomSwitch = async (roomId: string) => {
     if (roomId === currentRoomId || isSwitchingRoom) return
+
     if (saveTimerRef.current) { clearTimeout(saveTimerRef.current); saveTimerRef.current = null }
+
     setIsSwitchingRoom(true)
     isSwitchingRoomRef.current = true
+
     if (currentRoomId && projectId) {
-      try { await saveLayoutObjects(projectId, currentRoomId, buildSavePayload(layoutObjectsRef.current)) }
-      catch (err) { console.error('Failed to save before room switch:', err) }
+      try {
+        await saveLayoutObjects(projectId, currentRoomId, layoutObjectsRef.current)
+      } catch (err) {
+        console.error('Failed to save before room switch:', err)
+      }
     }
+
     try {
       const objects = await getLayoutObjects(projectId, roomId)
-      setLayoutObjects(mapDbObjects(objects))
+      setLayoutObjects(objects)
       setCurrentRoomId(roomId)
       currentRoomIdRef.current = roomId
     } catch (err) {
@@ -224,38 +193,49 @@ export default function EditorPage() {
     }
   }
 
-  // Called when a guest is dropped onto a chair from the guest panel
-  const handleGuestDropOnChair = useCallback(async (chairId: string, guestId: string) => {
-    try {
-      const assignment = await assignSeat(projectId, guestId, chairId)
-      assignGuest({
-        id: assignment.id,
-        projectId,
-        guestId,
-        layoutObjectId: chairId,
-      })
-    } catch (err) {
-      console.error('Failed to assign guest to chair:', err)
-    }
-  }, [projectId, assignGuest])
+  // ── Table drop & chair count ────────────────────────────────────────────────
 
   const handleTableDropped = (tableObject: LayoutObject, tableItem: DbCatalogItem) => {
     const { acceptsChairs, maxChairs } = getTableChairConfig(tableItem.name)
-    if (!acceptsChairs) { useLayoutStore.getState().addObject(tableObject); return }
+
+    if (!acceptsChairs) {
+      useLayoutStore.getState().addObject(tableObject)
+      return
+    }
+
     setPendingTableDrop({ tableObject, tableItem, maxChairs })
   }
 
   const handleChairCountConfirm = (chairCount: number) => {
     if (!pendingTableDrop) return
     const { tableObject, tableItem } = pendingTableDrop
+
     const chairItem = catalogItems.find((i) => i.category === 'chairs')
+      ?? catalogItems.find((i) => i.name.toLowerCase().includes('chair'))
+
     const isRound = tableItem.name.toLowerCase().includes('round')
+
     useLayoutStore.getState().addObject(tableObject)
+
     if (chairItem) {
-      const chairs = generateChairObjects(tableObject, tableItem.width_cm, tableItem.depth_cm, isRound, chairCount, chairItem.id, chairItem.width_cm, chairItem.depth_cm)
-      useLayoutStore.getState().updateObject(tableObject.id, { chairCount, chairCatalogItemId: chairItem.id, chairIds: chairs.map((c) => c.id) })
+      const chairs = generateChairObjects(
+        tableObject,
+        tableItem.width_cm,
+        tableItem.depth_cm,
+        isRound,
+        chairCount,
+        chairItem.id,
+        chairItem.width_cm,
+        chairItem.depth_cm,
+      )
+      useLayoutStore.getState().updateObject(tableObject.id, {
+        chairCount,
+        chairCatalogItemId: chairItem.id,
+        chairIds: chairs.map((c) => c.id),
+      })
       useLayoutStore.getState().addObjects(chairs)
     }
+
     setPendingTableDrop(null)
   }
 
@@ -265,14 +245,44 @@ export default function EditorPage() {
     setPendingTableDrop(null)
   }
 
+  // ── Guest seat assignment ───────────────────────────────────────────────────
+
+  // Called when a guest is dragged from the panel and dropped onto a chair
+  const handleGuestDropOnChair = useCallback(async (chairId: string, guestId: string) => {
+    const roomId = currentRoomIdRef.current
+    if (!roomId) return
+    try {
+      const assignment = await assignSeat(projectId, guestId, chairId, roomId)
+      assignGuest({
+        id: assignment.id,
+        projectId,
+        roomId,
+        guestId,
+        layoutObjectId: chairId,
+      })
+    } catch (err) {
+      console.error('Failed to assign guest to chair:', err)
+    }
+  }, [projectId, assignGuest])
+
+  // ── Derived values ──────────────────────────────────────────────────────────
+
   const liveObject = selectedObjectId
     ? layoutObjects.find((o) => o.id === selectedObjectId) ?? null
     : null
 
-  // Find the chair being assigned to show its label in the popover
   const assigningChair = assigningChairId
     ? layoutObjects.find((o) => o.id === assigningChairId)
     : null
+
+  const assigningChairLabel = assigningChair?.tableLabel
+    ?? String(
+      layoutObjects
+        .filter((o) => o.isChairFor === assigningChair?.isChairFor)
+        .findIndex((o) => o.id === assigningChairId) + 1
+    )
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -284,7 +294,8 @@ export default function EditorPage() {
 
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-gray-100">
-      {/* Left sidebar — catalog or hidden in guest mode */}
+
+      {/* Left sidebar — item catalog (hidden in guest mode) */}
       {!isGuestMode && (
         <div className="flex-shrink-0">
           <CatalogSidebar catalogItems={catalogItems} />
@@ -292,9 +303,13 @@ export default function EditorPage() {
       )}
 
       <div className="flex-1 flex flex-col min-w-0">
+
         {/* Toolbar */}
         <div className="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4">
-          <button onClick={() => router.push('/')} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+          <button
+            onClick={() => router.push('/')}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
             ← Home
           </button>
           <span className="text-gray-300">|</span>
@@ -308,9 +323,11 @@ export default function EditorPage() {
                 key={room.id}
                 onClick={() => handleRoomSwitch(room.id)}
                 disabled={isSwitchingRoom}
-                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                  room.id === currentRoomId ? 'bg-gray-900 text-white' : 'text-gray-500 hover:bg-gray-100'
-                } disabled:opacity-50`}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${
+                  room.id === currentRoomId
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`}
               >
                 {room.type === 'outdoor' ? '🌿 ' : '🏛 '}{room.name}
               </button>
@@ -331,8 +348,11 @@ export default function EditorPage() {
             👥 {isGuestMode ? 'Guest Mode ON' : 'Guest Mode'}
           </button>
 
+          {/* Zoom hint / level */}
           <span className="text-xs text-gray-400 ml-auto">
-            {zoom !== 1 ? `${Math.round(zoom * 100)}%` : 'Scroll to zoom · Right click drag to pan'}
+            {zoom !== 1
+              ? `${Math.round(zoom * 100)}%`
+              : 'Scroll to zoom · Right-click drag to pan'}
           </span>
 
           <button
@@ -342,47 +362,55 @@ export default function EditorPage() {
             View in 3D
           </button>
 
+          {/* Save status */}
           <div className="text-xs text-gray-400">
-            {isSwitchingRoom && 'Switching room...'}
-            {!isSwitchingRoom && isSaving && 'Saving...'}
-            {!isSwitchingRoom && !isSaving && lastSaved && `Saved at ${lastSaved.toLocaleTimeString()}`}
+            {isSwitchingRoom && 'Switching room…'}
+            {!isSwitchingRoom && isSaving && 'Saving…'}
+            {!isSwitchingRoom && !isSaving && lastSaved && `Saved ${lastSaved.toLocaleTimeString()}`}
           </div>
         </div>
 
-        {/* Canvas + panels */}
+        {/* Canvas + side panels */}
         <div className="flex-1 flex min-w-0 min-h-0">
           <div className="flex-1 overflow-hidden min-w-0">
             <FloorPlanCanvas
-              onObjectSelect={() => {}}
-              onZoomChange={setZoom}
               catalogItems={catalogItems}
+              currentRoom={rooms.find((r) => r.id === currentRoomId) ?? null}
+              onZoomChange={setZoom}
               onTableDropped={handleTableDropped}
               isGuestMode={isGuestMode}
-              onChairClickInGuestMode={(chairId) => setAssigningChairId(chairId)}
+              onChairClickInGuestMode={setAssigningChairId}
               onGuestDropOnChair={handleGuestDropOnChair}
               draggingGuestId={draggingGuestId}
             />
           </div>
 
-          {/* Properties panel (only outside guest mode) */}
+          {/* Properties panel — only when an object is selected outside guest mode */}
           {!isGuestMode && liveObject && (
             <div className="flex-shrink-0">
               <PropertiesPanel object={liveObject} catalogItems={catalogItems} />
             </div>
           )}
 
-          {/* Guest panel (only in guest mode) */}
+          {/* Guest panel — only in guest mode */}
           {isGuestMode && (
             <GuestPanel
               projectId={projectId}
-              onDragStart={(guestId) => setDraggingGuestId(guestId)}
+              onDragStart={setDraggingGuestId}
             />
           )}
         </div>
       </div>
 
-      {show3D && <ThreeSixtyViewer imageUrl="/assets/360-placeholder.jpg" onClose={() => setShow3D(false)} />}
+      {/* 3D viewer overlay */}
+      {show3D && (
+        <ThreeSixtyViewer
+          imageUrl="/assets/360-placeholder.jpg"
+          onClose={() => setShow3D(false)}
+        />
+      )}
 
+      {/* Chair count popover — shown after a table is dropped */}
       {pendingTableDrop && (
         <ChairCountPopover
           tableId={pendingTableDrop.tableObject.id}
@@ -393,12 +421,13 @@ export default function EditorPage() {
         />
       )}
 
-      {/* Chair assignment popover */}
+      {/* Chair assignment popover — shown when a chair is clicked in guest mode */}
       {assigningChairId && (
         <ChairAssignmentPopover
           chairId={assigningChairId}
           projectId={projectId}
-          chairLabel={assigningChair?.tableLabel ?? String(layoutObjects.filter((o) => o.isChairFor === assigningChair?.isChairFor).findIndex((o) => o.id === assigningChairId) + 1)}
+          roomId={currentRoomId ?? ''}
+          chairLabel={assigningChairLabel}
           onClose={() => setAssigningChairId(null)}
         />
       )}

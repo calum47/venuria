@@ -6,30 +6,22 @@ import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
 import { LayoutObject } from '@/types'
+import { DbCatalogItem, DbRoom } from '@/types/db'
 import Konva from 'konva'
 import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable, reassignChairEdge } from '@/lib/utils/seating'
 
 const BASE_SCALE = 2
-const ROOM_WIDTH_CM = 1500
-const ROOM_DEPTH_CM = 1000
 const CANVAS_PADDING = 60
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3
 
-type DbCatalogItem = {
-  id: string
-  name: string
-  width_cm: number
-  depth_cm: number
-  category: string
-}
-
 type Props = {
-  onObjectSelect?: (object: LayoutObject | null) => void
-  onZoomChange?: (zoom: number) => void
   catalogItems: DbCatalogItem[]
+  /** Active room — supplies real bounding box dimensions from the DB. */
+  currentRoom: DbRoom | null
+  onZoomChange?: (zoom: number) => void
   onTableDropped?: (tableObject: LayoutObject, tableItem: DbCatalogItem) => void
-  // Guest mode props
+  // Guest mode
   isGuestMode?: boolean
   onChairClickInGuestMode?: (chairId: string) => void
   onGuestDropOnChair?: (chairId: string, guestId: string) => void
@@ -37,9 +29,9 @@ type Props = {
 }
 
 export default function FloorPlanCanvas({
-  onObjectSelect,
-  onZoomChange,
   catalogItems,
+  currentRoom,
+  onZoomChange,
   onTableDropped,
   isGuestMode = false,
   onChairClickInGuestMode,
@@ -80,9 +72,14 @@ export default function FloorPlanCanvas({
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
 
+  // Room dimensions come from the DB via props; fall back to sensible defaults while loading
+  const roomWidthCm = currentRoom?.bounding_box_width_cm ?? 1500
+  const roomDepthCm = currentRoom?.bounding_box_depth_cm ?? 1000
+  const roomName = currentRoom ? `${currentRoom.name}  (${roomWidthCm / 100}m × ${roomDepthCm / 100}m)` : 'Loading…'
+
   const gridSizePx = cmToPixels(gridSizeCm, BASE_SCALE)
-  const roomWidthPx = cmToPixels(ROOM_WIDTH_CM, BASE_SCALE)
-  const roomDepthPx = cmToPixels(ROOM_DEPTH_CM, BASE_SCALE)
+  const roomWidthPx = cmToPixels(roomWidthCm, BASE_SCALE)
+  const roomDepthPx = cmToPixels(roomDepthCm, BASE_SCALE)
   const roomOffsetX = CANVAS_PADDING
   const roomOffsetY = CANVAS_PADDING
   const totalWidth = roomWidthPx + CANVAS_PADDING * 2
@@ -139,8 +136,8 @@ export default function FloorPlanCanvas({
     onZoomChange?.(newZoom)
   }, [onZoomChange])
 
-  const handleZoomIn = () => { const z = Math.min(MAX_ZOOM, zoomRef.current + 0.1); setZoom(z); onZoomChange?.(z) }
-  const handleZoomOut = () => { const z = Math.max(MIN_ZOOM, zoomRef.current - 0.1); setZoom(z); onZoomChange?.(z) }
+  const handleZoomIn    = () => { const z = Math.min(MAX_ZOOM, zoomRef.current + 0.1); setZoom(z); onZoomChange?.(z) }
+  const handleZoomOut   = () => { const z = Math.max(MIN_ZOOM, zoomRef.current - 0.1); setZoom(z); onZoomChange?.(z) }
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -260,16 +257,13 @@ export default function FloorPlanCanvas({
     const parentIsRound = parentTableItem?.name?.toLowerCase().includes('round') ?? false
     const isChair = !!obj.isChairFor
 
-    // In guest mode, show assigned guest name on chair
     const assignedGuest = isChair ? getGuestForChair(obj.id) : null
-
-    // Chair index for seat number label
     const chairIndex = isChair
       ? layoutObjects.filter((o) => o.isChairFor === obj.isChairFor).findIndex((o) => o.id === obj.id) + 1
       : null
 
     const fillColor = isGuestMode && isChair
-      ? assignedGuest ? '#fef3c7' : '#f9fafb'  // amber if assigned, light gray if empty
+      ? assignedGuest ? '#fef3c7' : '#f9fafb'
       : isSelected
         ? category === 'decorations' ? '#fde68a' : category === 'chairs' ? '#bbf7d0' : '#bfdbfe'
         : isMultiSelected
@@ -285,7 +279,7 @@ export default function FloorPlanCanvas({
           : category === 'decorations' ? '#fcd34d' : category === 'chairs' ? '#86efac' : '#93c5fd'
 
     const handleDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (isGuestMode) return  // No dragging objects in guest mode
+      if (isGuestMode) return
       const store = useLayoutStore.getState()
       const currentSelectedIds = store.selectedObjectIds
 
@@ -363,10 +357,10 @@ export default function FloorPlanCanvas({
           const ux = tx + dx * cos - dy * sin
           const uy = ty + dx * sin + dy * cos
           let lockedU: { x: number; y: number }
-          if (edge === 'top') lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
+          if (edge === 'top')         lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty - distLong }
           else if (edge === 'bottom') lockedU = { x: Math.max(tx - halfW, Math.min(tx + halfW, ux)), y: ty + distLong }
-          else if (edge === 'left') lockedU = { x: tx - distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
-          else lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
+          else if (edge === 'left')   lockedU = { x: tx - distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
+          else                        lockedU = { x: tx + distShort, y: Math.max(ty - halfD, Math.min(ty + halfD, uy)) }
           const cos2 = Math.cos((tableRot * Math.PI) / 180)
           const sin2 = Math.sin((tableRot * Math.PI) / 180)
           const dx2 = lockedU.x - tx
@@ -500,18 +494,15 @@ export default function FloorPlanCanvas({
 
     const handleClick = () => {
       if (isGuestMode && isChair) {
-        // In guest mode, clicking a chair opens the assignment popover
         onChairClickInGuestMode?.(obj.id)
         return
       }
       selectObject(obj.id)
-      onObjectSelect?.(obj)
     }
 
     const rawRot = obj.rotationDeg % 360
     const normalizedRot = rawRot > 90 && rawRot <= 270 ? rawRot + 180 : rawRot
 
-    // Label: in guest mode show guest name on chair, otherwise show table label / item name
     const label = isGuestMode && isChair
       ? assignedGuest ? assignedGuest.name : String(chairIndex ?? '')
       : obj.tableLabel
@@ -587,13 +578,15 @@ export default function FloorPlanCanvas({
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isPanning.current) return
     setTooltip(null)
-    if (e.target === e.target.getStage() && !isGuestMode) { selectObject(null); onObjectSelect?.(null) }
+    if (e.target === e.target.getStage() && !isGuestMode) {
+      selectObject(null)
+    }
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
 
-    // Guest drag onto canvas — find which chair is under the drop point
+    // Guest dragging from the panel onto the canvas — find the nearest chair
     const guestId = e.dataTransfer.getData('guestId')
     if (guestId && isGuestMode) {
       const stage = stageRef.current
@@ -602,9 +595,8 @@ export default function FloorPlanCanvas({
       const dropX = (e.clientX - stageBox.left - stagePosRef.current.x) / zoomRef.current
       const dropY = (e.clientY - stageBox.top - stagePosRef.current.y) / zoomRef.current
 
-      // Find the chair closest to the drop point (within 30px)
       let closestChair: LayoutObject | null = null
-      let closestDist = 30 / zoomRef.current  // threshold in canvas px
+      let closestDist = 30 / zoomRef.current
       layoutObjects.forEach((obj) => {
         if (!obj.isChairFor) return
         const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
@@ -613,13 +605,11 @@ export default function FloorPlanCanvas({
         if (dist < closestDist) { closestDist = dist; closestChair = obj }
       })
 
-      if (closestChair) {
-        onGuestDropOnChair?.(closestChair.id, guestId)
-      }
+      if (closestChair) onGuestDropOnChair?.(closestChair.id, guestId)
       return
     }
 
-    // Normal catalog item drop
+    // Catalog item drop
     const itemData = e.dataTransfer.getData('catalogItem')
     if (!itemData || isGuestMode) return
     const item: DbCatalogItem = JSON.parse(itemData)
@@ -644,12 +634,15 @@ export default function FloorPlanCanvas({
 
   return (
     <div className="relative w-full h-full">
+
+      {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
-        <button onClick={handleZoomOut} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">−</button>
+        <button onClick={handleZoomOut}   className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">−</button>
         <button onClick={handleZoomReset} className="px-2 text-xs text-gray-500 hover:bg-gray-100 rounded min-w-[48px] text-center">{Math.round(zoom * 100)}%</button>
-        <button onClick={handleZoomIn} className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">+</button>
+        <button onClick={handleZoomIn}    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">+</button>
       </div>
 
+      {/* Guest mode banner */}
       {isGuestMode && (
         <div className="absolute top-3 left-3 z-10 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
           <p className="text-xs text-amber-700 font-medium">👥 Guest Mode — click a chair to assign, or drag from the guest list</p>
@@ -678,21 +671,44 @@ export default function FloorPlanCanvas({
           onClick={handleStageClick}
         >
           <Layer>
+            {/* Canvas background */}
             <Rect x={0} y={0} width={totalWidth} height={totalHeight} fill="#f3f4f6" />
-            <Rect x={roomOffsetX} y={roomOffsetY} width={roomWidthPx} height={roomDepthPx} fill="#ffffff" stroke="#374151" strokeWidth={3} shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2} />
-            <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={`Test Venue — Main Hall  (${ROOM_WIDTH_CM / 100}m × ${ROOM_DEPTH_CM / 100}m)`} fontSize={11} fill="#9ca3af" />
+
+            {/* Room floor */}
+            <Rect
+              x={roomOffsetX} y={roomOffsetY}
+              width={roomWidthPx} height={roomDepthPx}
+              fill="#ffffff" stroke="#374151" strokeWidth={3}
+              shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2}
+            />
+
+            {/* Room label */}
+            <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={roomName} fontSize={11} fill="#9ca3af" />
+
             {renderGrid()}
             {layoutObjects.map(renderObject)}
+
+            {/* Drag-selection rectangle */}
             {selectionRect && (
-              <Rect x={selectionRect.x} y={selectionRect.y} width={selectionRect.w} height={selectionRect.h} fill="rgba(99, 102, 241, 0.08)" stroke="#6366f1" strokeWidth={1} dash={[4, 3]} listening={false} />
+              <Rect
+                x={selectionRect.x} y={selectionRect.y}
+                width={selectionRect.w} height={selectionRect.h}
+                fill="rgba(99, 102, 241, 0.08)" stroke="#6366f1" strokeWidth={1}
+                dash={[4, 3]} listening={false}
+              />
             )}
+
             <Transformer ref={transformerRef} rotateEnabled={true} resizeEnabled={false} enabledAnchors={[]} />
           </Layer>
         </Stage>
       </div>
 
+      {/* Table note tooltip */}
       {tooltip && (
-        <div className="fixed z-50 max-w-[280px] bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none whitespace-pre-wrap leading-relaxed" style={{ left: tooltip.x + 16, top: tooltip.y - 8 }}>
+        <div
+          className="fixed z-50 max-w-[280px] bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg pointer-events-none whitespace-pre-wrap leading-relaxed"
+          style={{ left: tooltip.x + 16, top: tooltip.y - 8 }}
+        >
           {tooltip.text}
         </div>
       )}

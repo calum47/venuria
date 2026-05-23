@@ -7,16 +7,18 @@ import { assignSeat, unassignSeat, addGuest } from '@/lib/supabase/queries'
 type Props = {
   chairId: string
   projectId: string
-  chairLabel: string  // seat number or table label
+  roomId: string      // needed to enforce one seat per guest per room
+  chairLabel: string
   onClose: () => void
 }
 
-export default function ChairAssignmentPopover({ chairId, projectId, chairLabel, onClose }: Props) {
+export default function ChairAssignmentPopover({ chairId, projectId, roomId, chairLabel, onClose }: Props) {
   const {
     guests,
     getGuestForChair,
     assignGuest,
     unassignGuest,
+    isGuestSeatedInRoom,
     addGuest: addGuestLocal,
   } = useGuestStore()
 
@@ -25,20 +27,24 @@ export default function ChairAssignmentPopover({ chairId, projectId, chairLabel,
   const [isWorking, setIsWorking] = useState(false)
 
   const assignedGuest = getGuestForChair(chairId)
-  const unassignedGuests = guests.filter(
-    (g) => !useGuestStore.getState().getAssignmentForGuest(g.id)
+
+  // Show guests who are NOT already seated in this room.
+  // (Guests seated in a different room are still available here — that's intentional.)
+  const availableGuests = guests.filter(
+    (g) => g.id === assignedGuest?.id || !isGuestSeatedInRoom(g.id, roomId)
   )
-  const filtered = unassignedGuests.filter((g) =>
+  const filtered = availableGuests.filter((g) =>
     g.name.toLowerCase().includes(search.toLowerCase())
   )
 
   const handleAssign = async (guestId: string) => {
     setIsWorking(true)
     try {
-      const assignment = await assignSeat(projectId, guestId, chairId)
+      const assignment = await assignSeat(projectId, guestId, chairId, roomId)
       assignGuest({
         id: assignment.id,
         projectId,
+        roomId,
         guestId,
         layoutObjectId: chairId,
       })
@@ -70,10 +76,11 @@ export default function ChairAssignmentPopover({ chairId, projectId, chairLabel,
     try {
       const guest = await addGuest(projectId, newName.trim())
       addGuestLocal(guest)
-      const assignment = await assignSeat(projectId, guest.id, chairId)
+      const assignment = await assignSeat(projectId, guest.id, chairId, roomId)
       assignGuest({
         id: assignment.id,
         projectId,
+        roomId,
         guestId: guest.id,
         layoutObjectId: chairId,
       })
@@ -119,7 +126,7 @@ export default function ChairAssignmentPopover({ chairId, projectId, chairLabel,
           <p className="text-xs text-gray-400 mb-3">No guest assigned</p>
         )}
 
-        {/* Search unassigned guests */}
+        {/* Search */}
         <input
           type="text"
           placeholder="Search guests..."
@@ -133,7 +140,9 @@ export default function ChairAssignmentPopover({ chairId, projectId, chairLabel,
         <div className="max-h-40 overflow-y-auto mb-3 space-y-0.5">
           {filtered.length === 0 && (
             <p className="text-xs text-gray-400 text-center py-3">
-              {guests.length === 0 ? 'No guests in list yet' : 'No unassigned guests match'}
+              {guests.length === 0
+                ? 'No guests in list yet'
+                : 'All guests already have a seat in this room'}
             </p>
           )}
           {filtered.map((guest) => (
@@ -149,7 +158,7 @@ export default function ChairAssignmentPopover({ chairId, projectId, chairLabel,
           ))}
         </div>
 
-        {/* Divider */}
+        {/* Add new & assign */}
         <div className="border-t border-gray-100 pt-3">
           <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-wide">Add new & assign</p>
           <div className="flex gap-2">

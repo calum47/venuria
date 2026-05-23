@@ -1,49 +1,45 @@
 'use client'
 
 import { useLayoutStore } from '@/stores/layoutStore'
+import { DbCatalogItem } from '@/types/db'
 
-type CatalogItem = {
-  id: string
-  name: string
-  category: string
-  width_cm: number
-  depth_cm: number
-  price_per_unit: number | null
-  owner_type: string
-}
-
-type Props = {
-  catalogItems: CatalogItem[]
-}
+// ─── Category display config ──────────────────────────────────────────────────
 
 const CATEGORY_ORDER = ['tables', 'chairs', 'decorations']
 
 const CATEGORY_ICONS: Record<string, string> = {
-  tables: '🪵',
-  chairs: '💺',
+  tables:      '🪵',
+  chairs:      '💺',
   decorations: '🌸',
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  tables: 'Tables',
-  chairs: 'Chairs',
+  tables:      'Tables',
+  chairs:      'Chairs',
   decorations: 'Decorations',
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+type Props = {
+  catalogItems: DbCatalogItem[]
 }
 
 export default function CatalogSidebar({ catalogItems }: Props) {
   const { snapToGrid, toggleSnapToGrid, gridSizeCm, setGridSize } = useLayoutStore()
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: CatalogItem) => {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: DbCatalogItem) => {
     e.dataTransfer.setData('catalogItem', JSON.stringify(item))
   }
 
-  const grouped = catalogItems.reduce<Record<string, CatalogItem[]>>((acc, item) => {
+  // Group items by category
+  const grouped = catalogItems.reduce<Record<string, DbCatalogItem[]>>((acc, item) => {
     if (!acc[item.category]) acc[item.category] = []
     acc[item.category].push(item)
     return acc
   }, {})
 
-  // Sort categories in defined order, then alphabetically for any extras
+  // Render in defined order, then alphabetically for any unknown categories
   const sortedCategories = Object.keys(grouped).sort((a, b) => {
     const ai = CATEGORY_ORDER.indexOf(a)
     const bi = CATEGORY_ORDER.indexOf(b)
@@ -55,6 +51,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
 
   return (
     <div className="w-64 h-full bg-white border-r border-gray-200 flex flex-col">
+
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
@@ -78,6 +75,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
                 {grouped[category].length}
               </span>
             </div>
+
             <div className="space-y-1.5">
               {grouped[category].map((item) => (
                 <div
@@ -89,13 +87,15 @@ export default function CatalogSidebar({ catalogItems }: Props) {
                              select-none"
                 >
                   <div className="flex items-center gap-2.5">
+                    {/* Category colour chip */}
                     <div className={`w-8 h-8 rounded flex items-center justify-center text-sm flex-shrink-0 ${
-                      category === 'tables' ? 'bg-blue-50' :
-                      category === 'chairs' ? 'bg-green-50' :
-                      category === 'decorations' ? 'bg-amber-50' : 'bg-gray-100'
+                      category === 'tables'      ? 'bg-blue-50'   :
+                      category === 'chairs'      ? 'bg-green-50'  :
+                      category === 'decorations' ? 'bg-amber-50'  : 'bg-gray-100'
                     }`}>
                       {CATEGORY_ICONS[category] ?? '📦'}
                     </div>
+
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-gray-800 truncate">
                         {item.name}
@@ -121,7 +121,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
         )}
       </div>
 
-      {/* Grid Controls */}
+      {/* Grid controls */}
       <div className="p-4 border-t border-gray-200 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-700">Snap to Grid</span>
@@ -131,17 +131,15 @@ export default function CatalogSidebar({ catalogItems }: Props) {
               snapToGrid ? 'bg-blue-600' : 'bg-gray-300'
             }`}
           >
-            <span
-              className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                snapToGrid ? 'translate-x-5' : 'translate-x-1'
-              }`}
-            />
+            <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+              snapToGrid ? 'translate-x-5' : 'translate-x-1'
+            }`} />
           </button>
         </div>
 
         {snapToGrid && (
           <div className="space-y-1">
-            <span className="text-xs text-gray-500">Grid Size: {gridSizeCm}cm</span>
+            <span className="text-xs text-gray-500">Grid Size: {gridSizeCm} cm</span>
             <input
               type="range"
               min={10}
