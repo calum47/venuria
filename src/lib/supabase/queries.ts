@@ -72,21 +72,36 @@ export async function saveLayoutObjects(
     extra_data: Record<string, any>
   }[]
 ) {
-  // Delete existing objects for this room only
+  // Step 1: delete objects that are no longer present (by ID)
+  // This avoids wiping rows we're about to upsert
+  if (objects.length === 0) {
+    // If canvas is empty, delete everything for this room
+    const { error } = await supabase
+      .from('layout_objects')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('room_id', roomId)
+    if (error) throw new Error(`Delete failed: ${error.message}`)
+    return []
+  }
+
+  // Step 2: delete rows that are no longer in the current layout
+  const keepIds = objects.map((o) => o.id)
   const { error: deleteError } = await supabase
     .from('layout_objects')
     .delete()
     .eq('project_id', projectId)
     .eq('room_id', roomId)
+    .not('id', 'in', `(${keepIds.join(',')})`)
 
-  if (deleteError) throw deleteError
-  if (objects.length === 0) return []
+  if (deleteError) throw new Error(`Delete old rows failed: ${deleteError.message}`)
 
+  // Step 3: upsert current objects (insert or update by id)
   const { data, error } = await supabase
     .from('layout_objects')
-    .insert(
+    .upsert(
       objects.map((obj) => ({
-        id: obj.id,           // preserve the original ID so isChairFor links stay valid
+        id: obj.id,
         project_id: projectId,
         room_id: roomId,
         catalog_item_id: obj.catalog_item_id,
@@ -95,11 +110,12 @@ export async function saveLayoutObjects(
         rotation_deg: obj.rotation_deg,
         quantity: obj.quantity,
         extra_data: obj.extra_data,
-      }))
+      })),
+      { onConflict: 'id' }
     )
     .select()
 
-  if (error) throw error
+  if (error) throw new Error(`Upsert failed: ${error.message}`)
   return data
 }
 
