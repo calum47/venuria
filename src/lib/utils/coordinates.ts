@@ -15,5 +15,5 @@ export function snapToGrid(pixels: number, gridSizePx: number): number {
 
 // Generate a simple unique id for layout objects
 export function generateId(): string {
-  return `obj_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+  return crypto.randomUUID()
 }
