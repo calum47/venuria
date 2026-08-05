@@ -309,11 +309,12 @@ export function reassignChairEdge(
 
   // Redistribute chairs on old edge and new edge evenly
   const edgeRotMap = { top: 180, bottom: 0, left: 90, right: 270 }
-  const edgeDistMap = {
-    top: { x: (i: number, count: number) => tx - halfW + (tableWidthCm / (count + 1)) * (i + 1), y: () => ty - distLong },
-    bottom: { x: (i: number, count: number) => tx - halfW + (tableWidthCm / (count + 1)) * (i + 1), y: () => ty + distLong },
-    left: { x: () => tx - distShort, y: (i: number, count: number) => ty - halfD + (tableDepthCm / (count + 1)) * (i + 1) },
-    right: { x: () => tx + distShort, y: (i: number, count: number) => ty - halfD + (tableDepthCm / (count + 1)) * (i + 1) },
+  type EdgePosFn = (i: number, count: number) => number
+  const edgeDistMap: Record<'top' | 'bottom' | 'left' | 'right', { x: EdgePosFn; y: EdgePosFn }> = {
+    top: { x: (i, count) => tx - halfW + (tableWidthCm / (count + 1)) * (i + 1), y: () => ty - distLong },
+    bottom: { x: (i, count) => tx - halfW + (tableWidthCm / (count + 1)) * (i + 1), y: () => ty + distLong },
+    left: { x: () => tx - distShort, y: (i, count) => ty - halfD + (tableDepthCm / (count + 1)) * (i + 1) },
+    right: { x: () => tx + distShort, y: (i, count) => ty - halfD + (tableDepthCm / (count + 1)) * (i + 1) },
   }
 
   const result = updatedChairs.map((chair) => {
@@ -326,8 +327,8 @@ export function reassignChairEdge(
     const eMap = edgeDistMap[edge]
 
     const unrotatedNewPos = {
-      x: typeof eMap.x === 'function' ? (eMap.x as any)(idx, count) : eMap.x(idx, count),
-      y: typeof eMap.y === 'function' ? (eMap.y as any)(idx, count) : eMap.y(idx, count),
+      x: eMap.x(idx, count),
+      y: eMap.y(idx, count),
     }
 
     const rotatedPos = rotatePoint(unrotatedNewPos.x, unrotatedNewPos.y, tx, ty, tableRot)

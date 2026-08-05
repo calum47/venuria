@@ -597,13 +597,13 @@ export default function FloorPlanCanvas({
 
       let closestChair: LayoutObject | null = null
       let closestDist = 30 / zoomRef.current
-      layoutObjects.forEach((obj) => {
-        if (!obj.isChairFor) return
+      for (const obj of layoutObjects) {
+        if (!obj.isChairFor) continue
         const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
         const oy = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
         const dist = Math.sqrt((ox - dropX) ** 2 + (oy - dropY) ** 2)
         if (dist < closestDist) { closestDist = dist; closestChair = obj }
-      })
+      }
 
       if (closestChair) onGuestDropOnChair?.(closestChair.id, guestId)
       return
