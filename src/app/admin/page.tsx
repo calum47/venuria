@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
+import { CreateVenueForm } from './CreateVenueForm'
 import { CreateAccountForm } from './CreateAccountForm'
 
 export default async function AdminPage() {
@@ -8,10 +9,14 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: venues }, { data: planners }] = await Promise.all([
+  const [{ data: venues }, { data: venueManagers }, { data: planners }] = await Promise.all([
     supabase
       .from('venues')
       .select('id, name, max_capacity_persons, created_at')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('venue_managers')
+      .select('id, name, email, venue_id, venues(name)')
       .order('created_at', { ascending: false }),
     supabase
       .from('planners')
@@ -30,7 +35,8 @@ export default async function AdminPage() {
           Logged in as <span className="font-medium text-gray-900">{user?.email}</span>.
         </p>
 
-        <CreateAccountForm />
+        <CreateVenueForm />
+        <CreateAccountForm venues={venues ?? []} />
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
@@ -45,6 +51,27 @@ export default async function AdminPage() {
             ))}
             {venues?.length === 0 && (
               <li className="px-4 py-2.5 text-sm text-gray-400">No venues yet.</li>
+            )}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">
+            Venue Managers ({venueManagers?.length ?? 0})
+          </h2>
+          <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+            {venueManagers?.map((vm) => (
+              <li key={vm.id} className="px-4 py-2.5 text-sm flex justify-between">
+                <span className="text-gray-900">
+                  {vm.name} <span className="text-gray-400">({vm.email})</span>
+                </span>
+                <span className="text-gray-400 text-xs">
+                  {(vm.venues as unknown as { name: string } | null)?.name ?? '—'}
+                </span>
+              </li>
+            ))}
+            {venueManagers?.length === 0 && (
+              <li className="px-4 py-2.5 text-sm text-gray-400">No venue managers yet.</li>
             )}
           </ul>
         </section>

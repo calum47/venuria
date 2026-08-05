@@ -3,13 +3,15 @@
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
-export function CreateAccountForm() {
+type Venue = { id: string; name: string }
+
+export function CreateAccountForm({ venues }: { venues: Venue[] }) {
   const router = useRouter()
-  const [targetRole, setTargetRole] = useState<'venue' | 'planner'>('venue')
+  const [targetRole, setTargetRole] = useState<'venue_manager' | 'planner'>('venue_manager')
+  const [venueId, setVenueId] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [maxCapacity, setMaxCapacity] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -28,8 +30,7 @@ export function CreateAccountForm() {
         name,
         email,
         password,
-        maxCapacityPersons:
-          targetRole === 'venue' && maxCapacity ? Number(maxCapacity) : undefined,
+        venueId: targetRole === 'venue_manager' ? venueId : undefined,
       }),
     })
 
@@ -41,17 +42,19 @@ export function CreateAccountForm() {
       return
     }
 
-    setSuccess(`${targetRole === 'venue' ? 'Venue' : 'Planner'} account created — share the email/password with them directly.`)
+    setSuccess(
+      `${targetRole === 'venue_manager' ? 'Venue manager' : 'Planner'} account created — share the email/password with them directly.`,
+    )
     setName('')
     setEmail('')
     setPassword('')
-    setMaxCapacity('')
+    setVenueId('')
     router.refresh()
   }
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-900">Create account</h2>
+      <h2 className="text-sm font-semibold text-gray-900">Create login account</h2>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-600">{success}</p>}
@@ -59,14 +62,14 @@ export function CreateAccountForm() {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => setTargetRole('venue')}
+          onClick={() => setTargetRole('venue_manager')}
           className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
-            targetRole === 'venue'
+            targetRole === 'venue_manager'
               ? 'bg-gray-900 text-white border-gray-900'
               : 'border-gray-200 text-gray-600'
           }`}
         >
-          Venue
+          Venue Manager
         </button>
         <button
           type="button"
@@ -81,13 +84,39 @@ export function CreateAccountForm() {
         </button>
       </div>
 
+      {targetRole === 'venue_manager' && (
+        <div className="space-y-1">
+          <label className="text-xs text-gray-500">Venue</label>
+          <select
+            required
+            value={venueId}
+            onChange={(e) => setVenueId(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
+          >
+            <option value="" disabled>
+              Select a venue...
+            </option>
+            {venues.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+          {venues.length === 0 && (
+            <p className="text-xs text-amber-600">No venues created yet — create one above first.</p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-1">
-        <label className="text-xs text-gray-500">Name</label>
+        <label className="text-xs text-gray-500">
+          {targetRole === 'venue_manager' ? "Manager's name" : 'Name'}
+        </label>
         <input
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
         />
       </div>
 
@@ -98,7 +127,7 @@ export function CreateAccountForm() {
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900"
         />
       </div>
 
@@ -111,28 +140,16 @@ export function CreateAccountForm() {
           minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono"
         />
       </div>
-
-      {targetRole === 'venue' && (
-        <div className="space-y-1">
-          <label className="text-xs text-gray-500">Max capacity (persons)</label>
-          <input
-            type="number"
-            value={maxCapacity}
-            onChange={(e) => setMaxCapacity(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          />
-        </div>
-      )}
 
       <button
         type="submit"
         disabled={isLoading}
         className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Creating...' : `Create ${targetRole}`}
+        {isLoading ? 'Creating...' : `Create ${targetRole === 'venue_manager' ? 'venue manager' : 'planner'}`}
       </button>
     </form>
   )

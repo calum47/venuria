@@ -26,22 +26,31 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { targetRole, name, email, password, maxCapacityPersons } = body as {
-    targetRole: 'venue' | 'planner'
+  const { targetRole, name, email, password, venueId } = body as {
+    targetRole: 'venue_manager' | 'planner'
     name: string
     email: string
     password: string
-    maxCapacityPersons?: number
+    venueId?: string
   }
 
-  if (targetRole !== 'venue' && targetRole !== 'planner') {
-    return NextResponse.json({ error: 'targetRole must be "venue" or "planner".' }, { status: 400 })
+  if (targetRole !== 'venue_manager' && targetRole !== 'planner') {
+    return NextResponse.json(
+      { error: 'targetRole must be "venue_manager" or "planner".' },
+      { status: 400 },
+    )
   }
   if (!name || !email || !password) {
     return NextResponse.json({ error: 'name, email, and password are required.' }, { status: 400 })
   }
   if (password.length < 8) {
     return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
+  }
+  if (targetRole === 'venue_manager' && !venueId) {
+    return NextResponse.json(
+      { error: 'A venue must be selected for a venue manager account.' },
+      { status: 400 },
+    )
   }
 
   const adminClient = createAdminClient()
@@ -60,11 +69,12 @@ export async function POST(request: Request) {
   }
 
   const insertResult =
-    targetRole === 'venue'
-      ? await adminClient.from('venues').insert({
+    targetRole === 'venue_manager'
+      ? await adminClient.from('venue_managers').insert({
           user_id: created.user.id,
+          venue_id: venueId,
           name,
-          max_capacity_persons: maxCapacityPersons ?? null,
+          email,
         })
       : await adminClient.from('planners').insert({
           user_id: created.user.id,
@@ -78,7 +88,14 @@ export async function POST(request: Request) {
     // role row — resolveUserRole would otherwise treat them as "no role"
     // forever, a login that goes nowhere.
     await adminClient.auth.admin.deleteUser(created.user.id)
-    return NextResponse.json({ error: insertResult.error.message }, { status: 400 })
+
+    // venue_managers.venue_id is unique — a friendlier message than the raw
+    // Postgres constraint error when someone tries to double-assign a venue.
+    const message = insertResult.error.message.includes('venue_managers_venue_id_key')
+      ? 'That venue already has a manager account assigned.'
+      : insertResult.error.message
+
+    return NextResponse.json({ error: message }, { status: 400 })
   }
 
   return NextResponse.json({ success: true })

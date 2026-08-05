@@ -23,12 +23,12 @@ export async function resolveUserRole(
     .maybeSingle()
   if (admin) return { role: 'admin', redirectPath: '/admin' }
 
-  const { data: venue } = await supabase
-    .from('venues')
+  const { data: venueManager } = await supabase
+    .from('venue_managers')
     .select('id')
     .eq('user_id', userId)
     .maybeSingle()
-  if (venue) return { role: 'venue', redirectPath: '/venue' }
+  if (venueManager) return { role: 'venue', redirectPath: '/venue' }
 
   const { data: planner } = await supabase
     .from('planners')
