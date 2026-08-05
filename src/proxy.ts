@@ -12,7 +12,7 @@ const PROTECTED_PREFIXES: Record<string, UserRole[]> = {
   '/editor': ['planner', 'client'],
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { supabaseResponse, supabase, user } = await updateSession(request)
   const path = request.nextUrl.pathname
 
