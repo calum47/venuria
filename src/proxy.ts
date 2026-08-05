@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
-import { resolveUserRole, type UserRole } from '@/lib/supabase/role'
+import { resolveUserRole, type AuthRole } from '@/lib/supabase/role'
 
 // Route prefix → the role(s) allowed to access it.
-const PROTECTED_PREFIXES: Record<string, UserRole[]> = {
+const PROTECTED_PREFIXES: Record<string, AuthRole[]> = {
   '/admin': ['admin'],
   '/venue': ['venue'],
   '/planner': ['planner'],

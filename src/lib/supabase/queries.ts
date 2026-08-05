@@ -4,18 +4,6 @@ import { DbLayoutObject } from '@/types/db'
 
 // ─── Venues & Rooms ───────────────────────────────────────────────────────────
 
-export async function getVenue(venueId: string) {
-  const { data, error } = await supabase.from('venues').select('*').eq('id', venueId).single()
-  if (error) throw error
-  return data
-}
-
-export async function getRoom(roomId: string) {
-  const { data, error } = await supabase.from('rooms').select('*').eq('id', roomId).single()
-  if (error) throw error
-  return data
-}
-
 export async function getRoomsForVenue(venueId: string) {
   const { data, error } = await supabase
     .from('rooms')
@@ -39,16 +27,6 @@ export async function getCatalogItems(venueId: string) {
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
-
-export async function createProject(venueId: string, roomId: string) {
-  const { data, error } = await supabase
-    .from('projects')
-    .insert({ venue_id: venueId, room_id: roomId, status: 'in_progress' })
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
 
 export async function getProject(projectId: string) {
   const { data, error } = await supabase

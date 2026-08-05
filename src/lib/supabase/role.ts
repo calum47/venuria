@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type UserRole = 'admin' | 'venue' | 'planner' | 'client' | null
+export type AuthRole = 'admin' | 'venue' | 'planner' | 'client' | null
 
 /**
  * Determines which role a logged-in user has by checking the admins,
@@ -15,7 +15,7 @@ export type UserRole = 'admin' | 'venue' | 'planner' | 'client' | null
 export async function resolveUserRole(
   supabase: SupabaseClient,
   userId: string,
-): Promise<{ role: UserRole; redirectPath: string }> {
+): Promise<{ role: AuthRole; redirectPath: string }> {
   const { data: admin } = await supabase
     .from('admins')
     .select('id')
