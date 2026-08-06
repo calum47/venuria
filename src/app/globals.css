@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,12 +13,17 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* No @media (prefers-color-scheme: dark) override — the app's components are
+   built with hardcoded light-theme Tailwind classes throughout, not real
+   dark-mode support. Letting :root flip --background/--foreground based on
+   OS preference just makes the *unstyled* elements (native <input>/<button>
+   chrome, anything missing an explicit text-color class) go dark-styled
+   while everything else stays light, which is what caused the zoom controls
+   and calibration input to render gray-on-gray for anyone on a dark-mode OS.
+   `color-scheme: light` above covers the rest: it stops browsers opting
+   native form controls into OS dark theming even where CSS doesn't set an
+   explicit color, so this class of bug can't recur on some future unstyled
+   input/button/select either. */
 
 body {
   background: var(--background);

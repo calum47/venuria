@@ -364,13 +364,13 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
 
       {tool === 'calibrate' && (
         <div className="flex items-center gap-2 rounded bg-blue-50 p-2 text-sm">
-          <span>Click two points on a wall of known length, then:</span>
+          <span className="text-gray-700">Click two points on a wall of known length, then:</span>
           <input
             type="number"
             placeholder="length in cm"
             value={calibrationInputCm}
             onChange={(e) => setCalibrationInputCm(e.target.value)}
-            className="w-28 rounded border px-2 py-1"
+            className="w-28 rounded border bg-white px-2 py-1 text-gray-900"
           />
           <button
             onClick={confirmCalibration}
@@ -393,7 +393,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
           <div className="flex items-center gap-2">
             <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 100) / 100))}
-              className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+              className="rounded bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
               aria-label="Zoom out"
             >
               −
@@ -401,7 +401,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             <span className="w-12 text-center text-sm text-gray-500">{Math.round(zoom * 100)}%</span>
             <button
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 100) / 100))}
-              className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+              className="rounded bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
               aria-label="Zoom in"
             >
               +
@@ -424,11 +424,6 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
               onMouseDown={handleStageMouseDown}
               onMouseMove={handleStageMouseMove}
               onMouseUp={handleStageMouseUp}
-              onWheel={(e) => {
-                e.evt.preventDefault()
-                const direction = e.evt.deltaY > 0 ? -1 : 1
-                setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((z + direction * 0.1) * 100) / 100)))
-              }}
             >
               <Layer x={STAGE_PADDING} y={STAGE_PADDING}>
                 <KonvaImage image={image} width={imageWidthPx} height={imageHeightPx} opacity={0.85} />
