@@ -90,6 +90,23 @@ export function newObstacleId() {
   return generateId()
 }
 
+/**
+ * Venue Manager creates a room in their own venue. Client-side insert is fine
+ * here (no server action needed) — the venue_manage_own_rooms RLS policy
+ * already scopes this to venue_id = current_venue_id(), so a non-manager or
+ * a room targeting someone else's venue is rejected at the database level
+ * regardless of what the client sends.
+ */
+export async function createRoom(venueId: string, name: string, type: 'indoor' | 'outdoor') {
+  const { data, error } = await supabase
+    .from('rooms')
+    .insert({ venue_id: venueId, name, type })
+    .select('*')
+    .single()
+  if (error) throw error
+  return data
+}
+
 // ─── Catalog ──────────────────────────────────────────────────────────────────
 
 export async function getCatalogItems(venueId: string) {
