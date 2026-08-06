@@ -113,12 +113,24 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
 
   // ─── Stage click handling per active tool ───────────────────────────────────
 
+  /**
+   * getPointerPosition() returns the mouse position in Stage-space (raw canvas
+   * pixels), but everything we draw lives inside <Layer x={STAGE_PADDING}
+   * y={STAGE_PADDING}> — so a raw stage position is 40px down-right of where it
+   * needs to be once rendered inside that offset layer. This was the root
+   * cause of clicks registering away from the cursor. Every pointer capture
+   * must go through this.
+   */
+  const getLayerPoint = (stage: Konva.Stage): Point2D => {
+    const pos = stage.getPointerPosition()
+    if (!pos) return { x: 0, y: 0 }
+    return { x: pos.x - STAGE_PADDING, y: pos.y - STAGE_PADDING }
+  }
+
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     const stage = e.target.getStage()
-    if (!stage) return
-    const pos = stage.getPointerPosition()
-    if (!pos) return
-    const point: Point2D = { x: pos.x, y: pos.y } // px in image space (stage has no zoom/pan offset applied here)
+    if (!stage || !stage.getPointerPosition()) return
+    const point = getLayerPoint(stage) // px in image space
 
     if (tool === 'calibrate') {
       if (calibrationLine.length === 0) {
@@ -158,18 +170,17 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
   const handleStageMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (tool !== 'obstacle-rect' && tool !== 'obstacle-circle') return
     const stage = e.target.getStage()
-    const pos = stage?.getPointerPosition()
-    if (!pos) return
-    dragStartPx.current = { x: pos.x, y: pos.y }
-    setDragPreview({ start: { x: pos.x, y: pos.y }, current: { x: pos.x, y: pos.y } })
+    if (!stage || !stage.getPointerPosition()) return
+    const point = getLayerPoint(stage)
+    dragStartPx.current = point
+    setDragPreview({ start: point, current: point })
   }
 
   const handleStageMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (!dragStartPx.current) return
     const stage = e.target.getStage()
-    const pos = stage?.getPointerPosition()
-    if (!pos) return
-    setDragPreview({ start: dragStartPx.current, current: { x: pos.x, y: pos.y } })
+    if (!stage || !stage.getPointerPosition()) return
+    setDragPreview({ start: dragStartPx.current, current: getLayerPoint(stage) })
   }
 
   const handleStageMouseUp = () => {
@@ -386,29 +397,58 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             <Layer x={STAGE_PADDING} y={STAGE_PADDING}>
               <KonvaImage image={image} width={imageWidthPx} height={imageHeightPx} opacity={0.85} />
 
-              {/* Saved wall boundary */}
-              {boundaryPx.length >= 3 && (
-                <Line
-                  points={boundaryPx.flatMap((p) => [p.x, p.y])}
-                  closed
-                  stroke="#dc2626"
-                  strokeWidth={4}
-                  fill="rgba(220,38,38,0.06)"
-                />
+              {/* Saved wall boundary — vertices are draggable so a misplaced
+                  point can be nudged without redrawing the whole shape. Hidden
+                  while actively tracing a brand-new polygon so the handles
+                  don't clash with in-progress points. */}
+              {boundaryPx.length >= 3 && inProgressPolygon.length === 0 && (
+                <>
+                  <Line
+                    points={boundaryPx.flatMap((p) => [p.x, p.y])}
+                    closed
+                    stroke="#dc2626"
+                    strokeWidth={4}
+                    fill="rgba(220,38,38,0.06)"
+                  />
+                  {boundaryPx.map((p, i) => (
+                    <Circle
+                      key={i}
+                      x={p.x}
+                      y={p.y}
+                      radius={5}
+                      fill="#dc2626"
+                      stroke="#ffffff"
+                      strokeWidth={1.5}
+                      draggable
+                      onClick={(e) => { e.cancelBubble = true }}
+                      onMouseDown={(e) => { e.cancelBubble = true }}
+                      onDragMove={(e) => {
+                        const { x, y } = e.target.position()
+                        setBoundaryDraft((prev) => prev.map((pt, idx) => (idx === i ? pxToCm({ x, y }) : pt)))
+                      }}
+                    />
+                  ))}
+                </>
               )}
 
-              {/* Saved obstacles */}
+              {/* Saved obstacles — draggable as a whole shape (translate) so a
+                  misplaced pillar/column can be repositioned without deleting
+                  and redrawing it. */}
               {obstaclesDraft.map((o) => (
                 <ObstacleShapeRender
                   key={o.id}
                   obstacle={o}
                   cmToPx={cmToPx}
+                  pxToCm={pxToCm}
                   cmPerPx={cmPerPx ?? 1}
                   onDoubleClick={() => removeObstacle(o.id)}
+                  onMoved={(updated) => setObstaclesDraft((prev) => prev.map((existing) => (existing.id === o.id ? updated : existing)))}
                 />
               ))}
 
-              {/* In-progress polygon (boundary or freeform obstacle) */}
+              {/* In-progress polygon (boundary or freeform obstacle) — points
+                  are draggable so a misplaced click can be corrected before
+                  double-clicking to close the shape. */}
               {inProgressPolygon.length > 0 && (
                 <>
                   <Line
@@ -418,12 +458,29 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
                     dash={[6, 4]}
                   />
                   {inProgressPolygon.map((p, i) => (
-                    <Circle key={i} x={p.x} y={p.y} radius={4} fill={tool === 'boundary' ? '#dc2626' : '#d97706'} />
+                    <Circle
+                      key={i}
+                      x={p.x}
+                      y={p.y}
+                      radius={5}
+                      fill={tool === 'boundary' ? '#dc2626' : '#d97706'}
+                      stroke="#ffffff"
+                      strokeWidth={1.5}
+                      draggable
+                      onClick={(e) => { e.cancelBubble = true }}
+                      onMouseDown={(e) => { e.cancelBubble = true }}
+                      onDragMove={(e) => {
+                        const { x, y } = e.target.position()
+                        setInProgressPolygon((prev) => prev.map((pt, idx) => (idx === i ? { x, y } : pt)))
+                      }}
+                    />
                   ))}
                 </>
               )}
 
-              {/* Calibration line */}
+              {/* Calibration line — endpoints are draggable, which matters
+                  most here since a bad calibration throws off every cm
+                  measurement derived from it afterward. */}
               {calibrationLine.length > 0 && (
                 <>
                   <Line
@@ -432,7 +489,22 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
                     strokeWidth={3}
                   />
                   {calibrationLine.map((p, i) => (
-                    <Circle key={i} x={p.x} y={p.y} radius={5} fill="#2563eb" />
+                    <Circle
+                      key={i}
+                      x={p.x}
+                      y={p.y}
+                      radius={6}
+                      fill="#2563eb"
+                      stroke="#ffffff"
+                      strokeWidth={1.5}
+                      draggable
+                      onClick={(e) => { e.cancelBubble = true }}
+                      onMouseDown={(e) => { e.cancelBubble = true }}
+                      onDragMove={(e) => {
+                        const { x, y } = e.target.position()
+                        setCalibrationLine((prev) => prev.map((pt, idx) => (idx === i ? { x, y } : pt)))
+                      }}
+                    />
                   ))}
                 </>
               )}
@@ -514,33 +586,77 @@ function ToolButton({
 function ObstacleShapeRender({
   obstacle,
   cmToPx,
+  pxToCm,
   cmPerPx,
   onDoubleClick,
+  onMoved,
 }: {
   obstacle: ObstacleShape
   cmToPx: (p: Point2D) => Point2D
+  pxToCm: (p: Point2D) => Point2D
   cmPerPx: number
   onDoubleClick: () => void
+  onMoved: (updated: ObstacleShape) => void
 }) {
   // cmToPx only maps positions (pure scale from the origin); lengths (radius,
   // width, depth) convert directly via the same ratio, no point math needed.
   const pxPerCm = 1 / cmPerPx
-  const shared = { fill: 'rgba(217,119,6,0.25)', stroke: '#d97706', strokeWidth: 2, onDblClick: onDoubleClick }
+  const shared = {
+    fill: 'rgba(217,119,6,0.25)',
+    stroke: '#d97706',
+    strokeWidth: 2,
+    onDblClick: onDoubleClick,
+    onMouseDown: (e: Konva.KonvaEventObject<MouseEvent>) => { e.cancelBubble = true },
+    draggable: true,
+  }
 
   if (obstacle.type === 'circle') {
     const c = cmToPx(obstacle.center)
-    return <Circle x={c.x} y={c.y} radius={obstacle.radiusCm * pxPerCm} {...shared} />
+    return (
+      <Circle
+        x={c.x}
+        y={c.y}
+        radius={obstacle.radiusCm * pxPerCm}
+        {...shared}
+        onDragEnd={(e) => onMoved({ ...obstacle, center: pxToCm({ x: e.target.x(), y: e.target.y() }) })}
+      />
+    )
   }
   if (obstacle.type === 'rect') {
     const c = cmToPx(obstacle.center)
     const wPx = obstacle.widthCm * pxPerCm
     const dPx = obstacle.depthCm * pxPerCm
     return (
-      <Group x={c.x} y={c.y} rotation={obstacle.rotationDeg}>
-        <Rect x={-wPx / 2} y={-dPx / 2} width={wPx} height={dPx} {...shared} />
+      <Group
+        x={c.x}
+        y={c.y}
+        rotation={obstacle.rotationDeg}
+        draggable
+        onDragEnd={(e) => onMoved({ ...obstacle, center: pxToCm({ x: e.target.x(), y: e.target.y() }) })}
+      >
+        <Rect x={-wPx / 2} y={-dPx / 2} width={wPx} height={dPx} {...shared} draggable={false} />
       </Group>
     )
   }
   const pointsPx = obstacle.points.map(cmToPx)
-  return <Line points={pointsPx.flatMap((p) => [p.x, p.y])} closed {...shared} />
+  return (
+    <Line
+      points={pointsPx.flatMap((p) => [p.x, p.y])}
+      closed
+      {...shared}
+      onDragEnd={(e) => {
+        // Group-less freeform drag: Konva reports the Line's own x/y offset
+        // (it starts at 0,0 since points are absolute), so that offset is the
+        // px delta to apply to every point, then reset the node back to 0,0
+        // since the points array itself now carries the new position.
+        const deltaPx = { x: e.target.x(), y: e.target.y() }
+        const deltaCm = { x: deltaPx.x * cmPerPx, y: deltaPx.y * cmPerPx }
+        e.target.position({ x: 0, y: 0 })
+        onMoved({
+          ...obstacle,
+          points: obstacle.points.map((p) => ({ x: p.x + deltaCm.x, y: p.y + deltaCm.y })),
+        })
+      }}
+    />
+  )
 }
