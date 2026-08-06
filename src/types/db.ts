@@ -27,6 +27,14 @@ export type DbRoom = {
   type: 'indoor' | 'outdoor'
   bounding_box_width_cm: number
   bounding_box_depth_cm: number
+  // floor_polygon already existed in the DB (jsonb, default '[]') but was never
+  // part of this type or read anywhere — dead field. Now the traced boundary.
+  floor_polygon: { x: number; y: number }[]
+  obstacles: import('./index').ObstacleShape[]
+  floor_plan_image_url: string | null
+  floor_plan_image_width_px: number | null
+  floor_plan_image_height_px: number | null
+  cm_per_px: number | null
 }
 
 export type DbLayoutObject = {

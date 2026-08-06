@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer } from 'react-konva'
+import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer, Image as KonvaImage } from 'react-konva'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
-import { LayoutObject } from '@/types'
+import { LayoutObject, ObstacleShape, Point2D } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import Konva from 'konva'
 import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable, reassignChairEdge } from '@/lib/utils/seating'
+import { findNearestValidAlongPath } from '@/lib/utils/geometry'
 
 const BASE_SCALE = 2
 const CANVAS_PADDING = 60
@@ -76,6 +77,47 @@ export default function FloorPlanCanvas({
   const roomWidthCm = currentRoom?.bounding_box_width_cm ?? 1500
   const roomDepthCm = currentRoom?.bounding_box_depth_cm ?? 1000
   const roomName = currentRoom ? `${currentRoom.name}  (${roomWidthCm / 100}m × ${roomDepthCm / 100}m)` : 'Loading…'
+
+  // Traced wall boundary + obstacles set by the venue manager (Phase 3 floor
+  // plan tool). Empty floor_polygon means this room hasn't been traced yet —
+  // every boundary/obstacle-aware code path below falls back to the legacy
+  // rectangle (roomWidthCm × roomDepthCm) in that case, so existing rooms keep
+  // working exactly as before until their venue manager sets this up.
+  const boundaryPolygonCm = (currentRoom?.floor_polygon as Point2D[] | undefined) ?? []
+  const hasTracedBoundary = boundaryPolygonCm.length >= 3
+  const obstacles = (currentRoom?.obstacles as ObstacleShape[] | undefined) ?? []
+  const boundaryPolygonPx = boundaryPolygonCm.map((p) => ({
+    x: cmToPixels(p.x, BASE_SCALE) + CANVAS_PADDING,
+    y: cmToPixels(p.y, BASE_SCALE) + CANVAS_PADDING,
+  }))
+
+  // Track the loaded image keyed by the url it was loaded for, rather than
+  // clearing state synchronously when the url changes/disappears — the state
+  // setter only ever runs inside the async onload callback, and a stale image
+  // is derived away automatically once the url no longer matches.
+  const [loadedFloorPlan, setLoadedFloorPlan] = useState<{ url: string; img: HTMLImageElement } | null>(null)
+  useEffect(() => {
+    const url = currentRoom?.floor_plan_image_url
+    if (!url) return
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.src = url
+    img.onload = () => setLoadedFloorPlan({ url, img })
+  }, [currentRoom?.floor_plan_image_url])
+  const floorPlanImage =
+    loadedFloorPlan && loadedFloorPlan.url === currentRoom?.floor_plan_image_url ? loadedFloorPlan.img : null
+
+  // The PNG was calibrated in its own pixel space (cm_per_px) — convert that to
+  // room cm, then to canvas px, so it lines up under the traced boundary/objects
+  // regardless of the image's native resolution.
+  const floorPlanWidthPx =
+    currentRoom?.cm_per_px && currentRoom.floor_plan_image_width_px
+      ? cmToPixels(currentRoom.floor_plan_image_width_px * currentRoom.cm_per_px, BASE_SCALE)
+      : 0
+  const floorPlanDepthPx =
+    currentRoom?.cm_per_px && currentRoom.floor_plan_image_height_px
+      ? cmToPixels(currentRoom.floor_plan_image_height_px * currentRoom.cm_per_px, BASE_SCALE)
+      : 0
 
   const gridSizePx = cmToPixels(gridSizeCm, BASE_SCALE)
   const roomWidthPx = cmToPixels(roomWidthCm, BASE_SCALE)
@@ -230,6 +272,66 @@ export default function FloorPlanCanvas({
     y: Math.max(roomOffsetY + halfH, Math.min(roomOffsetY + roomDepthPx - halfH, y)),
   })
 
+  /**
+   * Resolves a candidate drop position (canvas px) against the room's traced
+   * wall boundary and obstacles for the free-dragged object itself (table or
+   * any non-chair item). Falls back to the legacy axis-aligned rectangle clamp
+   * when the room has no traced boundary yet, so unconfigured rooms behave
+   * exactly as before.
+   */
+  const resolveDragPosition = (
+    xPx: number,
+    yPx: number,
+    widthCm: number,
+    depthCm: number,
+    rotationDeg: number,
+    fallbackCm: { x: number; y: number },
+  ) => {
+    if (!hasTracedBoundary) {
+      return clampToRoom(xPx, yPx, cmToPixels(widthCm, BASE_SCALE) / 2, cmToPixels(depthCm, BASE_SCALE) / 2)
+    }
+    const candidateCm = {
+      x: pixelsToCm(xPx - roomOffsetX, BASE_SCALE),
+      y: pixelsToCm(yPx - roomOffsetY, BASE_SCALE),
+    }
+    const resolvedCm = findNearestValidAlongPath(
+      fallbackCm, candidateCm, widthCm, depthCm, rotationDeg, boundaryPolygonCm, obstacles,
+    )
+    return {
+      x: cmToPixels(resolvedCm.x, BASE_SCALE) + roomOffsetX,
+      y: cmToPixels(resolvedCm.y, BASE_SCALE) + roomOffsetY,
+    }
+  }
+
+  /**
+   * Same boundary/obstacle snap as `resolveDragPosition`, but in cm and keyed
+   * by object id — used for every OTHER positionCm write during a drag (chair
+   * mirror pairs, edge-reassigned chairs, table→chair cascade, multi-select),
+   * so "act like real walls" applies uniformly rather than only to whichever
+   * object Konva is directly dragging. `fromCm` defaults to the object's
+   * current stored position (its last known-valid state).
+   *
+   * No-op (returns `candidateCm` unchanged) when the room has no traced
+   * boundary yet, or when the object/its catalog item can't be found — same
+   * legacy-safe fallback as everywhere else in this file.
+   */
+  const snapPositionToRoom = (
+    objectId: string,
+    candidateCm: { x: number; y: number },
+    rotationDegOverride?: number,
+    fromCmOverride?: { x: number; y: number },
+  ): { x: number; y: number } => {
+    if (!hasTracedBoundary) return candidateCm
+    const target = layoutObjects.find((o) => o.id === objectId)
+    if (!target) return candidateCm
+    const targetCatalogItem = catalogItems.find((i) => i.id === target.catalogItemId)
+    const widthCm = targetCatalogItem?.width_cm ?? 50
+    const depthCm = targetCatalogItem?.depth_cm ?? 50
+    const rotationDeg = rotationDegOverride ?? target.rotationDeg ?? 0
+    const fromCm = fromCmOverride ?? target.positionCm
+    return findNearestValidAlongPath(fromCm, candidateCm, widthCm, depthCm, rotationDeg, boundaryPolygonCm, obstacles)
+  }
+
   const renderGrid = () => {
     const lines = []
     for (let x = 0; x <= roomWidthPx; x += gridSizePx)
@@ -299,7 +401,8 @@ export default function FloorPlanCanvas({
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY } })
+            const candidateCm = { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY }
+            store.updateObject(id, { positionCm: snapPositionToRoom(id, candidateCm, undefined, otherStart) })
           })
         }
         return
@@ -327,7 +430,13 @@ export default function FloorPlanCanvas({
         updateObject(obj.id, { rotationDeg: angleDeg + 90 })
         if (existingChairs.length % 2 === 0 && mirrorOn) {
           const updated = mirrorDragRound(obj.id, angleDeg, parentTable, parentTableItem.width_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
-          updated.forEach((chair) => { if (chair.id !== obj.id) updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg }) })
+          updated.forEach((chair) => {
+            if (chair.id === obj.id) return
+            updateObject(chair.id, {
+              positionCm: snapPositionToRoom(chair.id, chair.positionCm, chair.rotationDeg),
+              rotationDeg: chair.rotationDeg,
+            })
+          })
         }
       } else {
         const currentXCm = pixelsToCm(currentX - roomOffsetX, BASE_SCALE)
@@ -336,8 +445,9 @@ export default function FloorPlanCanvas({
         if (mirrorOn) {
           const updated = mirrorDragRect(obj, { x: currentXCm, y: currentYCm }, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
           updated.forEach((chair) => {
-            if (chair.id === obj.id) e.target.position({ x: cmToPixels(chair.positionCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(chair.positionCm.y, BASE_SCALE) + roomOffsetY })
-            updateObject(chair.id, { positionCm: chair.positionCm })
+            const snapped = snapPositionToRoom(chair.id, chair.positionCm, chair.rotationDeg)
+            if (chair.id === obj.id) e.target.position({ x: cmToPixels(snapped.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(snapped.y, BASE_SCALE) + roomOffsetY })
+            updateObject(chair.id, { positionCm: snapped })
           })
         } else {
           rawDragPosCm.current = { x: currentXCm, y: currentYCm }
@@ -367,8 +477,9 @@ export default function FloorPlanCanvas({
           const dy2 = lockedU.y - ty
           const lockedXCm = tx + dx2 * cos2 - dy2 * sin2
           const lockedYCm = ty + dx2 * sin2 + dy2 * cos2
-          e.target.position({ x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX, y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY })
-          updateObject(obj.id, { positionCm: { x: lockedXCm, y: lockedYCm } })
+          const snapped = snapPositionToRoom(obj.id, { x: lockedXCm, y: lockedYCm })
+          e.target.position({ x: cmToPixels(snapped.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(snapped.y, BASE_SCALE) + roomOffsetY })
+          updateObject(obj.id, { positionCm: snapped })
         }
       }
     }
@@ -393,7 +504,12 @@ export default function FloorPlanCanvas({
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY } })
+            const candidateCm = { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY }
+            // fromCmOverride: otherStart, not the object's live positionCm — during
+            // a multi-select drag the store isn't updated per-frame for every
+            // object, so positionCm may still be its pre-drag value anyway, but
+            // being explicit here avoids relying on that.
+            store.updateObject(id, { positionCm: snapPositionToRoom(id, candidateCm, undefined, otherStart) })
           })
         }
         multiDragStartPositions.current.clear()
@@ -407,7 +523,12 @@ export default function FloorPlanCanvas({
         newX = snapToGrid(newX - roomOffsetX, gridSizePx) + roomOffsetX
         newY = snapToGrid(newY - roomOffsetY, gridSizePx) + roomOffsetY
       }
-      const clamped = clampToRoom(newX, newY, widthPx / 2, depthPx / 2)
+      const clamped = resolveDragPosition(
+        newX, newY,
+        catalogItem?.width_cm ?? 50, catalogItem?.depth_cm ?? 50,
+        obj.rotationDeg ?? 0,
+        obj.positionCm,
+      )
       e.target.position(clamped)
       const newPosCm = { x: pixelsToCm(clamped.x - roomOffsetX, BASE_SCALE), y: pixelsToCm(clamped.y - roomOffsetY, BASE_SCALE) }
 
@@ -422,12 +543,24 @@ export default function FloorPlanCanvas({
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
           if (isEven && mirrorOn) {
             const updated = mirrorDragRound(obj.id, angleDeg, parentTable, parentTableItem.width_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
-            updated.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg }))
+            updated.forEach((chair) =>
+              updateObject(chair.id, {
+                positionCm: snapPositionToRoom(chair.id, chair.positionCm, chair.rotationDeg),
+                rotationDeg: chair.rotationDeg,
+              }),
+            )
           } else {
             const gapCm = 5
             const distanceFromCenter = parentTableItem.width_cm / 2 + gapCm + (chairCatalogItem?.depth_cm ?? 45) / 2
             const angleRad = (angleDeg * Math.PI) / 180
-            updateObject(obj.id, { positionCm: { x: parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad), y: parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad) }, rotationDeg: angleDeg + 90 })
+            const roundChairPos = {
+              x: parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad),
+              y: parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad),
+            }
+            updateObject(obj.id, {
+              positionCm: snapPositionToRoom(obj.id, roundChairPos, angleDeg + 90),
+              rotationDeg: angleDeg + 90,
+            })
           }
         } else {
           const chairCatalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
@@ -437,14 +570,21 @@ export default function FloorPlanCanvas({
           const draggedResult = reassigned.find((c) => c.id === obj.id)
           const edgeChanged = draggedResult?.chairEdge !== obj.chairEdge
           if (edgeChanged) {
-            reassigned.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm, rotationDeg: chair.rotationDeg, chairEdge: chair.chairEdge }))
+            reassigned.forEach((chair) =>
+              updateObject(chair.id, {
+                positionCm: snapPositionToRoom(chair.id, chair.positionCm, chair.rotationDeg),
+                rotationDeg: chair.rotationDeg,
+                chairEdge: chair.chairEdge,
+              }),
+            )
             const draggedFinal = reassigned.find((c) => c.id === obj.id)!
-            e.target.position({ x: cmToPixels(draggedFinal.positionCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(draggedFinal.positionCm.y, BASE_SCALE) + roomOffsetY })
+            const draggedSnapped = snapPositionToRoom(obj.id, draggedFinal.positionCm, draggedFinal.rotationDeg)
+            e.target.position({ x: cmToPixels(draggedSnapped.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(draggedSnapped.y, BASE_SCALE) + roomOffsetY })
           } else if (isEven && mirrorOn) {
             const updated = mirrorDragRect(obj, newPosCm, parentTable, parentTableItem.width_cm, parentTableItem.depth_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
-            updated.forEach((chair) => updateObject(chair.id, { positionCm: chair.positionCm }))
+            updated.forEach((chair) => updateObject(chair.id, { positionCm: snapPositionToRoom(chair.id, chair.positionCm) }))
           } else {
-            updateObject(obj.id, { positionCm: newPosCm })
+            updateObject(obj.id, { positionCm: snapPositionToRoom(obj.id, newPosCm) })
           }
         }
         return
@@ -456,7 +596,10 @@ export default function FloorPlanCanvas({
         if (existingChairs.length > 0) {
           const deltaX = newPosCm.x - obj.positionCm.x
           const deltaY = newPosCm.y - obj.positionCm.y
-          existingChairs.forEach((chair) => updateObject(chair.id, { positionCm: { x: chair.positionCm.x + deltaX, y: chair.positionCm.y + deltaY } }))
+          existingChairs.forEach((chair) => {
+            const candidateCm = { x: chair.positionCm.x + deltaX, y: chair.positionCm.y + deltaY }
+            updateObject(chair.id, { positionCm: snapPositionToRoom(chair.id, candidateCm) })
+          })
         }
       }
     }
@@ -674,13 +817,44 @@ export default function FloorPlanCanvas({
             {/* Canvas background */}
             <Rect x={0} y={0} width={totalWidth} height={totalHeight} fill="#f3f4f6" />
 
-            {/* Room floor */}
-            <Rect
-              x={roomOffsetX} y={roomOffsetY}
-              width={roomWidthPx} height={roomDepthPx}
-              fill="#ffffff" stroke="#374151" strokeWidth={3}
-              shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2}
-            />
+            {/* Room floor — traced wall boundary from the venue manager's floor plan
+                once it exists, otherwise the legacy rectangle so older/unconfigured
+                rooms keep rendering exactly as before. */}
+            {hasTracedBoundary ? (
+              <>
+                {/* Image, boundary line, and obstacles are all positioned in the
+                    same absolute canvas-px space as renderObject (roomOffsetX/Y +
+                    cm→px), so no extra Group offset is needed here — nesting one
+                    would double-apply the offset already baked into boundaryPolygonPx. */}
+                {floorPlanImage && (
+                  <KonvaImage
+                    image={floorPlanImage}
+                    x={roomOffsetX} y={roomOffsetY}
+                    width={floorPlanWidthPx} height={floorPlanDepthPx}
+                    opacity={0.5} listening={false}
+                  />
+                )}
+                <Line
+                  points={boundaryPolygonPx.flatMap((p) => [p.x, p.y])}
+                  closed
+                  fill={floorPlanImage ? undefined : '#ffffff'}
+                  stroke="#374151"
+                  strokeWidth={4}
+                  shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2}
+                  listening={false}
+                />
+                {obstacles.map((o) => (
+                  <ObstacleRender key={o.id} obstacle={o} roomOffsetX={roomOffsetX} roomOffsetY={roomOffsetY} />
+                ))}
+              </>
+            ) : (
+              <Rect
+                x={roomOffsetX} y={roomOffsetY}
+                width={roomWidthPx} height={roomDepthPx}
+                fill="#ffffff" stroke="#374151" strokeWidth={3}
+                shadowColor="rgba(0,0,0,0.15)" shadowBlur={10} shadowOffsetX={2} shadowOffsetY={2}
+              />
+            )}
 
             {/* Room label */}
             <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={roomName} fontSize={11} fill="#9ca3af" />
@@ -714,4 +888,38 @@ export default function FloorPlanCanvas({
       )}
     </div>
   )
+}
+
+/** Read-only render of a venue-defined obstacle (pillar/column/planter) on the Planner's canvas. */
+function ObstacleRender({
+  obstacle,
+  roomOffsetX,
+  roomOffsetY,
+}: {
+  obstacle: ObstacleShape
+  roomOffsetX: number
+  roomOffsetY: number
+}) {
+  const toPx = (p: Point2D) => ({
+    x: cmToPixels(p.x, BASE_SCALE) + roomOffsetX,
+    y: cmToPixels(p.y, BASE_SCALE) + roomOffsetY,
+  })
+  const shared = { fill: 'rgba(120,113,108,0.35)', stroke: '#78716c', strokeWidth: 1.5, listening: false }
+
+  if (obstacle.type === 'circle') {
+    const c = toPx(obstacle.center)
+    return <Circle x={c.x} y={c.y} radius={cmToPixels(obstacle.radiusCm, BASE_SCALE)} {...shared} />
+  }
+  if (obstacle.type === 'rect') {
+    const c = toPx(obstacle.center)
+    const wPx = cmToPixels(obstacle.widthCm, BASE_SCALE)
+    const dPx = cmToPixels(obstacle.depthCm, BASE_SCALE)
+    return (
+      <Group x={c.x} y={c.y} rotation={obstacle.rotationDeg}>
+        <Rect x={-wPx / 2} y={-dPx / 2} width={wPx} height={dPx} {...shared} />
+      </Group>
+    )
+  }
+  const pointsPx = obstacle.points.map(toPx)
+  return <Line points={pointsPx.flatMap((p) => [p.x, p.y])} closed {...shared} />
 }

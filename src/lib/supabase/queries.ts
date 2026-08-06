@@ -1,6 +1,8 @@
 import { supabase } from './client'
-import { LayoutObject } from '@/types'
+import { LayoutObject, ObstacleShape, Point2D } from '@/types'
 import { DbLayoutObject } from '@/types/db'
+import { polygonBoundingBox } from '@/lib/utils/geometry'
+import { generateId } from '@/lib/utils/coordinates'
 
 // ─── Venues & Rooms ───────────────────────────────────────────────────────────
 
@@ -12,6 +14,80 @@ export async function getRoomsForVenue(venueId: string) {
     .order('created_at')
   if (error) throw error
   return data
+}
+
+/**
+ * Uploads a floor-plan PNG for a room to the `floor-plans` bucket, scoped under
+ * `{venueId}/{roomId}/...` to match the venue_manage_own_floor_plans storage
+ * policy. Overwrites any previous plan for this room (upsert). Does not touch
+ * calibration or the traced boundary — a new upload always resets those, since
+ * the old cm_per_px ratio and polygon were calibrated against the old image.
+ */
+export async function uploadRoomFloorPlan(
+  venueId: string,
+  roomId: string,
+  file: File,
+  imageWidthPx: number,
+  imageHeightPx: number,
+) {
+  const path = `${venueId}/${roomId}/plan-${Date.now()}.png`
+  const { error: uploadError } = await supabase.storage
+    .from('floor-plans')
+    .upload(path, file, { upsert: true, contentType: file.type || 'image/png' })
+  if (uploadError) throw uploadError
+
+  const { data: publicUrlData } = supabase.storage.from('floor-plans').getPublicUrl(path)
+
+  const { error: updateError } = await supabase
+    .from('rooms')
+    .update({
+      floor_plan_image_url: publicUrlData.publicUrl,
+      floor_plan_image_width_px: imageWidthPx,
+      floor_plan_image_height_px: imageHeightPx,
+      // Reset calibration + boundary + obstacles — they were traced against the
+      // previous image and no longer correspond to anything on the new one.
+      cm_per_px: null,
+      floor_polygon: [],
+      obstacles: [],
+    })
+    .eq('id', roomId)
+  if (updateError) throw updateError
+
+  return publicUrlData.publicUrl
+}
+
+/** Sets the venue manager's calibration ratio (cm per image pixel) for a room. */
+export async function updateRoomCalibration(roomId: string, cmPerPx: number) {
+  const { error } = await supabase.from('rooms').update({ cm_per_px: cmPerPx }).eq('id', roomId)
+  if (error) throw error
+}
+
+/**
+ * Saves the traced wall boundary. Also refreshes bounding_box_width/depth_cm as
+ * a cached fallback (bounding rect of the polygon), so any code that still reads
+ * those columns directly for a quick estimate keeps working.
+ */
+export async function updateRoomBoundary(roomId: string, floorPolygon: Point2D[]) {
+  const { widthCm, depthCm } = polygonBoundingBox(floorPolygon)
+  const { error } = await supabase
+    .from('rooms')
+    .update({
+      floor_polygon: floorPolygon,
+      ...(floorPolygon.length >= 3
+        ? { bounding_box_width_cm: Math.round(widthCm), bounding_box_depth_cm: Math.round(depthCm) }
+        : {}),
+    })
+    .eq('id', roomId)
+  if (error) throw error
+}
+
+export async function updateRoomObstacles(roomId: string, obstacles: ObstacleShape[]) {
+  const { error } = await supabase.from('rooms').update({ obstacles }).eq('id', roomId)
+  if (error) throw error
+}
+
+export function newObstacleId() {
+  return generateId()
 }
 
 // ─── Catalog ──────────────────────────────────────────────────────────────────
