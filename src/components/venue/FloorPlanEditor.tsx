@@ -23,6 +23,8 @@ type Props = {
 }
 
 const STAGE_PADDING = 40
+const MIN_ZOOM = 0.1
+const MAX_ZOOM = 3
 
 /**
  * NOTE: the parent (RoomFloorPlanManager) renders this with `key={room.id}`,
@@ -36,6 +38,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Working copies — only written back to Supabase on explicit Save, so a venue
@@ -115,16 +118,18 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
 
   /**
    * getPointerPosition() returns the mouse position in Stage-space (raw canvas
-   * pixels), but everything we draw lives inside <Layer x={STAGE_PADDING}
-   * y={STAGE_PADDING}> — so a raw stage position is 40px down-right of where it
-   * needs to be once rendered inside that offset layer. This was the root
-   * cause of clicks registering away from the cursor. Every pointer capture
-   * must go through this.
+   * pixels, BEFORE the Stage's own scaleX/scaleY zoom transform is undone —
+   * Konva does not do that for you), and everything we draw lives inside
+   * <Layer x={STAGE_PADDING} y={STAGE_PADDING}>. So a raw stage position needs
+   * dividing by the current zoom, then shifting back by the padding, to land
+   * in the same native-pixel coordinate space every point is stored in
+   * (dragging is unaffected by this — Konva's node.x()/y() during a drag are
+   * already reported in that same undistorted local space regardless of zoom).
    */
   const getLayerPoint = (stage: Konva.Stage): Point2D => {
     const pos = stage.getPointerPosition()
     if (!pos) return { x: 0, y: 0 }
-    return { x: pos.x - STAGE_PADDING, y: pos.y - STAGE_PADDING }
+    return { x: pos.x / zoom - STAGE_PADDING, y: pos.y / zoom - STAGE_PADDING }
   }
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -384,18 +389,49 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       )}
 
       {room.floor_plan_image_url && image && (
-        <div className="overflow-auto rounded border" style={{ maxHeight: 600 }}>
-          <Stage
-            width={imageWidthPx + STAGE_PADDING * 2}
-            height={imageHeightPx + STAGE_PADDING * 2}
-            onClick={handleStageClick}
-            onDblClick={handleStageDblClick}
-            onMouseDown={handleStageMouseDown}
-            onMouseMove={handleStageMouseMove}
-            onMouseUp={handleStageMouseUp}
-          >
-            <Layer x={STAGE_PADDING} y={STAGE_PADDING}>
-              <KonvaImage image={image} width={imageWidthPx} height={imageHeightPx} opacity={0.85} />
+        <>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 100) / 100))}
+              className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+              aria-label="Zoom out"
+            >
+              −
+            </button>
+            <span className="w-12 text-center text-sm text-gray-500">{Math.round(zoom * 100)}%</span>
+            <button
+              onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 100) / 100))}
+              className="rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+              aria-label="Zoom in"
+            >
+              +
+            </button>
+            <button
+              onClick={() => setZoom(1)}
+              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
+            >
+              Reset
+            </button>
+          </div>
+          <div className="overflow-auto rounded border" style={{ maxHeight: 600 }}>
+            <Stage
+              width={(imageWidthPx + STAGE_PADDING * 2) * zoom}
+              height={(imageHeightPx + STAGE_PADDING * 2) * zoom}
+              scaleX={zoom}
+              scaleY={zoom}
+              onClick={handleStageClick}
+              onDblClick={handleStageDblClick}
+              onMouseDown={handleStageMouseDown}
+              onMouseMove={handleStageMouseMove}
+              onMouseUp={handleStageMouseUp}
+              onWheel={(e) => {
+                e.evt.preventDefault()
+                const direction = e.evt.deltaY > 0 ? -1 : 1
+                setZoom((z) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round((z + direction * 0.1) * 100) / 100)))
+              }}
+            >
+              <Layer x={STAGE_PADDING} y={STAGE_PADDING}>
+                <KonvaImage image={image} width={imageWidthPx} height={imageHeightPx} opacity={0.85} />
 
               {/* Saved wall boundary — vertices are draggable so a misplaced
                   point can be nudged without redrawing the whole shape. Hidden
@@ -533,7 +569,8 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
                 ))}
             </Layer>
           </Stage>
-        </div>
+          </div>
+        </>
       )}
 
       {room.floor_plan_image_url && (
