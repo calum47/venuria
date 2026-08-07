@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { CreateVenueForm } from './CreateVenueForm'
+import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
 
 export default async function AdminPage() {
@@ -9,20 +10,29 @@ export default async function AdminPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [{ data: venues }, { data: venueManagers }, { data: planners }] = await Promise.all([
-    supabase
-      .from('venues')
-      .select('id, name, max_capacity_persons, created_at')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('venue_managers')
-      .select('id, name, email, venue_id, venues(name)')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('planners')
-      .select('id, name, email, planner_code, created_at')
-      .order('created_at', { ascending: false }),
-  ])
+  const [{ data: venues }, { data: venueManagers }, { data: rentalCompanies }, { data: rentalManagers }, { data: planners }] =
+    await Promise.all([
+      supabase
+        .from('venues')
+        .select('id, name, max_capacity_persons, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('venue_managers')
+        .select('id, name, email, venue_id, venues(name)')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('rental_companies')
+        .select('id, name, contact_email, created_at')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('rental_managers')
+        .select('id, name, email, rental_company_id, rental_companies(name)')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('planners')
+        .select('id, name, email, planner_code, created_at')
+        .order('created_at', { ascending: false }),
+    ])
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
@@ -36,7 +46,8 @@ export default async function AdminPage() {
         </p>
 
         <CreateVenueForm />
-        <CreateAccountForm venues={venues ?? []} />
+        <CreateRentalCompanyForm />
+        <CreateAccountForm venues={venues ?? []} rentalCompanies={rentalCompanies ?? []} />
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
@@ -72,6 +83,44 @@ export default async function AdminPage() {
             ))}
             {venueManagers?.length === 0 && (
               <li className="px-4 py-2.5 text-sm text-gray-400">No venue managers yet.</li>
+            )}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">
+            Rental Companies ({rentalCompanies?.length ?? 0})
+          </h2>
+          <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+            {rentalCompanies?.map((rc) => (
+              <li key={rc.id} className="px-4 py-2.5 text-sm flex justify-between">
+                <span className="text-gray-900">{rc.name}</span>
+                <span className="text-gray-400">{rc.contact_email ?? '—'}</span>
+              </li>
+            ))}
+            {rentalCompanies?.length === 0 && (
+              <li className="px-4 py-2.5 text-sm text-gray-400">No rental companies yet.</li>
+            )}
+          </ul>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">
+            Rental Managers ({rentalManagers?.length ?? 0})
+          </h2>
+          <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+            {rentalManagers?.map((rm) => (
+              <li key={rm.id} className="px-4 py-2.5 text-sm flex justify-between">
+                <span className="text-gray-900">
+                  {rm.name} <span className="text-gray-400">({rm.email})</span>
+                </span>
+                <span className="text-gray-400 text-xs">
+                  {(rm.rental_companies as unknown as { name: string } | null)?.name ?? '—'}
+                </span>
+              </li>
+            ))}
+            {rentalManagers?.length === 0 && (
+              <li className="px-4 py-2.5 text-sm text-gray-400">No rental managers yet.</li>
             )}
           </ul>
         </section>

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { DbRoom } from '@/types/db'
 import { createRoom } from '@/lib/supabase/queries'
 import FloorPlanEditor from './FloorPlanEditor'
+import StockManager from '@/components/stock/StockManager'
 
 type Props = {
   venueId: string
@@ -121,6 +122,16 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
         // note at the top of that component.
         <FloorPlanEditor key={selectedRoom.id} venueId={venueId} room={selectedRoom} onRoomUpdated={handleRoomUpdated} />
       )}
+
+      <div className="border-t pt-4 mt-2">
+        <h3 className="text-sm font-medium text-gray-900 mb-2">Stock — tables &amp; chairs</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          How many of each standard item this venue physically owns. Not a hard limit yet — a planner
+          can still place more than you have; this just tracks what&apos;s yours vs. what would need
+          renting later.
+        </p>
+        <StockManager ownerType="venue" ownerId={venueId} />
+      </div>
     </div>
   )
 }

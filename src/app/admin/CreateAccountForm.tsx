@@ -4,17 +4,22 @@ import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 
 type Venue = { id: string; name: string }
+type RentalCompany = { id: string; name: string }
 
-export function CreateAccountForm({ venues }: { venues: Venue[] }) {
+export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]; rentalCompanies: RentalCompany[] }) {
   const router = useRouter()
-  const [targetRole, setTargetRole] = useState<'venue_manager' | 'planner'>('venue_manager')
+  const [targetRole, setTargetRole] = useState<'venue_manager' | 'rental_manager' | 'planner'>('venue_manager')
   const [venueId, setVenueId] = useState('')
+  const [rentalCompanyId, setRentalCompanyId] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  const roleLabel =
+    targetRole === 'venue_manager' ? 'Venue manager' : targetRole === 'rental_manager' ? 'Rental manager' : 'Planner'
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -31,6 +36,7 @@ export function CreateAccountForm({ venues }: { venues: Venue[] }) {
         email,
         password,
         venueId: targetRole === 'venue_manager' ? venueId : undefined,
+        rentalCompanyId: targetRole === 'rental_manager' ? rentalCompanyId : undefined,
       }),
     })
 
@@ -42,13 +48,12 @@ export function CreateAccountForm({ venues }: { venues: Venue[] }) {
       return
     }
 
-    setSuccess(
-      `${targetRole === 'venue_manager' ? 'Venue manager' : 'Planner'} account created — share the email/password with them directly.`,
-    )
+    setSuccess(`${roleLabel} account created — share the email/password with them directly.`)
     setName('')
     setEmail('')
     setPassword('')
     setVenueId('')
+    setRentalCompanyId('')
     router.refresh()
   }
 
@@ -70,6 +75,17 @@ export function CreateAccountForm({ venues }: { venues: Venue[] }) {
           }`}
         >
           Venue Manager
+        </button>
+        <button
+          type="button"
+          onClick={() => setTargetRole('rental_manager')}
+          className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+            targetRole === 'rental_manager'
+              ? 'bg-gray-900 text-white border-gray-900'
+              : 'border-gray-200 text-gray-600'
+          }`}
+        >
+          Rental Manager
         </button>
         <button
           type="button"
@@ -108,9 +124,33 @@ export function CreateAccountForm({ venues }: { venues: Venue[] }) {
         </div>
       )}
 
+      {targetRole === 'rental_manager' && (
+        <div className="space-y-1">
+          <label className="text-xs text-gray-500">Rental company</label>
+          <select
+            required
+            value={rentalCompanyId}
+            onChange={(e) => setRentalCompanyId(e.target.value)}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
+          >
+            <option value="" disabled>
+              Select a rental company...
+            </option>
+            {rentalCompanies.map((rc) => (
+              <option key={rc.id} value={rc.id}>
+                {rc.name}
+              </option>
+            ))}
+          </select>
+          {rentalCompanies.length === 0 && (
+            <p className="text-xs text-amber-600">No rental companies created yet — create one above first.</p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-1">
         <label className="text-xs text-gray-500">
-          {targetRole === 'venue_manager' ? "Manager's name" : 'Name'}
+          {targetRole === 'planner' ? 'Name' : "Manager's name"}
         </label>
         <input
           required
@@ -149,7 +189,7 @@ export function CreateAccountForm({ venues }: { venues: Venue[] }) {
         disabled={isLoading}
         className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Creating...' : `Create ${targetRole === 'venue_manager' ? 'venue manager' : 'planner'}`}
+        {isLoading ? 'Creating...' : `Create ${roleLabel.toLowerCase()}`}
       </button>
     </form>
   )

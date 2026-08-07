@@ -1,16 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export type AuthRole = 'admin' | 'venue' | 'planner' | 'client' | null
+export type AuthRole = 'admin' | 'venue' | 'rental' | 'planner' | 'client' | null
 
 /**
  * Determines which role a logged-in user has by checking the admins,
- * venues, planners, and clients tables for a matching user_id (in that
- * priority order — an admin who is also linked elsewhere resolves as admin).
+ * venue_managers, rental_managers, planners, and clients tables for a
+ * matching user_id (in that priority order — an admin who is also linked
+ * elsewhere resolves as admin).
  *
  * Works with either the browser client (login page) or a request-scoped
  * server client (middleware) — both are plain SupabaseClient instances.
- * Relies on the RLS policies from 002_auth_roles.sql / 003_client_project_rls.sql,
- * which let a user read their own row in each of these tables.
+ * Relies on the RLS policies from 002_auth_roles.sql / 003_client_project_rls.sql
+ * / rental_company_role_and_stock.sql, which let a user read their own row
+ * in each of these tables.
  */
 export async function resolveUserRole(
   supabase: SupabaseClient,
@@ -29,6 +31,13 @@ export async function resolveUserRole(
     .eq('user_id', userId)
     .maybeSingle()
   if (venueManager) return { role: 'venue', redirectPath: '/venue' }
+
+  const { data: rentalManager } = await supabase
+    .from('rental_managers')
+    .select('id')
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (rentalManager) return { role: 'rental', redirectPath: '/rental' }
 
   const { data: planner } = await supabase
     .from('planners')

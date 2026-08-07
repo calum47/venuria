@@ -32,3 +32,30 @@ export async function createVenue(formData: FormData) {
   revalidatePath('/admin')
   return { success: true }
 }
+
+/**
+ * Same pattern as createVenue — plain insert covered by
+ * admin_manage_rental_companies RLS, session-scoped client.
+ */
+export async function createRentalCompany(formData: FormData) {
+  const supabase = await createClient()
+
+  const name = formData.get('name') as string
+  const contactEmail = formData.get('contactEmail') as string
+
+  if (!name) {
+    return { error: 'Rental company name is required.' }
+  }
+
+  const { error } = await supabase.from('rental_companies').insert({
+    name,
+    contact_email: contactEmail || null,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
+}

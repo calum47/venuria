@@ -32,7 +32,7 @@ export function LoginForm() {
     const { role, redirectPath } = await resolveUserRole(supabase, data.user.id)
 
     if (!role) {
-      setError("This account isn't linked to an Admin, Venue, or Planner profile yet.")
+      setError("This account isn't linked to an Admin, Venue, Rental, or Planner profile yet.")
       await supabase.auth.signOut()
       setIsLoading(false)
       return
@@ -49,7 +49,7 @@ export function LoginForm() {
       >
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Sign in to Venuria</h1>
-          <p className="text-xs text-gray-400 mt-1">Admin, Venue, and Planner accounts only.</p>
+          <p className="text-xs text-gray-400 mt-1">Admin, Venue, Rental, and Planner accounts only.</p>
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

@@ -107,6 +107,53 @@ export async function createRoom(venueId: string, name: string, type: 'indoor' |
   return data
 }
 
+// ─── Catalog stock (tables/chairs, per venue or rental company) ────────────────
+//
+// catalog_items rows with venue_id/rental_company_id both null are the master
+// list (name + dimensions, standardized across every venue/rental company —
+// see the 6 Aug catalog list). catalog_item_stock tracks how many of each
+// master item a specific venue or rental company owns; it's informational for
+// now (not enforced as a hard placement limit), meant to eventually power a
+// "you need N more from a rental company" project summary.
+
+export async function getMasterCatalogItems(categories: string[]) {
+  const { data, error } = await supabase
+    .from('catalog_items')
+    .select('*')
+    .is('venue_id', null)
+    .is('rental_company_id', null)
+    .in('category', categories)
+    .order('category')
+    .order('name')
+  if (error) throw error
+  return data
+}
+
+export async function getStock(ownerType: 'venue' | 'rental_company', ownerId: string) {
+  const { data, error } = await supabase
+    .from('catalog_item_stock')
+    .select('catalog_item_id, quantity')
+    .eq('owner_type', ownerType)
+    .eq('owner_id', ownerId)
+  if (error) throw error
+  return data
+}
+
+export async function upsertStockQuantity(
+  catalogItemId: string,
+  ownerType: 'venue' | 'rental_company',
+  ownerId: string,
+  quantity: number,
+) {
+  const { error } = await supabase
+    .from('catalog_item_stock')
+    .upsert(
+      { catalog_item_id: catalogItemId, owner_type: ownerType, owner_id: ownerId, quantity },
+      { onConflict: 'catalog_item_id,owner_type,owner_id' },
+    )
+  if (error) throw error
+}
+
 // ─── Catalog ──────────────────────────────────────────────────────────────────
 
 export async function getCatalogItems(venueId: string) {
