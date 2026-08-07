@@ -767,30 +767,18 @@ export default function FloorPlanCanvas({
     let placedCm: { x: number; y: number }
 
     if (hasTracedBoundary) {
-      // Same polygon/obstacle check used when moving an existing object — a
-      // new item was previously only checked against the legacy rectangle
-      // bounding box, which let it land outside the real (irregular) traced
-      // shape or inside an obstacle, and separately meant the rectangle's own
-      // edge (not necessarily matching the polygon's true extent) silently
-      // capped how far right/down a *new* drop could reach even though
-      // *moving* an existing item could go further, since movement already
-      // used the polygon directly.
+      // A fresh drop has no configuration yet (no chairs assigned, nothing
+      // to lose) — unlike moving an already-placed table, where snapping to
+      // the nearest valid spot makes sense so you don't lose that setup,
+      // here it's simpler to just refuse the drop outright when it's outside
+      // the boundary or inside an obstacle. Placing nothing means there's
+      // nothing to configure, so onTableDropped never fires and the chair-
+      // count popover correctly never shows for a table that isn't there.
       const candidateCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
       const footprint = getFootprintCorners(candidateCm, widthCm, depthCm, 0)
       const { valid } = validateFootprint(footprint, boundaryPolygonCm, obstacles)
-      if (valid) {
-        placedCm = candidateCm
-      } else {
-        // No natural "last valid position" for a brand-new item (there's no
-        // drag path to slide back along) — snap toward the polygon's
-        // centroid instead, so a drop just outside a wall still lands just
-        // inside it rather than silently doing nothing.
-        const centroidCm = boundaryPolygonCm.reduce(
-          (acc, p) => ({ x: acc.x + p.x / boundaryPolygonCm.length, y: acc.y + p.y / boundaryPolygonCm.length }),
-          { x: 0, y: 0 },
-        )
-        placedCm = findNearestValidAlongPath(centroidCm, candidateCm, widthCm, depthCm, 0, boundaryPolygonCm, obstacles)
-      }
+      if (!valid) return
+      placedCm = candidateCm
     } else {
       // Legacy rectangle rooms (no traced boundary yet) — unchanged behaviour.
       if (x < roomOffsetX || x > roomOffsetX + roomWidthPx || y < roomOffsetY || y > roomOffsetY + roomDepthPx) return
