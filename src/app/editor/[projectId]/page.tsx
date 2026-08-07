@@ -16,6 +16,8 @@ import { useGuestStore } from '@/stores/guestStore'
 import { LayoutObject } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import { generateChairObjects, getTableChairConfig } from '@/lib/utils/seating'
+import { supabase } from '@/lib/supabase/client'
+import { resolveUserRole } from '@/lib/supabase/role'
 import {
   getCatalogItems,
   getProject,
@@ -307,7 +309,20 @@ export default function EditorPage() {
         {/* Toolbar */}
         <div className="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4">
           <button
-            onClick={() => router.push('/')}
+            onClick={async () => {
+              // Was hardcoded to '/', which is a straight /login redirect
+              // (removed 5 Aug along with the old anonymous-project flow) —
+              // resolve wherever this logged-in user actually belongs instead.
+              const {
+                data: { user },
+              } = await supabase.auth.getUser()
+              if (!user) {
+                router.push('/login')
+                return
+              }
+              const { redirectPath } = await resolveUserRole(supabase, user.id)
+              router.push(redirectPath)
+            }}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             ← Home

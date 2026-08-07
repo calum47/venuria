@@ -156,14 +156,36 @@ export async function upsertStockQuantity(
 
 // ─── Catalog ──────────────────────────────────────────────────────────────────
 
+/**
+ * Items available to place in a venue's editor: the shared master tables/
+ * chairs list (venue_id/rental_company_id both null — standardized across
+ * every venue, see the 6 Aug catalog + stock work) plus anything actually
+ * scoped to this specific venue (decorations, once those get relinked —
+ * currently none, since they're still orphaned from the venue deletion
+ * incident, a separate known gap).
+ */
 export async function getCatalogItems(venueId: string) {
-  const { data, error } = await supabase
-    .from('catalog_items')
-    .select('*')
-    .eq('venue_id', venueId)
-    .order('category')
-  if (error) throw error
-  return data
+  const [masterResult, venueResult] = await Promise.all([
+    supabase
+      .from('catalog_items')
+      .select('*')
+      .is('venue_id', null)
+      .is('rental_company_id', null)
+      .in('category', ['tables', 'chairs']),
+    supabase.from('catalog_items').select('*').eq('venue_id', venueId),
+  ])
+  if (masterResult.error) throw masterResult.error
+  if (venueResult.error) throw venueResult.error
+
+  const seen = new Set<string>()
+  const combined = [...masterResult.data, ...venueResult.data].filter((item) => {
+    if (seen.has(item.id)) return false
+    seen.add(item.id)
+    return true
+  })
+  return combined.sort(
+    (a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name),
+  )
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
