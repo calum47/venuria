@@ -9,7 +9,7 @@ import { LayoutObject, ObstacleShape, Point2D } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import Konva from 'konva'
 import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable, reassignChairEdge } from '@/lib/utils/seating'
-import { findNearestValidAlongPath } from '@/lib/utils/geometry'
+import { findNearestValidAlongPath, getFootprintCorners, validateFootprint } from '@/lib/utils/geometry'
 
 const BASE_SCALE = 2
 const CANVAS_PADDING = 60
@@ -761,9 +761,45 @@ export default function FloorPlanCanvas({
     const stageBox = stage.container().getBoundingClientRect()
     const x = (e.clientX - stageBox.left - stagePosRef.current.x) / zoomRef.current
     const y = (e.clientY - stageBox.top - stagePosRef.current.y) / zoomRef.current
-    if (x < roomOffsetX || x > roomOffsetX + roomWidthPx || y < roomOffsetY || y > roomOffsetY + roomDepthPx) return
-    const snappedX = snapEnabled ? snapToGrid(x - roomOffsetX, gridSizePx) + roomOffsetX : x
-    const snappedY = snapEnabled ? snapToGrid(y - roomOffsetY, gridSizePx) + roomOffsetY : y
+
+    const widthCm = item.width_cm ?? 50
+    const depthCm = item.depth_cm ?? 50
+    let placedCm: { x: number; y: number }
+
+    if (hasTracedBoundary) {
+      // Same polygon/obstacle check used when moving an existing object — a
+      // new item was previously only checked against the legacy rectangle
+      // bounding box, which let it land outside the real (irregular) traced
+      // shape or inside an obstacle, and separately meant the rectangle's own
+      // edge (not necessarily matching the polygon's true extent) silently
+      // capped how far right/down a *new* drop could reach even though
+      // *moving* an existing item could go further, since movement already
+      // used the polygon directly.
+      const candidateCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
+      const footprint = getFootprintCorners(candidateCm, widthCm, depthCm, 0)
+      const { valid } = validateFootprint(footprint, boundaryPolygonCm, obstacles)
+      if (valid) {
+        placedCm = candidateCm
+      } else {
+        // No natural "last valid position" for a brand-new item (there's no
+        // drag path to slide back along) — snap toward the polygon's
+        // centroid instead, so a drop just outside a wall still lands just
+        // inside it rather than silently doing nothing.
+        const centroidCm = boundaryPolygonCm.reduce(
+          (acc, p) => ({ x: acc.x + p.x / boundaryPolygonCm.length, y: acc.y + p.y / boundaryPolygonCm.length }),
+          { x: 0, y: 0 },
+        )
+        placedCm = findNearestValidAlongPath(centroidCm, candidateCm, widthCm, depthCm, 0, boundaryPolygonCm, obstacles)
+      }
+    } else {
+      // Legacy rectangle rooms (no traced boundary yet) — unchanged behaviour.
+      if (x < roomOffsetX || x > roomOffsetX + roomWidthPx || y < roomOffsetY || y > roomOffsetY + roomDepthPx) return
+      placedCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
+    }
+
+    const placedPx = { x: cmToPixels(placedCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(placedCm.y, BASE_SCALE) + roomOffsetY }
+    const snappedX = snapEnabled ? snapToGrid(placedPx.x - roomOffsetX, gridSizePx) + roomOffsetX : placedPx.x
+    const snappedY = snapEnabled ? snapToGrid(placedPx.y - roomOffsetY, gridSizePx) + roomOffsetY : placedPx.y
     const newObject: LayoutObject = {
       id: generateId(),
       catalogItemId: item.id,
