@@ -26,17 +26,18 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json()
-  const { targetRole, name, email, password, venueId } = body as {
-    targetRole: 'venue_manager' | 'planner'
+  const { targetRole, name, email, password, venueId, rentalCompanyId } = body as {
+    targetRole: 'venue_manager' | 'rental_manager' | 'planner'
     name: string
     email: string
     password: string
     venueId?: string
+    rentalCompanyId?: string
   }
 
-  if (targetRole !== 'venue_manager' && targetRole !== 'planner') {
+  if (targetRole !== 'venue_manager' && targetRole !== 'rental_manager' && targetRole !== 'planner') {
     return NextResponse.json(
-      { error: 'targetRole must be "venue_manager" or "planner".' },
+      { error: 'targetRole must be "venue_manager", "rental_manager", or "planner".' },
       { status: 400 },
     )
   }
@@ -49,6 +50,12 @@ export async function POST(request: Request) {
   if (targetRole === 'venue_manager' && !venueId) {
     return NextResponse.json(
       { error: 'A venue must be selected for a venue manager account.' },
+      { status: 400 },
+    )
+  }
+  if (targetRole === 'rental_manager' && !rentalCompanyId) {
+    return NextResponse.json(
+      { error: 'A rental company must be selected for a rental manager account.' },
       { status: 400 },
     )
   }
@@ -76,12 +83,19 @@ export async function POST(request: Request) {
           name,
           email,
         })
-      : await adminClient.from('planners').insert({
-          user_id: created.user.id,
-          name,
-          email,
-          planner_code: generatePlannerCode(),
-        })
+      : targetRole === 'rental_manager'
+        ? await adminClient.from('rental_managers').insert({
+            user_id: created.user.id,
+            rental_company_id: rentalCompanyId,
+            name,
+            email,
+          })
+        : await adminClient.from('planners').insert({
+            user_id: created.user.id,
+            name,
+            email,
+            planner_code: generatePlannerCode(),
+          })
 
   if (insertResult.error) {
     // Roll back the auth user so we don't leave an orphaned login with no
@@ -89,11 +103,14 @@ export async function POST(request: Request) {
     // forever, a login that goes nowhere.
     await adminClient.auth.admin.deleteUser(created.user.id)
 
-    // venue_managers.venue_id is unique — a friendlier message than the raw
-    // Postgres constraint error when someone tries to double-assign a venue.
+    // venue_managers.venue_id / rental_managers.rental_company_id are unique —
+    // friendlier messages than the raw Postgres constraint errors when someone
+    // tries to double-assign a venue or rental company.
     const message = insertResult.error.message.includes('venue_managers_venue_id_key')
       ? 'That venue already has a manager account assigned.'
-      : insertResult.error.message
+      : insertResult.error.message.includes('rental_managers_rental_company_id_key')
+        ? 'That rental company already has a manager account assigned.'
+        : insertResult.error.message
 
     return NextResponse.json({ error: message }, { status: 400 })
   }
