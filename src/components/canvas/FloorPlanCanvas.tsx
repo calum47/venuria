@@ -79,10 +79,7 @@ export default function FloorPlanCanvas({
   const roomName = currentRoom ? `${currentRoom.name}  (${roomWidthCm / 100}m × ${roomDepthCm / 100}m)` : 'Loading…'
 
   // Traced wall boundary + obstacles set by the venue manager (Phase 3 floor
-  // plan tool). Empty floor_polygon means this room hasn't been traced yet —
-  // every boundary/obstacle-aware code path below falls back to the legacy
-  // rectangle (roomWidthCm × roomDepthCm) in that case, so existing rooms keep
-  // working exactly as before until their venue manager sets this up.
+  // plan tool). Empty floor_polygon means this room hasn't been traced yet.
   const boundaryPolygonCm = (currentRoom?.floor_polygon as Point2D[] | undefined) ?? []
   const hasTracedBoundary = boundaryPolygonCm.length >= 3
   const obstacles = (currentRoom?.obstacles as ObstacleShape[] | undefined) ?? []
@@ -90,6 +87,24 @@ export default function FloorPlanCanvas({
     x: cmToPixels(p.x, BASE_SCALE) + CANVAS_PADDING,
     y: cmToPixels(p.y, BASE_SCALE) + CANVAS_PADDING,
   }))
+
+  // Every boundary/obstacle-aware collision check below uses this instead of
+  // branching on hasTracedBoundary — an untraced room falls back to a
+  // synthetic 4-corner rectangle (0,0)-(roomWidthCm,roomDepthCm), which is a
+  // perfectly valid polygon for the exact same point-in-polygon/footprint
+  // logic used for a real traced boundary. Previously the untraced fallback
+  // used a separate axis-aligned half-width/half-height clamp that ignored
+  // rotation entirely (the long-open Phase 1 "rotated object boundary
+  // clamping" item) — folding it into the same polygon path fixes that for
+  // free instead of maintaining two different collision implementations.
+  const effectiveBoundaryCm: Point2D[] = hasTracedBoundary
+    ? boundaryPolygonCm
+    : [
+        { x: 0, y: 0 },
+        { x: roomWidthCm, y: 0 },
+        { x: roomWidthCm, y: roomDepthCm },
+        { x: 0, y: roomDepthCm },
+      ]
 
   // Track the loaded image keyed by the url it was loaded for, rather than
   // clearing state synchronously when the url changes/disappears — the state
@@ -267,17 +282,11 @@ export default function FloorPlanCanvas({
     }
   }
 
-  const clampToRoom = (x: number, y: number, halfW: number, halfH: number) => ({
-    x: Math.max(roomOffsetX + halfW, Math.min(roomOffsetX + roomWidthPx - halfW, x)),
-    y: Math.max(roomOffsetY + halfH, Math.min(roomOffsetY + roomDepthPx - halfH, y)),
-  })
-
   /**
-   * Resolves a candidate drop position (canvas px) against the room's traced
-   * wall boundary and obstacles for the free-dragged object itself (table or
-   * any non-chair item). Falls back to the legacy axis-aligned rectangle clamp
-   * when the room has no traced boundary yet, so unconfigured rooms behave
-   * exactly as before.
+   * Resolves a candidate drop position (canvas px) against the room's
+   * boundary (traced polygon, or a synthetic rectangle for untraced rooms —
+   * see effectiveBoundaryCm) and obstacles, for the free-dragged object
+   * itself (table or any non-chair item). Rotation-aware in both cases.
    */
   const resolveDragPosition = (
     xPx: number,
@@ -287,15 +296,12 @@ export default function FloorPlanCanvas({
     rotationDeg: number,
     fallbackCm: { x: number; y: number },
   ) => {
-    if (!hasTracedBoundary) {
-      return clampToRoom(xPx, yPx, cmToPixels(widthCm, BASE_SCALE) / 2, cmToPixels(depthCm, BASE_SCALE) / 2)
-    }
     const candidateCm = {
       x: pixelsToCm(xPx - roomOffsetX, BASE_SCALE),
       y: pixelsToCm(yPx - roomOffsetY, BASE_SCALE),
     }
     const resolvedCm = findNearestValidAlongPath(
-      fallbackCm, candidateCm, widthCm, depthCm, rotationDeg, boundaryPolygonCm, obstacles,
+      fallbackCm, candidateCm, widthCm, depthCm, rotationDeg, effectiveBoundaryCm, obstacles,
     )
     return {
       x: cmToPixels(resolvedCm.x, BASE_SCALE) + roomOffsetX,
@@ -311,9 +317,9 @@ export default function FloorPlanCanvas({
    * object Konva is directly dragging. `fromCm` defaults to the object's
    * current stored position (its last known-valid state).
    *
-   * No-op (returns `candidateCm` unchanged) when the room has no traced
-   * boundary yet, or when the object/its catalog item can't be found — same
-   * legacy-safe fallback as everywhere else in this file.
+   * No-op (returns `candidateCm` unchanged) only when the object/its catalog
+   * item can't be found (shouldn't normally happen) — every room, traced or
+   * not, now goes through the same polygon collision via effectiveBoundaryCm.
    */
   const snapPositionToRoom = (
     objectId: string,
@@ -321,7 +327,6 @@ export default function FloorPlanCanvas({
     rotationDegOverride?: number,
     fromCmOverride?: { x: number; y: number },
   ): { x: number; y: number } => {
-    if (!hasTracedBoundary) return candidateCm
     const target = layoutObjects.find((o) => o.id === objectId)
     if (!target) return candidateCm
     const targetCatalogItem = catalogItems.find((i) => i.id === target.catalogItemId)
@@ -329,7 +334,48 @@ export default function FloorPlanCanvas({
     const depthCm = targetCatalogItem?.depth_cm ?? 50
     const rotationDeg = rotationDegOverride ?? target.rotationDeg ?? 0
     const fromCm = fromCmOverride ?? target.positionCm
-    return findNearestValidAlongPath(fromCm, candidateCm, widthCm, depthCm, rotationDeg, boundaryPolygonCm, obstacles)
+    return findNearestValidAlongPath(fromCm, candidateCm, widthCm, depthCm, rotationDeg, effectiveBoundaryCm, obstacles)
+  }
+
+  /**
+   * Multi-select group move: finds the largest delta-scale t∈[0,1] such that
+   * EVERY selected object's footprint (each at its own start position + t ×
+   * the shared requested delta) stays valid. Applying the same t to the
+   * whole group keeps it rigid — everyone moves by the same fraction of the
+   * requested delta and stops together, rather than each object snapping to
+   * its own nearest valid point independently (which let the group visually
+   * separate when only one member reached a wall/obstacle first).
+   */
+  const resolveGroupDelta = (
+    ids: string[],
+    startPositions: Map<string, { x: number; y: number }>,
+    deltaCm: { x: number; y: number },
+  ): number => {
+    const isValidAt = (t: number) => {
+      for (const id of ids) {
+        const start = startPositions.get(id)
+        const memberObj = layoutObjects.find((o) => o.id === id)
+        if (!start || !memberObj) continue
+        const item = catalogItems.find((i) => i.id === memberObj.catalogItemId)
+        const widthCm = item?.width_cm ?? 50
+        const depthCm = item?.depth_cm ?? 50
+        const rotationDeg = memberObj.rotationDeg ?? 0
+        const pos = { x: start.x + deltaCm.x * t, y: start.y + deltaCm.y * t }
+        const footprint = getFootprintCorners(pos, widthCm, depthCm, rotationDeg)
+        if (!validateFootprint(footprint, effectiveBoundaryCm, obstacles).valid) return false
+      }
+      return true
+    }
+    if (isValidAt(1)) return 1
+    if (!isValidAt(0)) return 0 // group already invalid at its start position — don't move it further into trouble
+    let validT = 0
+    let invalidT = 1
+    for (let i = 0; i < 14; i++) {
+      const midT = (validT + invalidT) / 2
+      if (isValidAt(midT)) validT = midT
+      else invalidT = midT
+    }
+    return validT
   }
 
   const renderGrid = () => {
@@ -396,13 +442,23 @@ export default function FloorPlanCanvas({
           const deltaCmX = currentXCm - startCm.x
           const deltaCmY = currentYCm - startCm.y
           const allObjects = store.layoutObjects
+          const t = resolveGroupDelta(currentSelectedIds, multiDragStartPositions.current, { x: deltaCmX, y: deltaCmY })
+          if (t < 1) {
+            // Cap the dragged object's own on-screen position too, so it
+            // doesn't visually outrun the rest of the group once the group
+            // as a whole has hit a wall/obstacle.
+            const cappedCm = { x: startCm.x + deltaCmX * t, y: startCm.y + deltaCmY * t }
+            e.target.position({
+              x: cmToPixels(cappedCm.x, BASE_SCALE) + roomOffsetX,
+              y: cmToPixels(cappedCm.y, BASE_SCALE) + roomOffsetY,
+            })
+          }
           currentSelectedIds.forEach((id) => {
             if (id === obj.id) return
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            const candidateCm = { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY }
-            store.updateObject(id, { positionCm: snapPositionToRoom(id, candidateCm, undefined, otherStart) })
+            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX * t, y: otherStart.y + deltaCmY * t } })
           })
         }
         return
@@ -426,7 +482,18 @@ export default function FloorPlanCanvas({
         const angleRad = (angleDeg * Math.PI) / 180
         const lockedXCm = parentTable.positionCm.x + distanceFromCenter * Math.cos(angleRad)
         const lockedYCm = parentTable.positionCm.y + distanceFromCenter * Math.sin(angleRad)
-        e.target.position({ x: cmToPixels(lockedXCm, BASE_SCALE) + roomOffsetX, y: cmToPixels(lockedYCm, BASE_SCALE) + roomOffsetY })
+        // Live-snap the primary dragged chair too — previously this only
+        // happened at drag-end, so a round chair could visibly sit inside a
+        // wall/obstacle for the whole drag gesture before jumping to a valid
+        // spot on release. fromCm is obj.positionCm (stable for this whole
+        // gesture, since round-chair position isn't written to the store
+        // until drop — only rotationDeg is), so every frame searches from
+        // the same known-good starting point.
+        const snappedRoundChair = snapPositionToRoom(obj.id, { x: lockedXCm, y: lockedYCm }, angleDeg + 90)
+        e.target.position({
+          x: cmToPixels(snappedRoundChair.x, BASE_SCALE) + roomOffsetX,
+          y: cmToPixels(snappedRoundChair.y, BASE_SCALE) + roomOffsetY,
+        })
         updateObject(obj.id, { rotationDeg: angleDeg + 90 })
         if (existingChairs.length % 2 === 0 && mirrorOn) {
           const updated = mirrorDragRound(obj.id, angleDeg, parentTable, parentTableItem.width_cm, chairCatalogItem?.depth_cm ?? 45, existingChairs)
@@ -500,16 +567,19 @@ export default function FloorPlanCanvas({
           const deltaCmX = currentXCm - startCm.x
           const deltaCmY = currentYCm - startCm.y
           const allObjects = store.layoutObjects
+          const t = resolveGroupDelta(currentSelectedIds, multiDragStartPositions.current, { x: deltaCmX, y: deltaCmY })
+          if (t < 1) {
+            const cappedCm = { x: startCm.x + deltaCmX * t, y: startCm.y + deltaCmY * t }
+            e.target.position({
+              x: cmToPixels(cappedCm.x, BASE_SCALE) + roomOffsetX,
+              y: cmToPixels(cappedCm.y, BASE_SCALE) + roomOffsetY,
+            })
+          }
           currentSelectedIds.forEach((id) => {
             const other = allObjects.find((o) => o.id === id)
             const otherStart = multiDragStartPositions.current.get(id)
             if (!other || !otherStart) return
-            const candidateCm = { x: otherStart.x + deltaCmX, y: otherStart.y + deltaCmY }
-            // fromCmOverride: otherStart, not the object's live positionCm — during
-            // a multi-select drag the store isn't updated per-frame for every
-            // object, so positionCm may still be its pre-drag value anyway, but
-            // being explicit here avoids relying on that.
-            store.updateObject(id, { positionCm: snapPositionToRoom(id, candidateCm, undefined, otherStart) })
+            store.updateObject(id, { positionCm: { x: otherStart.x + deltaCmX * t, y: otherStart.y + deltaCmY * t } })
           })
         }
         multiDragStartPositions.current.clear()
@@ -764,26 +834,21 @@ export default function FloorPlanCanvas({
 
     const widthCm = item.width_cm ?? 50
     const depthCm = item.depth_cm ?? 50
-    let placedCm: { x: number; y: number }
 
-    if (hasTracedBoundary) {
-      // A fresh drop has no configuration yet (no chairs assigned, nothing
-      // to lose) — unlike moving an already-placed table, where snapping to
-      // the nearest valid spot makes sense so you don't lose that setup,
-      // here it's simpler to just refuse the drop outright when it's outside
-      // the boundary or inside an obstacle. Placing nothing means there's
-      // nothing to configure, so onTableDropped never fires and the chair-
-      // count popover correctly never shows for a table that isn't there.
-      const candidateCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
-      const footprint = getFootprintCorners(candidateCm, widthCm, depthCm, 0)
-      const { valid } = validateFootprint(footprint, boundaryPolygonCm, obstacles)
-      if (!valid) return
-      placedCm = candidateCm
-    } else {
-      // Legacy rectangle rooms (no traced boundary yet) — unchanged behaviour.
-      if (x < roomOffsetX || x > roomOffsetX + roomWidthPx || y < roomOffsetY || y > roomOffsetY + roomDepthPx) return
-      placedCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
-    }
+    // A fresh drop has no configuration yet (no chairs assigned, nothing to
+    // lose) — unlike moving an already-placed table, where snapping to the
+    // nearest valid spot makes sense so you don't lose that setup, here it's
+    // simpler to just refuse the drop outright when it's outside the
+    // boundary or inside an obstacle. Placing nothing means there's nothing
+    // to configure, so onTableDropped never fires and the chair-count
+    // popover correctly never shows for a table that isn't there. Uses
+    // effectiveBoundaryCm so this is rotation-aware and correct even in
+    // untraced rooms, same as every other collision check in this file.
+    const candidateCm = { x: pixelsToCm(x - roomOffsetX, BASE_SCALE), y: pixelsToCm(y - roomOffsetY, BASE_SCALE) }
+    const footprint = getFootprintCorners(candidateCm, widthCm, depthCm, 0)
+    const { valid } = validateFootprint(footprint, effectiveBoundaryCm, obstacles)
+    if (!valid) return
+    const placedCm = candidateCm
 
     const placedPx = { x: cmToPixels(placedCm.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(placedCm.y, BASE_SCALE) + roomOffsetY }
     const snappedX = snapEnabled ? snapToGrid(placedPx.x - roomOffsetX, gridSizePx) + roomOffsetX : placedPx.x
