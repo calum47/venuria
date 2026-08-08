@@ -266,6 +266,16 @@ export async function getLayoutObjects(projectId: string, roomId: string): Promi
   return (data as DbLayoutObject[]).map(mapDbObject)
 }
 
+/** Every placed object across every room of a project — used by the project summary's stock-shortfall calc, which cares about total usage, not per-room breakdowns. */
+export async function getAllLayoutObjectsForProject(projectId: string): Promise<LayoutObject[]> {
+  const { data, error } = await supabase
+    .from('layout_objects')
+    .select('*')
+    .eq('project_id', projectId)
+  if (error) throw error
+  return (data as DbLayoutObject[]).map(mapDbObject)
+}
+
 /**
  * Upsert the full list of layout objects for a project+room.
  * Any DB rows not in the current list are deleted (they were removed by the user).

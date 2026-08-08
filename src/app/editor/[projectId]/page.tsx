@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 
 import FloorPlanCanvas from '@/components/canvas/FloorPlanCanvas'
 import CatalogSidebar from '@/components/canvas/CatalogSidebar'
@@ -327,6 +328,13 @@ export default function EditorPage() {
           >
             ← Home
           </button>
+          <span className="text-gray-300">|</span>
+          <Link
+            href={`/editor/${projectId}/summary`}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            📋 Summary
+          </Link>
           <span className="text-gray-300">|</span>
           <h1 className="text-sm font-semibold text-gray-800">Venuria</h1>
           <span className="text-gray-300">|</span>
