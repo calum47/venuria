@@ -389,25 +389,36 @@ export function generateChairObjects(
   })
 }
 
+/**
+ * Table → seating capacity. Previously this guessed capacity from
+ * substrings in the table name (bucketed by "small/medium/large", with a
+ * hardcoded exception for "cocktail" that forced 0 chairs) — those buckets
+ * were placeholder numbers, not real specs, and the "cocktail" exception
+ * actively fought against tables that are meant to seat people despite
+ * having "cocktail" in the name. This is now an exact lookup for the
+ * current fixed catalog. If a table name isn't recognised, it falls back to
+ * a permissive default rather than silently blocking chair placement.
+ */
 export function getTableChairConfig(tableName: string): {
   maxChairs: number
   acceptsChairs: boolean
 } {
-  const name = tableName.toLowerCase()
-
-  if (name.includes('cocktail')) return { maxChairs: 0, acceptsChairs: false }
-  if (name.includes('sweetheart')) return { maxChairs: 2, acceptsChairs: true }
-  if (name.includes('head table')) return { maxChairs: 12, acceptsChairs: true }
-  if (name.includes('round') && name.includes('small')) return { maxChairs: 6, acceptsChairs: true }
-  if (name.includes('round') && name.includes('medium')) return { maxChairs: 8, acceptsChairs: true }
-  if (name.includes('round') && name.includes('large') && !name.includes('xl')) return { maxChairs: 10, acceptsChairs: true }
-  if (name.includes('round') && name.includes('xl')) return { maxChairs: 12, acceptsChairs: true }
-  if (name.includes('rectangular') && name.includes('small')) return { maxChairs: 4, acceptsChairs: true }
-  if (name.includes('rectangular') && name.includes('medium')) return { maxChairs: 6, acceptsChairs: true }
-  if (name.includes('rectangular') && name.includes('large') && !name.includes('banquet')) return { maxChairs: 8, acceptsChairs: true }
-  if (name.includes('banquet')) return { maxChairs: 10, acceptsChairs: true }
-
-  return { maxChairs: 12, acceptsChairs: true }
+  switch (tableName) {
+    case 'Rectangular Table (6-Seat)':
+      return { maxChairs: 6, acceptsChairs: true }
+    case 'Rectangular Table (8-Seat)':
+      return { maxChairs: 8, acceptsChairs: true }
+    case 'Round Tall Table':
+      return { maxChairs: 0, acceptsChairs: false }
+    case 'Round Cocktail Table':
+      return { maxChairs: 6, acceptsChairs: true }
+    case 'Round Dinner Table (180cm)':
+      return { maxChairs: 10, acceptsChairs: true }
+    case 'Round Dinner Table (200cm)':
+      return { maxChairs: 12, acceptsChairs: true }
+    default:
+      return { maxChairs: 8, acceptsChairs: true }
+  }
 }
 
 export function recalculateChairPositions(
