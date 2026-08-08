@@ -37,7 +37,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
 
   const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }] = await Promise.all([
-    getAllLayoutObjectsForProject(projectId),
+    getAllLayoutObjectsForProject(projectId, supabase),
     supabase.from('catalog_item_stock').select('catalog_item_id, quantity').eq('owner_type', 'venue').eq('owner_id', project.venue_id),
     supabase.from('rental_companies').select('id, name').order('name'),
   ])

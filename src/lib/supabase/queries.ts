@@ -1,4 +1,5 @@
 import { supabase } from './client'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { LayoutObject, ObstacleShape, Point2D } from '@/types'
 import { DbLayoutObject } from '@/types/db'
 import { polygonBoundingBox } from '@/lib/utils/geometry'
@@ -266,9 +267,22 @@ export async function getLayoutObjects(projectId: string, roomId: string): Promi
   return (data as DbLayoutObject[]).map(mapDbObject)
 }
 
-/** Every placed object across every room of a project — used by the project summary's stock-shortfall calc, which cares about total usage, not per-room breakdowns. */
-export async function getAllLayoutObjectsForProject(projectId: string): Promise<LayoutObject[]> {
-  const { data, error } = await supabase
+/**
+ * Every placed object across every room of a project — used by the project summary's
+ * stock-shortfall calc, which cares about total usage, not per-room breakdowns.
+ *
+ * Accepts an optional Supabase client so this can be called from Server Components
+ * (which must use the cookie-aware server client from `server.ts`) as well as from
+ * client components (which use the default browser client). Passing the wrong client
+ * doesn't error — it just silently returns zero rows once RLS is scoped, because the
+ * request has no authenticated session attached. Always pass the server client explicitly
+ * when calling this from a Server Component.
+ */
+export async function getAllLayoutObjectsForProject(
+  projectId: string,
+  client: SupabaseClient = supabase,
+): Promise<LayoutObject[]> {
+  const { data, error } = await client
     .from('layout_objects')
     .select('*')
     .eq('project_id', projectId)
