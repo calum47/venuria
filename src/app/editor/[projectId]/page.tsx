@@ -11,12 +11,14 @@ import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
 import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
+import AutoArrangeModal from '@/components/canvas/AutoArrangeModal'
 
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { LayoutObject } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
-import { generateChairObjects, getTableChairConfig } from '@/lib/utils/seating'
+import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromSides } from '@/lib/utils/seating'
+import { generateId } from '@/lib/utils/coordinates'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
 import {
@@ -53,6 +55,7 @@ export default function EditorPage() {
   const {
     isGuestMode,
     setGuestMode,
+    guests,
     setGuests,
     setSeatAssignments,
     assignGuest,
@@ -67,6 +70,7 @@ export default function EditorPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSwitchingRoom, setIsSwitchingRoom] = useState(false)
   const [show3D, setShow3D] = useState(false)
+  const [showAutoArrange, setShowAutoArrange] = useState(false)
 
   // Table dropped — waiting for the user to choose chair count
   const [pendingTableDrop, setPendingTableDrop] = useState<{
@@ -217,26 +221,63 @@ export default function EditorPage() {
       ?? catalogItems.find((i) => i.name.toLowerCase().includes('chair'))
 
     const isRound = tableItem.name.toLowerCase().includes('round')
+    // A Sweetheart Table seats the couple side-by-side facing the room, not
+    // one at each end — the default "all-sides" proportional split (used by
+    // every other table) would put 1 chair top + 1 bottom for a 2-seat table,
+    // which is wrong for this specific table. Force both chairs onto one edge
+    // instead, via the same per-side mechanism the properties panel already
+    // exposes (chairSides) — so it's correct on drop and still fully
+    // editable afterwards through the existing Top/Bottom/Left/Right toggles.
+    const isSweetheart = tableItem.name === 'Sweetheart Table'
 
     useLayoutStore.getState().addObject(tableObject)
 
     if (chairItem) {
-      const chairs = generateChairObjects(
-        tableObject,
-        tableItem.width_cm,
-        tableItem.depth_cm,
-        isRound,
-        chairCount,
-        chairItem.id,
-        chairItem.width_cm,
-        chairItem.depth_cm,
-      )
-      useLayoutStore.getState().updateObject(tableObject.id, {
-        chairCount,
-        chairCatalogItemId: chairItem.id,
-        chairIds: chairs.map((c) => c.id),
-      })
-      useLayoutStore.getState().addObjects(chairs)
+      if (isSweetheart) {
+        const sides = { top: true, bottom: false, left: false, right: false }
+        const positions = calculateChairPositionsFromSides(
+          tableObject.positionCm.x,
+          tableObject.positionCm.y,
+          tableItem.width_cm,
+          tableItem.depth_cm,
+          chairCount,
+          chairItem.depth_cm,
+          sides,
+        )
+        const chairs: LayoutObject[] = positions.map((pos) => ({
+          id: generateId(),
+          catalogItemId: chairItem.id,
+          positionCm: { x: pos.x, y: pos.y },
+          rotationDeg: pos.rotationDeg,
+          quantity: 1,
+          isChairFor: tableObject.id,
+          chairEdge: 'top',
+        }))
+        useLayoutStore.getState().updateObject(tableObject.id, {
+          chairCount,
+          chairCatalogItemId: chairItem.id,
+          chairIds: chairs.map((c) => c.id),
+          chairSides: sides,
+        })
+        useLayoutStore.getState().addObjects(chairs)
+      } else {
+        const chairs = generateChairObjects(
+          tableObject,
+          tableItem.width_cm,
+          tableItem.depth_cm,
+          isRound,
+          chairCount,
+          chairItem.id,
+          chairItem.width_cm,
+          chairItem.depth_cm,
+        )
+        useLayoutStore.getState().updateObject(tableObject.id, {
+          chairCount,
+          chairCatalogItemId: chairItem.id,
+          chairIds: chairs.map((c) => c.id),
+        })
+        useLayoutStore.getState().addObjects(chairs)
+      }
     }
 
     setPendingTableDrop(null)
@@ -269,6 +310,8 @@ export default function EditorPage() {
   }, [projectId, assignGuest])
 
   // ── Derived values ──────────────────────────────────────────────────────────
+
+  const currentRoom = rooms.find((r) => r.id === currentRoomId) ?? null
 
   const liveObject = selectedObjectId
     ? layoutObjects.find((o) => o.id === selectedObjectId) ?? null
@@ -336,6 +379,14 @@ export default function EditorPage() {
             📋 Summary
           </Link>
           <span className="text-gray-300">|</span>
+          <button
+            onClick={() => setShowAutoArrange(true)}
+            disabled={!currentRoom || isGuestMode}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
+          >
+            ✨ Auto-Arrange
+          </button>
+          <span className="text-gray-300">|</span>
           <h1 className="text-sm font-semibold text-gray-800">Venuria</h1>
           <span className="text-gray-300">|</span>
 
@@ -398,7 +449,7 @@ export default function EditorPage() {
           <div className="flex-1 overflow-hidden min-w-0">
             <FloorPlanCanvas
               catalogItems={catalogItems}
-              currentRoom={rooms.find((r) => r.id === currentRoomId) ?? null}
+              currentRoom={currentRoom}
               onZoomChange={setZoom}
               onTableDropped={handleTableDropped}
               isGuestMode={isGuestMode}
@@ -441,6 +492,21 @@ export default function EditorPage() {
           maxChairs={pendingTableDrop.maxChairs}
           onConfirm={handleChairCountConfirm}
           onSkip={handleChairSkip}
+        />
+      )}
+
+      {/* Auto-Arrange modal */}
+      {showAutoArrange && currentRoom && (
+        <AutoArrangeModal
+          catalogItems={catalogItems}
+          currentRoom={currentRoom}
+          existingObjects={layoutObjects}
+          guestCount={guests.length}
+          onClose={() => setShowAutoArrange(false)}
+          onArranged={(objects) => {
+            useLayoutStore.getState().addObjects(objects)
+            setShowAutoArrange(false)
+          }}
         />
       )}
 

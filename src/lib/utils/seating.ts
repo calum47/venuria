@@ -416,6 +416,8 @@ export function getTableChairConfig(tableName: string): {
       return { maxChairs: 10, acceptsChairs: true }
     case 'Round Dinner Table (200cm)':
       return { maxChairs: 12, acceptsChairs: true }
+    case 'Sweetheart Table':
+      return { maxChairs: 2, acceptsChairs: true }
     default:
       return { maxChairs: 8, acceptsChairs: true }
   }
