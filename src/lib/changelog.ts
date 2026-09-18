@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-team-invites',
+    date: '2026-09-18',
+    title: 'Invite colleagues to your team',
+    roles: ['planner', 'admin'],
+    items: [
+      'Team managers can now create invite links from My team. Send the link to a colleague; they set up their own login and land straight in your team.',
+      'Choose whether they join as a Member (sees public projects and their own) or a Lead (sees and assigns every project).',
+      'Links are one-time and expire after 7 days. Pending links can be revoked from My team.',
+      'Managers can change a teammate\'s role or remove them. Removing someone moves them to their own team — nothing of theirs is deleted.',
+    ],
+  },
+  {
     id: '2026-09-18-teams-nav',
     date: '2026-09-18',
     title: 'Navigation, Settings and Teams',

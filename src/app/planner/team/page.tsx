@@ -1,11 +1,13 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import TeamManager from './TeamManager'
 import { getPlannerContext, ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
 
 /**
- * My Team — roster (Phase 22a). Read-only for now: inviting, removing, and
- * role changes arrive with 22b (invite links). Team name and currency are
- * edited in Settings by the manager, per the spec.
+ * My Team (Phase 22a/22b). Everyone sees the roster; the manager also gets
+ * invite links, pending invites, and per-member role/remove controls. Team
+ * name and currency are edited in Settings, per the spec.
  */
 export default async function TeamPage() {
   const supabase = await createClient()
@@ -24,6 +26,24 @@ export default async function TeamPage() {
     .select('id, name, email, role, created_at')
     .eq('team_id', ctx.team.id)
     .order('created_at')
+
+  // Manager-only data: RLS returns nothing for anyone else, so no branching needed.
+  const { data: invites } = ctx.planner.role === 'manager'
+    ? await supabase
+        .from('team_invites')
+        .select('id, role, expires_at, token')
+        .eq('team_id', ctx.team.id)
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+    : { data: [] }
+
+  // Absolute origin for the invite links, from the request itself so it's
+  // right in local dev and production without an env var.
+  const h = await headers()
+  const proto = h.get('x-forwarded-proto') ?? 'https'
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? ''
+  const origin = `${proto}://${host}`
 
   const order: Record<PlannerRole, number> = { manager: 0, lead: 1, member: 2 }
   const roster = [...(members ?? [])].sort(
@@ -60,10 +80,13 @@ export default async function TeamPage() {
           ))}
         </ul>
 
-        {ctx.planner.role === 'manager' && roster.length === 1 && (
-          <p className="text-sm text-gray-400">
-            It&apos;s just you for now. Inviting colleagues is coming next.
-          </p>
+        {ctx.planner.role === 'manager' && (
+          <TeamManager
+            meId={ctx.planner.id}
+            members={roster.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role as PlannerRole }))}
+            invites={(invites ?? []) as { id: string; role: 'lead' | 'member'; expires_at: string; token: string }[]}
+            origin={origin}
+          />
         )}
       </div>
     </main>

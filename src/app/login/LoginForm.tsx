@@ -64,6 +64,9 @@ export function LoginForm() {
         {searchParams.get('error') === 'unauthorized' && !error && (
           <p className="text-sm text-amber-600">You don&apos;t have access to that area.</p>
         )}
+        {searchParams.get('joined') === '1' && !error && (
+          <p className="text-sm text-green-600">Your account is ready — sign in to join your team.</p>
+        )}
 
         <div className="space-y-1">
           <label className="text-xs text-gray-500">Email</label>
