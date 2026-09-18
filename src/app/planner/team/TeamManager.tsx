@@ -132,6 +132,7 @@ function MemberControls({ meId, members }: { meId: string; members: Member[] }) 
               <form action={run(setMemberRole)} className="flex items-center gap-1">
                 <input type="hidden" name="plannerId" value={m.id} />
                 <select
+                  key={m.role}
                   name="role"
                   defaultValue={m.role}
                   onChange={(e) => e.currentTarget.form?.requestSubmit()}

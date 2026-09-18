@@ -125,6 +125,10 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                   <label className="text-[11px] text-gray-500">Assigned to</label>
                   <input type="hidden" name="projectId" value={project.id} />
                   <select
+                    // key forces a remount when the assignee changes, so the box
+                    // reflects the saved value after a revalidation (defaultValue
+                    // alone only applies on first mount).
+                    key={project.assigneeId ?? 'none'}
                     name="plannerId"
                     defaultValue={project.assigneeId ?? ''}
                     onChange={(e) => e.currentTarget.form?.requestSubmit()}
