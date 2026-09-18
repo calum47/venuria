@@ -1,7 +1,8 @@
 import { supabase } from './client'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { LayoutObject, ObstacleShape, Point2D } from '@/types'
-import { DbLayoutObject, DbProjectActivity } from '@/types/db'
+import { LayoutObject, ObstacleShape, Point2D, ProjectZone } from '@/types'
+import { mapDbZone } from '@/lib/zones'
+import { DbLayoutObject, DbProjectActivity, DbProjectZone } from '@/types/db'
 import { polygonBoundingBox } from '@/lib/utils/geometry'
 import { generateId } from '@/lib/utils/coordinates'
 
@@ -512,4 +513,72 @@ export async function getProjectActivitySince(
   const { data, error } = await query
   if (error) throw error
   return (data ?? []) as DbProjectActivity[]
+}
+
+// ─── Project zones (Phase 4b) ─────────────────────────────────────────────────
+//
+// Zones are small and edited one at a time, so every mutation persists
+// immediately — no debounced full-replace like layout_objects.
+
+export async function getProjectZones(projectId: string, roomId: string): Promise<ProjectZone[]> {
+  const { data, error } = await supabase
+    .from('project_zones')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('room_id', roomId)
+    .order('sort_order')
+    .order('created_at')
+  if (error) throw error
+  return (data as DbProjectZone[]).map(mapDbZone)
+}
+
+/** Every zone in the project, for the summary page (server client). */
+export async function getAllProjectZones(
+  projectId: string,
+  client: SupabaseClient = supabase,
+): Promise<ProjectZone[]> {
+  const { data, error } = await client
+    .from('project_zones')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('room_id')
+    .order('sort_order')
+    .order('created_at')
+  if (error) throw error
+  return (data as DbProjectZone[]).map(mapDbZone)
+}
+
+export async function insertProjectZone(zone: Omit<ProjectZone, 'id'>): Promise<ProjectZone> {
+  const { data, error } = await supabase
+    .from('project_zones')
+    .insert({
+      project_id: zone.projectId,
+      room_id: zone.roomId,
+      name: zone.name,
+      color: zone.color,
+      shape: zone.shape,
+      sort_order: zone.sortOrder,
+    })
+    .select('*')
+    .single()
+  if (error) throw error
+  return mapDbZone(data as DbProjectZone)
+}
+
+export async function updateProjectZone(
+  id: string,
+  patch: Partial<Pick<ProjectZone, 'name' | 'color' | 'shape' | 'sortOrder'>>,
+): Promise<void> {
+  const row: Record<string, unknown> = {}
+  if (patch.name !== undefined) row.name = patch.name
+  if (patch.color !== undefined) row.color = patch.color
+  if (patch.shape !== undefined) row.shape = patch.shape
+  if (patch.sortOrder !== undefined) row.sort_order = patch.sortOrder
+  const { error } = await supabase.from('project_zones').update(row).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProjectZone(id: string): Promise<void> {
+  const { error } = await supabase.from('project_zones').delete().eq('id', id)
+  if (error) throw error
 }

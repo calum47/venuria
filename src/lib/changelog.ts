@@ -28,6 +28,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-zones',
+    date: '2026-09-18',
+    title: 'Zone colour-coding',
+    roles: ['planner', 'admin'],
+    items: [
+      'New 🎨 Zones button in the editor: paint named areas onto a room — Dance Floor, Bar, Ceremony, Buffet, Photo Booth, Stage/DJ, Lounge, or your own.',
+      'Draw a rectangle by dragging, or a freeform shape by clicking corners and double-clicking to finish. Drag a zone to move it, drag its handles to reshape it.',
+      'Zones show under your tables all the time; turn Zones on only when you want to edit them.',
+      'Auto-Arrange now keeps tables out of every zone — draw the dance floor first and it will fill the rest of the room around it.',
+      'The project summary lists every zone per room with its size.',
+    ],
+  },
+  {
     id: '2026-09-18-auto-arrange',
     date: '2026-09-18',
     title: 'Auto-Arrange and the Sweetheart Table',

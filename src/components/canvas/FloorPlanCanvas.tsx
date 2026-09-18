@@ -5,7 +5,9 @@ import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer, Image as Ko
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
-import { LayoutObject, ObstacleShape, Point2D } from '@/types'
+import { LayoutObject, ObstacleShape, Point2D, ProjectZone } from '@/types'
+import ZoneOverlay, { type ZoneDraft } from '@/components/zones/ZoneOverlay'
+import type { ZoneTool } from '@/lib/zones'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import Konva from 'konva'
 import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable, reassignChairEdge } from '@/lib/utils/seating'
@@ -27,6 +29,17 @@ type Props = {
   onChairClickInGuestMode?: (chairId: string) => void
   onGuestDropOnChair?: (chairId: string, guestId: string) => void
   draggingGuestId?: string | null
+  // ── Zones (Phase 4b) — all optional so existing callers are unaffected ──
+  zones?: ProjectZone[]
+  zoneMode?: boolean
+  zoneTool?: ZoneTool
+  selectedZoneId?: string | null
+  zoneDraftColor?: string
+  onZoneSelect?: (id: string | null) => void
+  onZoneCreate?: (shape: ObstacleShape) => void
+  onZoneChangeLocal?: (id: string, shape: ObstacleShape) => void
+  onZoneCommit?: (id: string) => void
+  onZoneDelete?: (id: string) => void
 }
 
 export default function FloorPlanCanvas({
@@ -35,6 +48,16 @@ export default function FloorPlanCanvas({
   onZoomChange,
   onTableDropped,
   isGuestMode = false,
+  zones = [],
+  zoneMode = false,
+  zoneTool = 'select',
+  selectedZoneId = null,
+  zoneDraftColor = '#6366f1',
+  onZoneSelect,
+  onZoneCreate,
+  onZoneChangeLocal,
+  onZoneCommit,
+  onZoneDelete,
   onChairClickInGuestMode,
   onGuestDropOnChair,
   draggingGuestId,
@@ -72,6 +95,10 @@ export default function FloorPlanCanvas({
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 })
   const [tooltip, setTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
   const [selectionRect, setSelectionRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null)
+  // Zone drawing (Phase 4b). Draft lives here because it needs the stage's
+  // pointer/zoom/pan state; the overlay component just renders it.
+  const [zoneDraft, setZoneDraft] = useState<ZoneDraft | null>(null)
+  const zoneRectStart = useRef<Point2D | null>(null)
 
   // Room dimensions come from the DB via props; fall back to sensible defaults while loading
   const roomWidthCm = currentRoom?.bounding_box_width_cm ?? 1500
@@ -156,7 +183,7 @@ export default function FloorPlanCanvas({
 
   useEffect(() => {
     if (!transformerRef.current || !stageRef.current) return
-    if (selectedObjectId && !isGuestMode) {
+    if (selectedObjectId && !isGuestMode && !zoneMode) {
       const shape = stageRef.current.findOne(`#${selectedObjectId}`)
       if (shape) {
         transformerRef.current.nodes([shape])
@@ -166,17 +193,25 @@ export default function FloorPlanCanvas({
       transformerRef.current.nodes([])
       transformerRef.current.getLayer()?.batchDraw()
     }
-  }, [selectedObjectId, isGuestMode])
+  }, [selectedObjectId, isGuestMode, zoneMode])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't hijack keys while typing in a zone name / note field.
+      const tag = (e.target as HTMLElement | null)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      if (zoneMode) {
+        if (e.key === 'Escape') { setZoneDraft(null); zoneRectStart.current = null; onZoneSelect?.(null) }
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedZoneId) onZoneDelete?.(selectedZoneId)
+        return
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0 && !isGuestMode) {
         deleteSelection()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedObjectIds, deleteSelection, isGuestMode])
+  }, [selectedObjectIds, deleteSelection, isGuestMode, zoneMode, selectedZoneId, onZoneDelete, onZoneSelect])
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
@@ -205,6 +240,16 @@ export default function FloorPlanCanvas({
       stageRef.current?.container().style.setProperty('cursor', 'grabbing')
       return
     }
+    if (zoneMode) {
+      // Zone shapes cancel bubbling on mousedown, so reaching here means
+      // empty canvas: start a rect draft if that's the tool, otherwise nothing.
+      if (e.evt.button !== 0 || zoneTool !== 'rect') return
+      const p = getCanvasPoint()
+      if (!p) return
+      zoneRectStart.current = p
+      setZoneDraft({ type: 'rect', startPx: p, currentPx: p })
+      return
+    }
     if (e.evt.button === 0 && !isGuestMode) {
       const target = e.target
       const isOnObject = target.getType() === 'Group' || (target.getParent() !== null && target.getParent()?.getType() === 'Group')
@@ -231,6 +276,17 @@ export default function FloorPlanCanvas({
       setStagePos((prev) => ({ x: prev.x + dx, y: prev.y + dy }))
       return
     }
+    if (zoneMode) {
+      if (!zoneDraft) return
+      const p = getCanvasPoint()
+      if (!p) return
+      if (zoneDraft.type === 'rect' && zoneRectStart.current) {
+        setZoneDraft({ type: 'rect', startPx: zoneRectStart.current, currentPx: p })
+      } else if (zoneDraft.type === 'polygon') {
+        setZoneDraft({ ...zoneDraft, cursorPx: p })
+      }
+      return
+    }
     if (isSelecting.current && selectionStart.current) {
       const stage = stageRef.current
       if (!stage) return
@@ -251,6 +307,27 @@ export default function FloorPlanCanvas({
     if (isPanning.current) {
       isPanning.current = false
       stageRef.current?.container().style.setProperty('cursor', 'default')
+      return
+    }
+    if (zoneMode) {
+      if (zoneDraft?.type === 'rect' && zoneRectStart.current) {
+        const s0 = zoneRectStart.current
+        const c0 = zoneDraft.currentPx
+        const w = Math.abs(c0.x - s0.x)
+        const h = Math.abs(c0.y - s0.y)
+        zoneRectStart.current = null
+        setZoneDraft(null)
+        if (w >= 16 && h >= 16) {
+          onZoneCreate?.({
+            id: generateId(),
+            type: 'rect',
+            center: canvasPxToCm({ x: (s0.x + c0.x) / 2, y: (s0.y + c0.y) / 2 }),
+            widthCm: pixelsToCm(w, BASE_SCALE),
+            depthCm: pixelsToCm(h, BASE_SCALE),
+            rotationDeg: 0,
+          })
+        }
+      }
       return
     }
     if (isSelecting.current && selectionStart.current) {
@@ -729,7 +806,8 @@ export default function FloorPlanCanvas({
         x={x}
         y={y}
         rotation={obj.rotationDeg}
-        draggable={!isGuestMode}
+        draggable={!isGuestMode && !zoneMode}
+        listening={!zoneMode}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
         onDragEnd={handleDragEnd}
@@ -791,9 +869,48 @@ export default function FloorPlanCanvas({
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isPanning.current) return
     setTooltip(null)
+    if (zoneMode) {
+      if (zoneTool === 'polygon') {
+        const p = getCanvasPoint()
+        if (!p) return
+        setZoneDraft((prev) => {
+          const pts = prev?.type === 'polygon' ? prev.pointsPx : []
+          const last = pts[pts.length - 1]
+          // A double-click also fires two clicks at the same spot — ignore the repeat.
+          if (last && Math.hypot(last.x - p.x, last.y - p.y) < 3) return prev
+          return { type: 'polygon', pointsPx: [...pts, p], cursorPx: p }
+        })
+        return
+      }
+      if (e.target === e.target.getStage()) onZoneSelect?.(null)
+      return
+    }
     if (e.target === e.target.getStage() && !isGuestMode) {
       selectObject(null)
     }
+  }
+
+  const handleStageDblClick = () => {
+    if (!zoneMode || zoneDraft?.type !== 'polygon') return
+    const pts = zoneDraft.pointsPx
+    setZoneDraft(null)
+    if (pts.length < 3) return
+    onZoneCreate?.({ id: generateId(), type: 'polygon', points: pts.map(canvasPxToCm) })
+  }
+
+  /** Stage pointer → canvas px (undoing the stage's own pan/zoom). */
+  function getCanvasPoint(): Point2D | null {
+    const stage = stageRef.current
+    if (!stage) return null
+    const pos = stage.getPointerPosition()
+    if (!pos) return null
+    return { x: (pos.x - stagePosRef.current.x) / zoomRef.current, y: (pos.y - stagePosRef.current.y) / zoomRef.current }
+  }
+  function canvasPxToCm(p: Point2D): Point2D {
+    return { x: pixelsToCm(p.x - roomOffsetX, BASE_SCALE), y: pixelsToCm(p.y - roomOffsetY, BASE_SCALE) }
+  }
+  function cmToCanvasPx(p: Point2D): Point2D {
+    return { x: cmToPixels(p.x, BASE_SCALE) + roomOffsetX, y: cmToPixels(p.y, BASE_SCALE) + roomOffsetY }
   }
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -824,7 +941,7 @@ export default function FloorPlanCanvas({
 
     // Catalog item drop
     const itemData = e.dataTransfer.getData('catalogItem')
-    if (!itemData || isGuestMode) return
+    if (!itemData || isGuestMode || zoneMode) return
     const item: DbCatalogItem = JSON.parse(itemData)
     const stage = stageRef.current
     if (!stage) return
@@ -874,6 +991,13 @@ export default function FloorPlanCanvas({
         <button onClick={handleZoomIn}    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">+</button>
       </div>
 
+      {/* Zone mode banner */}
+      {zoneMode && (
+        <div className="absolute top-3 left-3 z-10 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
+          <p className="text-xs text-indigo-700 font-medium">🎨 Zones — {zoneTool === 'rect' ? 'drag to draw a rectangle' : zoneTool === 'polygon' ? 'click corners, double-click to finish' : 'click a zone to select, drag to move'}</p>
+        </div>
+      )}
+
       {/* Guest mode banner */}
       {isGuestMode && (
         <div className="absolute top-3 left-3 z-10 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
@@ -901,6 +1025,7 @@ export default function FloorPlanCanvas({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onClick={handleStageClick}
+          onDblClick={handleStageDblClick}
         >
           <Layer>
             {/* Canvas background */}
@@ -949,6 +1074,20 @@ export default function FloorPlanCanvas({
             <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={roomName} fontSize={11} fill="#9ca3af" />
 
             {renderGrid()}
+            {/* Zones sit under the furniture like painted floor areas */}
+            <ZoneOverlay
+              zones={zones}
+              editable={zoneMode}
+              selectedZoneId={selectedZoneId}
+              toPx={cmToCanvasPx}
+              toCm={canvasPxToCm}
+              pxPerCm={BASE_SCALE}
+              onSelect={(id) => onZoneSelect?.(id)}
+              onChangeLocal={(id, shape) => onZoneChangeLocal?.(id, shape)}
+              onCommit={(id) => onZoneCommit?.(id)}
+              draft={zoneDraft}
+              draftColor={zoneDraftColor}
+            />
             {layoutObjects.map(renderObject)}
 
             {/* Drag-selection rectangle */}

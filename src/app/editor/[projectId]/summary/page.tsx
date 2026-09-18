@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
-import { getAllLayoutObjectsForProject } from '@/lib/supabase/queries'
+import { getAllLayoutObjectsForProject, getAllProjectZones } from '@/lib/supabase/queries'
+import { zoneAreaM2 } from '@/lib/zones'
+import type { ProjectZone } from '@/types'
 import Link from 'next/link'
 import { DbCatalogItem } from '@/types/db'
 
@@ -36,11 +38,15 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
 
-  const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }] = await Promise.all([
+  const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }, zones, { data: roomRows }] = await Promise.all([
     getAllLayoutObjectsForProject(projectId, supabase),
     supabase.from('catalog_item_stock').select('catalog_item_id, quantity').eq('owner_type', 'venue').eq('owner_id', project.venue_id),
     supabase.from('rental_companies').select('id, name').order('name'),
+    getAllProjectZones(projectId, supabase),
+    supabase.from('rooms').select('id, name').eq('venue_id', project.venue_id),
   ])
+  const roomNameById = new Map<string, string>((roomRows ?? []).map((r) => [r.id, r.name]))
+  const zoneLegend = <ZoneLegend zones={zones} roomNameById={roomNameById} />
 
   // How many of each catalog item are actually placed across every room.
   const usedCounts = new Map<string, number>()
@@ -53,6 +59,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     return (
       <SummaryShell projectId={projectId} venueName={venueName}>
         <p className="text-sm text-gray-400">Nothing placed in this project yet.</p>
+        {zoneLegend}
       </SummaryShell>
     )
   }
@@ -160,7 +167,36 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
           ))}
         </tbody>
       </table>
+      {zoneLegend}
     </SummaryShell>
+  )
+}
+
+/** Phase 4b: zone legend per room. Renders nothing when the project has no zones. */
+function ZoneLegend({ zones, roomNameById }: { zones: ProjectZone[]; roomNameById: Map<string, string> }) {
+  if (zones.length === 0) return null
+  const byRoom = new Map<string, ProjectZone[]>()
+  for (const z of zones) byRoom.set(z.roomId, [...(byRoom.get(z.roomId) ?? []), z])
+  return (
+    <section className="mt-8">
+      <h2 className="text-sm font-semibold text-gray-900 mb-2">Zones</h2>
+      <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
+        {[...byRoom.entries()].map(([roomId, roomZones]) => (
+          <div key={roomId} className="px-4 py-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{roomNameById.get(roomId) ?? 'Room'}</p>
+            <ul className="space-y-1">
+              {roomZones.map((z) => (
+                <li key={z.id} className="flex items-center gap-2 text-sm">
+                  <span className="w-3 h-3 rounded-sm border border-black/10" style={{ backgroundColor: z.color }} />
+                  <span className="text-gray-900">{z.name}</span>
+                  <span className="text-gray-400 text-xs ml-auto">{zoneAreaM2(z).toFixed(1)} m²</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 

@@ -191,3 +191,22 @@ export function findNearestValidAlongPath(
   }
   return { x: fromCm.x + (toCm.x - fromCm.x) * validT, y: fromCm.y + (toCm.y - fromCm.y) * validT }
 }
+
+/** Area of a simple polygon in cm² (shoelace). Order-independent sign; returns absolute value. */
+export function polygonAreaCm2(polygon: Point2D[]): number {
+  if (polygon.length < 3) return 0
+  let twice = 0
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i]
+    const b = polygon[(i + 1) % polygon.length]
+    twice += a.x * b.y - b.x * a.y
+  }
+  return Math.abs(twice) / 2
+}
+
+/** Area of any ObstacleShape in cm². */
+export function obstacleAreaCm2(shape: ObstacleShape): number {
+  if (shape.type === 'rect') return shape.widthCm * shape.depthCm
+  if (shape.type === 'circle') return Math.PI * shape.radiusCm * shape.radiusCm
+  return polygonAreaCm2(shape.points)
+}

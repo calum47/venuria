@@ -52,6 +52,22 @@ export type ObstacleShape =
   | { id: string; type: 'circle'; label?: string; center: Point2D; radiusCm: number }
   | { id: string; type: 'polygon'; label?: string; points: Point2D[] }
 
+// ─── Zones (Phase 4b) ────────────────────────────────────────────────────────
+// A Planner-drawn, named, coloured area on a room's canvas for one project
+// (Dance Floor, Bar, Ceremony…). Reuses ObstacleShape on purpose: Auto-Arrange
+// treats every zone as an obstacle, so "keep tables off the dance floor" is
+// the same footprint check as a pillar.
+
+export type ProjectZone = {
+  id: string
+  projectId: string
+  roomId: string
+  name: string
+  color: string // hex from ZONE_PALETTE
+  shape: ObstacleShape
+  sortOrder: number
+}
+
 export type Hotspot = {
   id: string
   roomId: string

@@ -13,6 +13,8 @@ import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
 import AutoArrangeModal from '@/components/canvas/AutoArrangeModal'
 import ProjectActivityModal from '@/components/changelog/ProjectActivityModal'
+import ZonePanel from '@/components/zones/ZonePanel'
+import { useZoneStore } from '@/stores/zoneStore'
 
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
@@ -61,6 +63,20 @@ export default function EditorPage() {
     setSeatAssignments,
     assignGuest,
   } = useGuestStore()
+  const {
+    zones,
+    zoneMode,
+    zoneTool,
+    selectedZoneId,
+    pendingPreset,
+    loadZones,
+    setZoneMode,
+    selectZone,
+    createZone,
+    updateZoneLocal,
+    persistZone,
+    deleteZone,
+  } = useZoneStore()
 
   // ── Local state ─────────────────────────────────────────────────────────────
 
@@ -141,6 +157,24 @@ export default function EditorPage() {
 
     init()
   }, [projectId])
+
+  // ── Zones (Phase 4b) — per room, reloaded on every room switch ─────────────
+
+  useEffect(() => {
+    if (!projectId || !currentRoomId) return
+    loadZones(projectId, currentRoomId).catch((err) => console.error('Failed to load zones:', err))
+  }, [projectId, currentRoomId, loadZones])
+
+  const toggleZoneMode = () => {
+    const next = !zoneMode
+    if (next) {
+      // Modes are exclusive; clear furniture selection so the Transformer hides.
+      setGuestMode(false)
+      useLayoutStore.getState().selectObject(null)
+      useLayoutStore.getState().setSelectedObjectIds([])
+    }
+    setZoneMode(next)
+  }
 
   // ── Auto-save ───────────────────────────────────────────────────────────────
 
@@ -342,8 +376,8 @@ export default function EditorPage() {
   return (
     <main className="flex h-screen w-screen overflow-hidden bg-gray-100">
 
-      {/* Left sidebar — item catalog (hidden in guest mode) */}
-      {!isGuestMode && (
+      {/* Left sidebar — item catalog (hidden in guest and zone modes) */}
+      {!isGuestMode && !zoneMode && (
         <div className="flex-shrink-0">
           <CatalogSidebar catalogItems={catalogItems} />
         </div>
@@ -413,7 +447,7 @@ export default function EditorPage() {
 
           {/* Guest mode toggle */}
           <button
-            onClick={() => setGuestMode(!isGuestMode)}
+            onClick={() => { if (!isGuestMode) setZoneMode(false); setGuestMode(!isGuestMode) }}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               isGuestMode
                 ? 'bg-amber-500 text-white hover:bg-amber-600'
@@ -421,6 +455,19 @@ export default function EditorPage() {
             }`}
           >
             👥 {isGuestMode ? 'Guest Mode ON' : 'Guest Mode'}
+          </button>
+
+          {/* Zone mode toggle */}
+          <button
+            onClick={toggleZoneMode}
+            disabled={!currentRoom}
+            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-30 ${
+              zoneMode
+                ? 'bg-indigo-500 text-white hover:bg-indigo-600'
+                : 'text-gray-500 hover:bg-gray-100 border border-gray-200'
+            }`}
+          >
+            🎨 {zoneMode ? 'Zones ON' : 'Zones'}
           </button>
 
           {/* Zoom hint / level */}
@@ -457,13 +504,33 @@ export default function EditorPage() {
               onChairClickInGuestMode={setAssigningChairId}
               onGuestDropOnChair={handleGuestDropOnChair}
               draggingGuestId={draggingGuestId}
+              zones={zones}
+              zoneMode={zoneMode}
+              zoneTool={zoneTool}
+              selectedZoneId={selectedZoneId}
+              zoneDraftColor={pendingPreset.color}
+              onZoneSelect={selectZone}
+              onZoneCreate={(shape) => {
+                if (!currentRoomId) return
+                createZone(projectId, currentRoomId, shape).catch((err) => console.error('Failed to create zone:', err))
+              }}
+              onZoneChangeLocal={(id, shape) => updateZoneLocal(id, { shape })}
+              onZoneCommit={(id) => persistZone(id).catch((err) => console.error('Failed to save zone:', err))}
+              onZoneDelete={(id) => deleteZone(id).catch((err) => console.error('Failed to delete zone:', err))}
             />
           </div>
 
           {/* Properties panel — only when an object is selected outside guest mode */}
-          {!isGuestMode && liveObject && (
+          {!isGuestMode && !zoneMode && liveObject && (
             <div className="flex-shrink-0">
               <PropertiesPanel object={liveObject} catalogItems={catalogItems} />
+            </div>
+          )}
+
+          {/* Zone panel — only in zone mode */}
+          {zoneMode && (
+            <div className="flex-shrink-0">
+              <ZonePanel roomName={currentRoom?.name ?? ''} />
             </div>
           )}
 
@@ -507,6 +574,7 @@ export default function EditorPage() {
           catalogItems={catalogItems}
           currentRoom={currentRoom}
           existingObjects={layoutObjects}
+          zones={zones}
           guestCount={guests.length}
           onClose={() => setShowAutoArrange(false)}
           onArranged={(objects) => {

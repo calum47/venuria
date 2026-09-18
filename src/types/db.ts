@@ -75,3 +75,14 @@ export type DbProjectActivity = {
   summary: { name?: string | null; label?: string | null; guest_name?: string | null }
   created_at: string
 }
+
+export type DbProjectZone = {
+  id: string
+  project_id: string
+  room_id: string
+  name: string
+  color: string
+  shape: Record<string, unknown>
+  sort_order: number
+  created_at: string
+}

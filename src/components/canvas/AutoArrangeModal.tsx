@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { LayoutObject, Point2D } from '@/types'
+import { LayoutObject, Point2D, ProjectZone } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import {
   autoArrangeRoom,
@@ -15,6 +15,7 @@ type Props = {
   catalogItems: DbCatalogItem[]
   currentRoom: DbRoom
   existingObjects: LayoutObject[]
+  zones?: ProjectZone[] // Phase 4b: every zone is a no-go area for the packer
   guestCount: number
   onClose: () => void
   onArranged: (objects: LayoutObject[]) => void
@@ -24,6 +25,7 @@ export default function AutoArrangeModal({
   catalogItems,
   currentRoom,
   existingObjects,
+  zones = [],
   guestCount,
   onClose,
   onArranged,
@@ -81,7 +83,10 @@ export default function AutoArrangeModal({
             { x: currentRoom.bounding_box_width_cm, y: currentRoom.bounding_box_depth_cm },
             { x: 0, y: currentRoom.bounding_box_depth_cm },
           ]
-      const obstacles = currentRoom.obstacles ?? []
+      // Venue obstacles (pillars etc.) plus this project's zones — a Dance
+      // Floor is just as off-limits to a new table as a column is. Same
+      // validateFootprint check, no special-casing.
+      const obstacles = [...(currentRoom.obstacles ?? []), ...zones.map((z) => z.shape)]
 
       const catalogItemsById = new Map(catalogItems.map((i) => [i.id, i]))
 
@@ -192,7 +197,10 @@ export default function AutoArrangeModal({
           </span>
         </div>
 
-        <p className="text-xs text-gray-400">~{AUTO_ARRANGE_CLEARANCE_CM}cm walking-space clearance between tables.</p>
+        <p className="text-xs text-gray-400">
+          ~{AUTO_ARRANGE_CLEARANCE_CM}cm walking-space clearance between tables.
+          {zones.length > 0 && ` Keeps clear of ${zones.length} zone${zones.length === 1 ? '' : 's'} in this room.`}
+        </p>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
