@@ -90,3 +90,37 @@ export async function updateProjectDates(formData: FormData): Promise<{ error?: 
   revalidatePath('/planner')
   return {}
 }
+
+/**
+ * Assign / unassign a project (Phase 22c). Who may do this is enforced by
+ * the projects_before_update trigger (manager or lead only, assignee must be
+ * a teammate) — the UI only decides whether to show the control.
+ */
+export async function assignProject(formData: FormData): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const projectId = formData.get('projectId') as string
+  const raw = (formData.get('plannerId') as string | null) ?? ''
+  if (!projectId) return { error: 'Missing project.' }
+  const { data, error } = await supabase
+    .from('projects')
+    .update({ assigned_to_planner_id: raw || null })
+    .eq('id', projectId)
+    .select('id')
+  if (error) return { error: error.code === '42501' ? 'Only a manager or lead can assign projects.' : error.message }
+  if (!data || data.length === 0) return { error: 'You don\u2019t have access to that project.' }
+  revalidatePath('/planner')
+  return {}
+}
+
+/** Toggle private/public. Trigger allows the creator, a manager, or a lead. */
+export async function setProjectVisibility(formData: FormData): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const projectId = formData.get('projectId') as string
+  const visibility = formData.get('visibility') as string
+  if (!projectId || (visibility !== 'private' && visibility !== 'public')) return { error: 'Invalid request.' }
+  const { data, error } = await supabase.from('projects').update({ visibility }).eq('id', projectId).select('id')
+  if (error) return { error: error.code === '42501' ? 'Only the creator, a manager or a lead can change this.' : error.message }
+  if (!data || data.length === 0) return { error: 'You don\u2019t have access to that project.' }
+  revalidatePath('/planner')
+  return {}
+}

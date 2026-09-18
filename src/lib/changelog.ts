@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-project-sharing',
+    date: '2026-09-18',
+    title: 'Team projects, assignment and privacy',
+    roles: ['planner', 'admin'],
+    items: [
+      'Projects are now shared with your team. Your dashboard shows Mine (created by or assigned to you) and Team projects (everything public from your colleagues).',
+      'Managers and Leads can assign a project to a teammate from the row\'s Edit panel. Assigned projects show up under Mine for that person.',
+      'Any project can be made private by its creator (or a Manager/Lead). Private projects are only seen by the creator, the assignee, and Managers/Leads.',
+      'Opening a project someone else has worked on shows what changed since you last opened it.',
+    ],
+  },
+  {
     id: '2026-09-18-team-invites',
     date: '2026-09-18',
     title: 'Invite colleagues to your team',
