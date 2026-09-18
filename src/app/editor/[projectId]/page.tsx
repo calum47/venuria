@@ -12,6 +12,7 @@ import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
 import AutoArrangeModal from '@/components/canvas/AutoArrangeModal'
+import ProjectActivityModal from '@/components/changelog/ProjectActivityModal'
 
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
@@ -494,6 +495,11 @@ export default function EditorPage() {
           onSkip={handleChairSkip}
         />
       )}
+
+      {/* What other users changed since this user last opened the project.
+          Mounted only after load so it never blocks the editor; renders
+          nothing when there's nothing to show. */}
+      {!isLoading && <ProjectActivityModal projectId={projectId} rooms={rooms} />}
 
       {/* Auto-Arrange modal */}
       {showAutoArrange && currentRoom && (

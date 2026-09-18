@@ -1,0 +1,68 @@
+import type { AuthRole } from '@/lib/supabase/role'
+
+/**
+ * User-facing release notes, shown by WhatsNewModal on the first visit after
+ * a new entry ships.
+ *
+ * Lives in the repo on purpose: an entry is added in the same commit as the
+ * feature it describes, so the notes can never get ahead of (or behind) what
+ * is actually deployed. If non-technical editing is ever needed, move this
+ * array to a table — the modal only cares about the array.
+ *
+ * Rules:
+ * - `id` must be unique and must never change once shipped — it's what the
+ *   "seen" marker stores. Convention: YYYY-MM-DD-slug.
+ * - Newest entry FIRST. The modal treats index 0 as the latest.
+ * - `roles` restricts who sees an entry. Omit it for everyone. A Venue user
+ *   doesn't need to hear about a Planner-only editor feature.
+ * - Write for the person using the app, not for the changelog in Notion —
+ *   no table names, migration numbers, or internals.
+ */
+export type ChangelogEntry = {
+  id: string
+  date: string // ISO date, display only
+  title: string
+  items: string[]
+  roles?: Exclude<AuthRole, null>[]
+}
+
+export const CHANGELOG: ChangelogEntry[] = [
+  {
+    id: '2026-09-18-auto-arrange',
+    date: '2026-09-18',
+    title: 'Auto-Arrange and the Sweetheart Table',
+    roles: ['planner', 'admin'],
+    items: [
+      'New ✨ Auto-Arrange button in the editor toolbar: pick how many of each table you want and Venuria lays them out inside the room for you — clear of walls, obstacles and anything you\'ve already placed, with walking space between tables.',
+      'The seat total has to match your guest list exactly before it will run, so you can\'t accidentally plan for the wrong number.',
+      'New Sweetheart Table in the catalog — a two-seat table for the couple, with both chairs together on one side.',
+      'Turn on "Balance around Sweetheart Table" to mirror your tables either side of it. An odd table sits on the centre line.',
+      'Everything Auto-Arrange places is a normal table: move it, rotate it, change its chairs or delete it as usual.',
+    ],
+  },
+]
+
+/** Newest entry visible to this role, or null if nothing applies. */
+export function latestEntryForRole(role: AuthRole): ChangelogEntry | null {
+  return entriesForRole(role)[0] ?? null
+}
+
+export function entriesForRole(role: AuthRole): ChangelogEntry[] {
+  return CHANGELOG.filter((e) => !e.roles || (role !== null && e.roles.includes(role)))
+}
+
+/**
+ * Entries this role hasn't seen. `lastSeenId` is the id stored on the user;
+ * entries newer than it (earlier in the array) are unseen. With no marker at
+ * all (first ever visit, or an account that predates this feature) only the
+ * latest entry is returned — dumping the whole backlog on someone is noise.
+ */
+export function unseenEntries(role: AuthRole, lastSeenId: string | null | undefined): ChangelogEntry[] {
+  const visible = entriesForRole(role)
+  if (!lastSeenId) return visible.slice(0, 1)
+  const idx = visible.findIndex((e) => e.id === lastSeenId)
+  // Marker points at an entry that's no longer visible (removed, or role
+  // changed): treat as caught up rather than re-showing everything.
+  if (idx === -1) return CHANGELOG.some((e) => e.id === lastSeenId) ? [] : visible.slice(0, 1)
+  return visible.slice(0, idx)
+}

@@ -63,3 +63,15 @@ export type DbSeatAssignment = {
   guest_id: string
   layout_object_id: string
 }
+export type DbProjectActivity = {
+  id: string
+  project_id: string
+  room_id: string | null
+  actor_user_id: string | null
+  actor_name: string | null
+  entity: 'layout_object' | 'guest' | 'seat_assignment'
+  action: 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
+  entity_id: string | null
+  summary: { name?: string | null; label?: string | null; guest_name?: string | null }
+  created_at: string
+}

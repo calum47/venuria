@@ -1,7 +1,7 @@
 import { supabase } from './client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { LayoutObject, ObstacleShape, Point2D } from '@/types'
-import { DbLayoutObject } from '@/types/db'
+import { DbLayoutObject, DbProjectActivity } from '@/types/db'
 import { polygonBoundingBox } from '@/lib/utils/geometry'
 import { generateId } from '@/lib/utils/coordinates'
 
@@ -456,4 +456,60 @@ export async function unassignChair(layoutObjectId: string) {
     .delete()
     .eq('layout_object_id', layoutObjectId)
   if (error) throw error
+}
+// ─── Project activity ─────────────────────────────────────────────────────────
+//
+// project_activity is written only by database triggers (see migration 008);
+// client code just reads it. project_visits is the per-user "when did I last
+// open this project" stamp the modal diffs against.
+
+
+/** When this user last opened the project, or null if never. */
+export async function getProjectLastOpenedAt(projectId: string): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data, error } = await supabase
+    .from('project_visits')
+    .select('last_opened_at')
+    .eq('user_id', user.id)
+    .eq('project_id', projectId)
+    .maybeSingle()
+  if (error) throw error
+  return data?.last_opened_at ?? null
+}
+
+/** Stamp "opened now" for this user + project. */
+export async function touchProjectVisit(projectId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return
+  const { error } = await supabase
+    .from('project_visits')
+    .upsert(
+      { user_id: user.id, project_id: projectId, last_opened_at: new Date().toISOString() },
+      { onConflict: 'user_id,project_id' },
+    )
+  if (error) throw error
+}
+
+/**
+ * Activity on a project since `sinceIso`, by OTHER users only — the reader
+ * doesn't need to be told what they did themselves. Rows with a null actor
+ * (service-role writes) are included as "system" changes.
+ */
+export async function getProjectActivitySince(
+  projectId: string,
+  sinceIso: string,
+): Promise<DbProjectActivity[]> {
+  const { data: { user } } = await supabase.auth.getUser()
+  let query = supabase
+    .from('project_activity')
+    .select('*')
+    .eq('project_id', projectId)
+    .gt('created_at', sinceIso)
+    .order('created_at', { ascending: false })
+    .limit(500)
+  if (user) query = query.or(`actor_user_id.neq.${user.id},actor_user_id.is.null`)
+  const { data, error } = await query
+  if (error) throw error
+  return (data ?? []) as DbProjectActivity[]
 }
