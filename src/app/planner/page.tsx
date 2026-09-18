@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import NewProjectForm from './NewProjectForm'
-import Link from 'next/link'
+import ProjectRow from './ProjectRow'
+import { daysUntil } from '@/lib/projectDates'
 
 export default async function PlannerPage() {
   const supabase = await createClient()
@@ -30,11 +31,23 @@ export default async function PlannerPage() {
     planner
       ? supabase
           .from('projects')
-          .select('id, status, event_date, created_at, venues(name)')
+          .select('id, status, event_date, due_by, created_at, venues(name)')
           .eq('planner_id', planner.id)
-          .order('created_at', { ascending: false })
       : Promise.resolve({ data: [] as never[] }),
   ])
+
+  // Phase 9 ordering: upcoming events soonest-first, then undated (newest
+  // first), then past events sinking to the bottom most-recent-first.
+  const sortedProjects = [...(projects ?? [])].sort((a, b) => {
+    const rank = (p: { event_date: string | null }) =>
+      p.event_date === null ? 1 : daysUntil(p.event_date) < 0 ? 2 : 0
+    const ra = rank(a)
+    const rb = rank(b)
+    if (ra !== rb) return ra - rb
+    if (ra === 0) return a.event_date!.localeCompare(b.event_date!)
+    if (ra === 2) return b.event_date!.localeCompare(a.event_date!)
+    return b.created_at.localeCompare(a.created_at)
+  })
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
@@ -66,18 +79,17 @@ export default async function PlannerPage() {
                 Your projects ({projects?.length ?? 0})
               </h2>
               <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
-                {(projects ?? []).map((p) => (
-                  <li key={p.id} className="px-4 py-2.5 text-sm flex items-center justify-between">
-                    <div>
-                      <span className="text-gray-900">
-                        {(p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'}
-                      </span>
-                      <span className="text-gray-400 ml-2 text-xs">{p.status}</span>
-                    </div>
-                    <Link href={`/editor/${p.id}`} className="text-blue-600 hover:underline text-sm">
-                      Open editor →
-                    </Link>
-                  </li>
+                {sortedProjects.map((p) => (
+                  <ProjectRow
+                    key={p.id}
+                    project={{
+                      id: p.id,
+                      status: p.status,
+                      event_date: p.event_date,
+                      due_by: p.due_by,
+                      venueName: (p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue',
+                    }}
+                  />
                 ))}
                 {(!projects || projects.length === 0) && (
                   <li className="px-4 py-2.5 text-sm text-gray-400">No projects yet — start one above.</li>

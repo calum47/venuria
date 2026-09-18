@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-event-dates',
+    date: '2026-09-18',
+    title: 'Event dates and due-by',
+    roles: ['planner', 'admin'],
+    items: [
+      'Every new project now has an event date. Your dashboard sorts projects soonest-first with a countdown, and past events drop to the bottom.',
+      'Each project also gets a "due by" date — the day the layout should be locked with the venue and rental companies. It defaults to two weeks before the event and you can change it.',
+      'Edit either date from the dashboard with "Edit dates".',
+    ],
+  },
+  {
     id: '2026-09-18-zones',
     date: '2026-09-18',
     title: 'Zone colour-coding',

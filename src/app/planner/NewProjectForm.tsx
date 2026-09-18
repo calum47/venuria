@@ -2,12 +2,16 @@
 
 import { useState, useTransition } from 'react'
 import { createProject } from './actions'
+import { suggestDueBy, isIsoDate, DUE_BY_LEAD_DAYS } from '@/lib/projectDates'
 
 type Venue = { id: string; name: string }
 
 export default function NewProjectForm({ venues }: { venues: Venue[] }) {
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [eventDate, setEventDate] = useState('')
+  const [dueBy, setDueBy] = useState('')
+  const [dueByTouched, setDueByTouched] = useState(false)
 
   const handleSubmit = (formData: FormData) => {
     setError(null)
@@ -19,6 +23,12 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
     })
   }
 
+  // Due By follows the event date (−14 days) until the planner edits it by hand.
+  const handleEventDateChange = (value: string) => {
+    setEventDate(value)
+    if (!dueByTouched) setDueBy(isIsoDate(value) ? suggestDueBy(value) : '')
+  }
+
   if (venues.length === 0) {
     return (
       <p className="text-sm text-gray-500">
@@ -28,7 +38,7 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
   }
 
   return (
-    <form action={handleSubmit} className="flex items-end gap-2 rounded border bg-gray-50 p-3">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-2 rounded border bg-gray-50 p-3">
       <div className="flex flex-col gap-1">
         <label className="text-xs text-gray-500">Venue</label>
         <select name="venueId" required className="rounded border bg-white px-2 py-1 text-sm text-gray-900">
@@ -39,6 +49,29 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
           ))}
         </select>
       </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-gray-500">Event date</label>
+        <input
+          type="date"
+          name="eventDate"
+          required
+          value={eventDate}
+          onChange={(e) => handleEventDateChange(e.target.value)}
+          className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-gray-500" title={`Defaults to ${DUE_BY_LEAD_DAYS} days before the event`}>
+          Due by
+        </label>
+        <input
+          type="date"
+          name="dueBy"
+          value={dueBy}
+          onChange={(e) => { setDueByTouched(true); setDueBy(e.target.value) }}
+          className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+        />
+      </div>
       <button
         type="submit"
         disabled={isPending}
@@ -46,7 +79,7 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
       >
         {isPending ? 'Creating…' : 'New project'}
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 w-full">{error}</p>}
     </form>
   )
 }
