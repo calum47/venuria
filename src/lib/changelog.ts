@@ -28,6 +28,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-teams-nav',
+    date: '2026-09-18',
+    title: 'Navigation, Settings and Teams',
+    roles: ['planner', 'admin'],
+    items: [
+      'A navigation bar now sits on every planner screen: Last project, My projects, My team, Settings. In the editor, click ☰ Venuria for the same links.',
+      'You now belong to a team. Solo planners are a team of one, so nothing changes day to day — but this is the foundation for working with colleagues, which is coming next.',
+      'New Settings page: update your name, change your password, and (as team manager) rename the team and set its currency.',
+      'New My team page showing who is on your team and their role.',
+      'The login page has a "Remember me" box. Untick it and you\'ll be signed out when the browser closes.',
+    ],
+  },
+  {
     id: '2026-09-18-event-dates',
     date: '2026-09-18',
     title: 'Event dates and due-by',

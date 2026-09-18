@@ -75,6 +75,23 @@ export async function POST(request: Request) {
     )
   }
 
+  // Phase 22a: every planner belongs to a team; a new planner starts as the
+  // manager of their own team of one. Created first so the planner row can
+  // reference it; rolled back below if the planner insert fails.
+  let teamId: string | null = null
+  if (targetRole === 'planner') {
+    const { data: team, error: teamError } = await adminClient
+      .from('teams')
+      .insert({ name: `${name.trim()}'s team` })
+      .select('id')
+      .single()
+    if (teamError || !team) {
+      await adminClient.auth.admin.deleteUser(created.user.id)
+      return NextResponse.json({ error: teamError?.message ?? 'Failed to create the team.' }, { status: 400 })
+    }
+    teamId = team.id
+  }
+
   const insertResult =
     targetRole === 'venue_manager'
       ? await adminClient.from('venue_managers').insert({
@@ -95,6 +112,8 @@ export async function POST(request: Request) {
             name,
             email,
             planner_code: generatePlannerCode(),
+            team_id: teamId,
+            role: 'manager',
           })
 
   if (insertResult.error) {
@@ -102,6 +121,7 @@ export async function POST(request: Request) {
     // role row — resolveUserRole would otherwise treat them as "no role"
     // forever, a login that goes nowhere.
     await adminClient.auth.admin.deleteUser(created.user.id)
+    if (teamId) await adminClient.from('teams').delete().eq('id', teamId)
 
     // venue_managers.venue_id / rental_managers.rental_company_id are unique —
     // friendlier messages than the raw Postgres constraint errors when someone

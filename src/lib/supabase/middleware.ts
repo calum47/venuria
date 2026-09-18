@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { REMEMBER_COOKIE, rememberAwareOptions } from './rememberMe'
 
 /**
  * Refreshes the Supabase auth session for the current request and returns
@@ -20,8 +21,9 @@ export async function updateSession(request: NextRequest) {
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
+          const remembered = request.cookies.get(REMEMBER_COOKIE)?.value === '1'
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            supabaseResponse.cookies.set(name, value, rememberAwareOptions(options, remembered)),
           )
         },
       },

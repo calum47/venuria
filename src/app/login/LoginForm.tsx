@@ -4,12 +4,14 @@ import { useState, type FormEvent } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
+import { REMEMBER_COOKIE, REMEMBER_COOKIE_MAX_AGE } from '@/lib/supabase/rememberMe'
 
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -17,6 +19,12 @@ export function LoginForm() {
     e.preventDefault()
     setError(null)
     setIsLoading(true)
+
+    // Set the marker BEFORE signing in: the auth cookies written by
+    // signInWithPassword read it to decide persistent vs session-only.
+    document.cookie = rememberMe
+      ? `${REMEMBER_COOKIE}=1; Path=/; Max-Age=${REMEMBER_COOKIE_MAX_AGE}; SameSite=Lax`
+      : `${REMEMBER_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`
 
     const { data, error: signInError } = await supabase.auth.signInWithPassword({
       email,
@@ -78,6 +86,17 @@ export function LoginForm() {
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
           />
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-600 select-none">
+          <input
+            type="checkbox"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Remember me
+          <span className="text-xs text-gray-400 ml-auto">{rememberMe ? 'Stays signed in' : 'Signs out when the browser closes'}</span>
+        </label>
 
         <button
           type="submit"

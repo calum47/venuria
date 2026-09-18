@@ -14,6 +14,7 @@ import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
 import AutoArrangeModal from '@/components/canvas/AutoArrangeModal'
 import ProjectActivityModal from '@/components/changelog/ProjectActivityModal'
 import ZonePanel from '@/components/zones/ZonePanel'
+import EditorNavMenu from '@/components/nav/EditorNavMenu'
 import { useZoneStore } from '@/stores/zoneStore'
 
 import { useLayoutStore } from '@/stores/layoutStore'
@@ -422,7 +423,7 @@ export default function EditorPage() {
             ✨ Auto-Arrange
           </button>
           <span className="text-gray-300">|</span>
-          <h1 className="text-sm font-semibold text-gray-800">Venuria</h1>
+          <EditorNavMenu />
           <span className="text-gray-300">|</span>
 
           {/* Room tabs */}

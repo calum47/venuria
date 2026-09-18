@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { REMEMBER_COOKIE, rememberAwareOptions } from './rememberMe'
 
 /**
  * Creates a Supabase client for use inside Server Components / route
@@ -21,8 +22,9 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
+            const remembered = cookieStore.get(REMEMBER_COOKIE)?.value === '1'
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
+              cookieStore.set(name, value, rememberAwareOptions(options, remembered)),
             )
           } catch {
             // Called from a Server Component that can't set cookies directly.

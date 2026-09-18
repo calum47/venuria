@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { SignOutButton } from '@/components/auth/SignOutButton'
 import NewProjectForm from './NewProjectForm'
 import ProjectRow from './ProjectRow'
 import { daysUntil } from '@/lib/projectDates'
@@ -12,7 +11,7 @@ export default async function PlannerPage() {
 
   if (!user) {
     return (
-      <main className="min-h-screen bg-gray-50 p-8">
+      <main className="p-8">
         <p className="text-sm text-gray-500">Not signed in.</p>
       </main>
     )
@@ -50,20 +49,9 @@ export default async function PlannerPage() {
   })
 
   return (
-    <main className="min-h-screen bg-gray-50 p-8">
+    <main className="p-8">
       <div className="max-w-3xl mx-auto space-y-8">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">Planner{planner?.name ? ` — ${planner.name}` : ''}</h1>
-          <SignOutButton />
-        </div>
-        <p className="text-sm text-gray-500">
-          Logged in as <span className="font-medium text-gray-900">{user.email}</span>.
-          {planner?.planner_code && (
-            <>
-              {' '}Planner code: <span className="font-mono text-gray-700">{planner.planner_code}</span>
-            </>
-          )}
-        </p>
+        <h1 className="text-xl font-semibold text-gray-900">My projects</h1>
 
         {!planner ? (
           <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
