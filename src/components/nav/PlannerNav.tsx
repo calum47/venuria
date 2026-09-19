@@ -17,8 +17,7 @@ type Props = {
  * app/planner/layout.tsx; the editor gets a compact menu version instead
  * (EditorNavMenu) because its toolbar has no room for a full bar.
  *
- * "My Stock" is intentionally absent until Phase 23 exists — a dead link
- * is worse than no link.
+ * "My Stock" links to Phase 23's inventory page, added once that existed.
  */
 export default function PlannerNav({ plannerName, role, teamName, lastProjectId }: Props) {
   const pathname = usePathname()
@@ -44,6 +43,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
           <span className="px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
         )}
         {item('/planner', 'My projects', pathname === '/planner')}
+        {item('/planner/stock', 'My stock', pathname.startsWith('/planner/stock'))}
         {item('/planner/team', 'My team', pathname.startsWith('/planner/team'))}
         {item('/planner/settings', 'Settings', pathname.startsWith('/planner/settings'))}
 

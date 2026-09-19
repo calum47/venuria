@@ -86,3 +86,59 @@ export type DbProjectZone = {
   sort_order: number
   created_at: string
 }
+
+// ─── Stock Tracking (Phase 23) ─────────────────────────────────────────────
+
+export type DbStockGroup = {
+  id: string
+  team_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+export type DbStockItem = {
+  id: string
+  team_id: string
+  group_id: string | null
+  name: string
+  icon_type: 'emoji' | 'photo'
+  icon_value: string | null
+  cost_price: number
+  sell_price: number
+  min_stock_alert: number
+  on_demand: boolean
+  notes: string | null
+  current_stock: number
+  created_at: string
+}
+
+export type DbStockPurchase = {
+  id: string
+  item_id: string
+  qty: number
+  unit_cost: number
+  supplier: string | null
+  project_id: string | null
+  purchased_at: string
+}
+
+export type DbStockSale = {
+  id: string
+  item_id: string
+  qty: number
+  unit_price: number
+  unit_cost_snapshot: number
+  project_id: string | null
+  sold_at: string
+}
+
+export type DbStockOrder = {
+  id: string
+  team_id: string
+  item_id: string | null
+  project_id: string | null
+  qty: number
+  status: 'pending' | 'received'
+  ordered_at: string
+}

@@ -44,6 +44,7 @@ export default function EditorNavMenu() {
       {open && (
         <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-50">
           <Link href="/planner" className={item} onClick={() => setOpen(false)}>My projects</Link>
+          <Link href="/planner/stock" className={item} onClick={() => setOpen(false)}>My stock</Link>
           <Link href="/planner/team" className={item} onClick={() => setOpen(false)}>My team</Link>
           <Link href="/planner/settings" className={item} onClick={() => setOpen(false)}>Settings</Link>
           <div className="my-1 border-t border-gray-100" />

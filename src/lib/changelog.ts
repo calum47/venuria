@@ -28,6 +28,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-18-stock-tracking',
+    date: '2026-09-18',
+    title: 'My Stock — your own inventory',
+    roles: ['planner', 'admin'],
+    items: [
+      'New My Stock page — a place for your own retail inventory (welcome bags, favours, personalized items) completely separate from the floor-plan catalog.',
+      'Catalogue tab: add products with an emoji or photo, cost/sell price, low-stock alert, and optional "On Demand" for made-to-order items with no stock count.',
+      'Purchases and Sales tabs log stock in and out and keep your stock counts up to date automatically. A sale can optionally be tagged to one of your weddings.',
+      'Orders tab is one place for everything you\'ve ordered in, with a simple pending/received status.',
+      'Shared with your whole team — everyone sees and can edit the same inventory, no separate copies.',
+    ],
+  },
+  {
     id: '2026-09-18-project-sharing',
     date: '2026-09-18',
     title: 'Team projects, assignment and privacy',
