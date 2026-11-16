@@ -18,11 +18,12 @@ type Props = {
   currency: string
   items: DbStockItem[]
   groups: DbStockGroup[]
+  canManage: boolean
   onItemsChanged: () => void
   onGroupsChanged: () => void
 }
 
-export default function CatalogueTab({ teamId, currency, items, groups, onItemsChanged, onGroupsChanged }: Props) {
+export default function CatalogueTab({ teamId, currency, items, groups, canManage, onItemsChanged, onGroupsChanged }: Props) {
   const [activeGroup, setActiveGroup] = useState<string | 'all'>('all')
   const [editing, setEditing] = useState<DbStockItem | 'new' | null>(null)
   const [newGroupName, setNewGroupName] = useState('')
@@ -56,28 +57,29 @@ export default function CatalogueTab({ teamId, currency, items, groups, onItemsC
             <Chip active={activeGroup === g.id} onClick={() => setActiveGroup(g.id)}>
               {g.name} ({items.filter((i) => i.group_id === g.id).length})
             </Chip>
-            <button
+            {canManage && <button
               onClick={() => removeGroup(g.id)}
               title="Remove group"
               className="absolute -right-1 -top-1 hidden group-hover:flex w-3.5 h-3.5 items-center justify-center rounded-full bg-gray-400 text-white text-[9px] leading-none"
             >
               ✕
-            </button>
+            </button>}
           </div>
         ))}
-        <input
+        {canManage && <input
           value={newGroupName}
           onChange={(e) => setNewGroupName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addGroup()}
           placeholder="+ group"
           className="w-20 text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 text-gray-500 focus:outline-none"
-        />
-        <button
+        />}
+        {canManage && <button
           onClick={() => setEditing('new')}
           className="ml-auto rounded-lg bg-gray-900 text-white text-sm px-3 py-1.5 hover:bg-gray-800"
         >
           + Add product
-        </button>
+        </button>}
+        {!canManage && <span className="ml-auto text-xs text-gray-400">View only — managers and leads edit the catalogue</span>}
       </div>
 
       {visible.length === 0 ? (
@@ -85,7 +87,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, onItemsC
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visible.map((item) => (
-            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} onClick={() => setEditing(item)} />
+            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} onClick={canManage ? () => setEditing(item) : () => {}} />
           ))}
         </div>
       )}

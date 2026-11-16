@@ -170,6 +170,16 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
                 )}
               </div>
 
+              <a
+                href={`/planner/projects/${projectId}/guests?guest=${guest.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                draggable={false}
+                title="Edit details (photo, family, dietary, hotel…) in a new tab"
+                className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[10px] text-gray-400 hover:text-gray-800 underline px-1 whitespace-nowrap"
+              >
+                Edit details
+              </a>
               <button
                 onClick={() => handleDelete(guest.id)}
                 className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity text-xs px-1"

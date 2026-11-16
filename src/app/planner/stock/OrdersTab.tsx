@@ -10,6 +10,7 @@ type Props = {
   items: DbStockItem[]
   orders: DbStockOrder[]
   projects: ProjectOption[]
+  canManage: boolean
   itemById: Map<string, DbStockItem>
   onChanged: () => void
 }
@@ -22,7 +23,7 @@ type Props = {
  * Deliberately no tracking-number field yet — Order Tracking Integration
  * (17TRACK) is v2, built after this core CRUD ships.
  */
-export default function OrdersTab({ teamId, items, orders, projects, itemById, onChanged }: Props) {
+export default function OrdersTab({ teamId, items, orders, projects, canManage, itemById, onChanged }: Props) {
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p.label])), [projects])
 
   const [itemId, setItemId] = useState('')
@@ -129,11 +130,13 @@ export default function OrdersTab({ teamId, items, orders, projects, itemById, o
               <span className="text-xs text-gray-400">{new Date(o.ordered_at).toLocaleDateString()}</span>
               <button
                 onClick={() => toggleStatus(o)}
-                className={`text-xs px-2 py-0.5 rounded-full ${o.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}
+                disabled={!canManage}
+                title={canManage ? undefined : 'Only managers and leads change an order\'s status'}
+                className={`text-xs px-2 py-0.5 rounded-full ${o.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} disabled:cursor-default`}
               >
                 {o.status === 'received' ? 'Received' : 'Pending'}
               </button>
-              <button onClick={() => remove(o.id)} className="text-gray-300 hover:text-red-500">✕</button>
+              {canManage && <button onClick={() => remove(o.id)} className="text-gray-300 hover:text-red-500">✕</button>}
             </div>
           </li>
         ))}

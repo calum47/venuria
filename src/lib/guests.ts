@@ -179,6 +179,7 @@ export type GuestLike = {
   dietary: string | null
   age_group: AgeGroup
   family_id: string | null
+  seat_dismissed_at?: string | null
 }
 export type FamilyLike = { id: string; name: string }
 
@@ -199,6 +200,14 @@ export function hasDietary(g: { dietary: string | null }): boolean {
 
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
 
+/**
+ * True when the guest should have a seat but has none: babies are exempt (they
+ * sit on a lap) and a planner can dismiss the flag with a reason.
+ */
+export function needsSeat(g: { age_group: AgeGroup; seat_dismissed_at?: string | null }, seatCount: number): boolean {
+  return seatCount === 0 && g.age_group !== 'baby' && !g.seat_dismissed_at
+}
+
 export function filterGuests<G extends GuestLike>(
   guests: G[],
   f: GuestFilters,
@@ -210,7 +219,7 @@ export function filterGuests<G extends GuestLike>(
     if (f.vip && !g.is_vip) return false
     if (f.speech && !g.gives_speech) return false
     if (f.dietary && !hasDietary(g)) return false
-    if (f.unseated && (ctx.seats[g.id]?.length ?? 0) > 0) return false
+    if (f.unseated && !needsSeat(g, ctx.seats[g.id]?.length ?? 0)) return false
     if (f.familyId && g.family_id !== f.familyId) return false
     if (q) {
       const hay = [
@@ -261,7 +270,7 @@ export function guestStats(guests: GuestLike[], seats: Record<string, SeatInfo[]
     vip: guests.filter((g) => g.is_vip).length,
     speech: guests.filter((g) => g.gives_speech).length,
     dietary: guests.filter(hasDietary).length,
-    unseated: guests.filter((g) => (seats[g.id]?.length ?? 0) === 0).length,
+    unseated: guests.filter((g) => needsSeat(g, seats[g.id]?.length ?? 0)).length,
     families: new Set(guests.map((g) => g.family_id).filter(Boolean)).size,
   }
 }

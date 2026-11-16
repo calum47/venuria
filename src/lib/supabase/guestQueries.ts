@@ -172,3 +172,32 @@ export async function removeGuestPhoto(guestId: string, path: string): Promise<D
   await supabase.storage.from(GUEST_PHOTOS_BUCKET).remove([path])
   return data as DbGuest
 }
+
+// ── Seat flag ────────────────────────────────────────────────────────────────
+
+/** Dismisses the "needs a seat" flag. The reason is required (1–300 chars, also enforced by the DB). */
+export async function dismissSeatFlag(id: string, note: string): Promise<DbGuest> {
+  const trimmed = note.trim()
+  if (!trimmed) throw new Error('Say why this guest does not need a seat.')
+  if (trimmed.length > 300) throw new Error('Keep the reason under 300 characters.')
+  const { data: auth } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('guests')
+    .update({ seat_dismissed_note: trimmed, seat_dismissed_at: new Date().toISOString(), seat_dismissed_by: auth.user?.id ?? null })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as DbGuest
+}
+
+export async function restoreSeatFlag(id: string): Promise<DbGuest> {
+  const { data, error } = await supabase
+    .from('guests')
+    .update({ seat_dismissed_note: null, seat_dismissed_at: null, seat_dismissed_by: null })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as DbGuest
+}

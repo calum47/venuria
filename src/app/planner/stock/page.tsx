@@ -6,7 +6,10 @@ import StockApp from './StockApp'
  * My Stock (Phase 23 core CRUD). Team-shared retail inventory — welcome
  * bags, favours, personalized items sold as add-ons — kept entirely
  * separate from the floor-plan catalog (layout_objects). No visibility
- * split: every team member sees and edits everything here, per the spec.
+ * split: every team member SEES everything. Writing is by role (migration 017):
+ * managers and leads do everything; members can only add orders and record
+ * items used on a wedding. The database enforces it; canManage just hides
+ * the buttons a member could not use.
  *
  * Order Tracking Integration (17TRACK) is explicitly v2 in the spec and is
  * not part of this page — Orders here is a plain status log (pending/received).
@@ -39,6 +42,7 @@ export default async function StockPage() {
         <StockApp
           teamId={ctx.team.id}
           currency={ctx.team.currency}
+          canManage={ctx.planner.role !== 'member'}
           projects={(projects ?? []).map((p) => ({
             id: p.id,
             label: `${(p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'}${p.event_date ? ` — ${p.event_date}` : ''}`,

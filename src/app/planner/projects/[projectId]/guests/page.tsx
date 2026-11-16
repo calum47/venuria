@@ -17,8 +17,16 @@ type Params = { projectId: string }
  * Photos live in a private bucket, so the server signs one URL per photo up
  * front (1 hour) instead of every thumbnail making its own round trip.
  */
-export default async function GuestsPage({ params }: { params: Promise<Params> }) {
+export default async function GuestsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>
+  searchParams: Promise<{ guest?: string | string[] }>
+}) {
   const { projectId } = await params
+  const { guest: guestParam } = await searchParams
+  const preselect = typeof guestParam === 'string' ? guestParam : null
   const supabase = await createClient()
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
@@ -95,6 +103,7 @@ export default async function GuestsPage({ params }: { params: Promise<Params> }
           initialFamilies={(familiesRes.data ?? []) as DbGuestFamily[]}
           initialStays={(staysRes.data ?? []) as DbGuestStay[]}
           seats={seats}
+          initialSelectedId={guests.some((g) => g.id === preselect) ? preselect : null}
           initialPhotoUrls={photoUrls}
         />
       </div>

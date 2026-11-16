@@ -65,6 +65,10 @@ export type DbGuest = {
   family_id: string | null
   /** Path in the private `guest-photos` bucket: {team_id}/{project_id}/{uuid}.jpg */
   photo_path: string | null
+  // Migration 018: planner says this guest will not sit (flag dismissed, with a reason)
+  seat_dismissed_note: string | null
+  seat_dismissed_at: string | null
+  seat_dismissed_by: string | null
 }
 
 export type DbGuestFamily = {

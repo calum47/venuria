@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { needsSeat } from '@/lib/guests'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
@@ -44,14 +45,20 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
   const { data: guestRows } = await supabase
     .from('guests')
-    .select('id, is_vip')
+    .select('id, is_vip, age_group, seat_dismissed_at')
     .eq('project_id', projectId)
+  const { data: seatRows } = await supabase
+    .from('seat_assignments')
+    .select('guest_id')
+    .eq('project_id', projectId)
+  const seated = new Set((seatRows ?? []).map((s) => s.guest_id))
+  const needSeat = (guestRows ?? []).filter((g) => needsSeat(g, seated.has(g.id) ? 1 : 0)).length
   const guestCount = guestRows?.length ?? 0
   const vipCount = (guestRows ?? []).filter((g) => g.is_vip).length
   const guestsHint =
     guestCount === 0
       ? 'No guests yet — photos, families, dietary needs, hotel per night'
-      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}`
+      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}${needSeat > 0 ? ` · ${needSeat} still ${needSeat === 1 ? 'needs' : 'need'} a seat` : ''}`
 
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
   const all = payments ?? []
@@ -98,7 +105,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
           <Link href={`/planner/projects/${projectId}/guests`} className={card}>
             <p className="font-medium text-gray-900">Guest list details</p>
-            <p className="text-sm text-gray-500 mt-1">{guestsHint}</p>
+            <p className={`text-sm mt-1 ${needSeat > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{guestsHint}</p>
           </Link>
         </div>
       </div>

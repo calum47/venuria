@@ -19,6 +19,8 @@ export type ProjectOption = { id: string; label: string }
 type Props = {
   teamId: string
   currency: string
+  /** Manager or lead. Members get the reduced set of actions (see migration 017). */
+  canManage: boolean
   projects: ProjectOption[]
 }
 
@@ -31,7 +33,7 @@ type Tab = 'catalogue' | 'purchases' | 'sales' | 'orders'
  * their "which item" pickers, so a shared cache avoids re-fetching it four
  * times as the planner switches tabs.
  */
-export default function StockApp({ teamId, currency, projects }: Props) {
+export default function StockApp({ teamId, currency, canManage, projects }: Props) {
   const [tab, setTab] = useState<Tab>('catalogue')
   const [groups, setGroups] = useState<DbStockGroup[]>([])
   const [items, setItems] = useState<DbStockItem[]>([])
@@ -117,6 +119,7 @@ export default function StockApp({ teamId, currency, projects }: Props) {
           currency={currency}
           items={items}
           groups={groups}
+          canManage={canManage}
           onItemsChanged={reloadItems}
           onGroupsChanged={reloadGroups}
         />
@@ -126,6 +129,7 @@ export default function StockApp({ teamId, currency, projects }: Props) {
           items={items}
           purchases={purchases}
           projects={projects}
+          canManage={canManage}
           onChanged={() => { reloadPurchases(); reloadItems() }}
         />
       )}
@@ -134,6 +138,7 @@ export default function StockApp({ teamId, currency, projects }: Props) {
           items={items}
           sales={sales}
           projects={projects}
+          canManage={canManage}
           currency={currency}
           onChanged={() => { reloadSales(); reloadItems() }}
         />
@@ -144,6 +149,7 @@ export default function StockApp({ teamId, currency, projects }: Props) {
           items={items}
           orders={orders}
           projects={projects}
+          canManage={canManage}
           itemById={itemById}
           onChanged={reloadOrders}
         />

@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-16-stock-roles-seats-png',
+    date: '2026-11-16',
+    title: 'Stock permissions, seat reminders and PNG export',
+    roles: ['planner', 'admin'],
+    items: [
+      'My Stock now follows team roles: managers and leads can do everything; members can see the stock, add orders and record items used on a wedding.',
+      'Guests without a seat are now flagged "Needs a seat" on the guest list and on the project page. Babies are never flagged. If someone will not sit, dismiss the flag and say why; you can bring it back any time.',
+      'In the editor\'s guest list, hover a guest and click "Edit details" to open their full details in a new tab.',
+      'New Export PNG button in the editor toolbar downloads the current room as an image, just as drawn: tables, chairs, zones and labels, without the grid or selection handles.',
+    ],
+  },
+  {
     id: '2026-11-16-guest-list-details',
     date: '2026-11-16',
     title: 'Guest list details',

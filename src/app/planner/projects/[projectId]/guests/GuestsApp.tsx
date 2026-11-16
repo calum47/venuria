@@ -8,8 +8,10 @@ import {
   createGuest,
   deleteGuestAndPhoto,
   deleteStays,
+  dismissSeatFlag,
   removeGuestPhoto,
   renameFamily,
+  restoreSeatFlag,
   saveStays,
   setGuestFamily,
   updateGuest,
@@ -44,6 +46,8 @@ type Props = {
   initialStays: DbGuestStay[]
   seats: Record<string, SeatInfo[]>
   initialPhotoUrls: Record<string, string>
+  /** From ?guest=ID (the editor's "Edit details" link): open this guest's panel on load. */
+  initialSelectedId?: string | null
 }
 
 const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
@@ -55,14 +59,14 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialSelectedId = null }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   const [families, setFamilies] = useState<DbGuestFamily[]>(initialFamilies)
   const [stays, setStays] = useState<DbGuestStay[]>(initialStays)
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>(initialPhotoUrls)
   const [filters, setFilters] = useState<GuestFilters>(NO_FILTERS)
   const [sortMode, setSortMode] = useState<'name' | 'family'>('name')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId)
   const [error, setError] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
@@ -131,7 +135,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         <button type="button" onClick={() => toggle('vip')} aria-pressed={filters.vip} className={chip(filters.vip)}>VIP ({stats.vip})</button>
         <button type="button" onClick={() => toggle('speech')} aria-pressed={filters.speech} className={chip(filters.speech)}>Speeches ({stats.speech})</button>
         <button type="button" onClick={() => toggle('dietary')} aria-pressed={filters.dietary} className={chip(filters.dietary)}>Dietary ({stats.dietary})</button>
-        <button type="button" onClick={() => toggle('unseated')} aria-pressed={filters.unseated} className={chip(filters.unseated)}>Unseated ({stats.unseated})</button>
+        <button type="button" onClick={() => toggle('unseated')} aria-pressed={filters.unseated} className={chip(filters.unseated)}>Needs a seat ({stats.unseated})</button>
         <select
           value={filters.familyId}
           onChange={(e) => setFilters((f) => ({ ...f, familyId: e.target.value }))}
@@ -205,7 +209,13 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                       {hasDietary(g) ? <span className="line-clamp-2" title={g.dietary ?? ''}>{g.dietary}</span> : <span className="text-gray-400">—</span>}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
-                      {gSeats.length === 0 ? <span className="text-gray-400">Unseated</span> : gSeats.map((s, i) => <div key={i}>{seatLabel(s, multiRoom)}</div>)}
+                      {gSeats.length > 0
+                        ? gSeats.map((s, i) => <div key={i}>{seatLabel(s, multiRoom)}</div>)
+                        : g.age_group === 'baby'
+                          ? <span className="text-gray-400">No seat needed</span>
+                          : g.seat_dismissed_at
+                            ? <span className="text-gray-500" title={g.seat_dismissed_note ?? ''}>No seat needed <span className="text-xs text-gray-400">(dismissed)</span></span>
+                            : <span className="font-medium text-amber-700">Needs a seat</span>}
                     </td>
                     <td className="hidden max-w-[16rem] px-3 py-2 text-gray-700 lg:table-cell">
                       {gStays.length === 0 ? <span className="text-gray-400">—</span> : <span className="line-clamp-2" title={staySummary(gStays)}>{staySummary(gStays)}</span>}
@@ -303,6 +313,7 @@ function GuestPanel(p: PanelProps) {
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [dismissNote, setDismissNote] = useState('')
   const [confirmRemovePhoto, setConfirmRemovePhoto] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -360,6 +371,17 @@ function GuestPanel(p: PanelProps) {
         gives_speech: speech,
       })
       replaceGuest(g)
+    })
+
+  const dismissFlag = () =>
+    run('dismiss', async () => {
+      replaceGuest(await dismissSeatFlag(guest.id, dismissNote))
+      setDismissNote('')
+    })
+
+  const restoreFlag = () =>
+    run('restore', async () => {
+      replaceGuest(await restoreSeatFlag(guest.id))
     })
 
   const choosePhoto = (file: File | null) =>
@@ -588,8 +610,24 @@ function GuestPanel(p: PanelProps) {
           {/* Seats */}
           <div className={section}>
             <p className="text-sm font-medium text-gray-900">Seat</p>
-            {p.seats.length === 0 ? <p className="text-sm text-gray-500">Not seated yet.</p> : (
+            {p.seats.length > 0 ? (
               <ul className="text-sm text-gray-700">{p.seats.map((s, i) => <li key={i}>{seatLabel(s, true)}</li>)}</ul>
+            ) : guest.age_group === 'baby' ? (
+              <p className="text-sm text-gray-500">Babies don&rsquo;t need a seat.</p>
+            ) : guest.seat_dismissed_at ? (
+              <div className="rounded border border-gray-200 bg-gray-50 p-2 text-sm text-gray-700">
+                <p>No seat needed: {guest.seat_dismissed_note}</p>
+                <button type="button" disabled={busy !== null} onClick={restoreFlag} className={btn + ' mt-1.5'}>Flag as needing a seat again</button>
+              </div>
+            ) : (
+              <div className="space-y-1.5 rounded border border-amber-200 bg-amber-50 p-2">
+                <p className="text-sm font-medium text-amber-800">Needs a seat</p>
+                <p className="text-xs text-amber-800">Seat them in the editor, or dismiss this if they will not sit (say why).</p>
+                <div className="flex gap-1.5">
+                  <input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} maxLength={300} placeholder="Why no seat? e.g. leaves after the ceremony" aria-label="Reason no seat is needed" className={input + ' min-w-0 flex-1'} />
+                  <button type="button" disabled={busy !== null || !dismissNote.trim()} onClick={dismissFlag} className={btn}>Dismiss</button>
+                </div>
+              </div>
             )}
             <Link href={`/editor/${p.projectId}`} className="text-xs text-gray-500 underline hover:text-gray-900">Change seats in the editor</Link>
           </div>

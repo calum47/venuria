@@ -19,6 +19,8 @@ const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3
 
 type Props = {
+  /** The editor fills this with a function that downloads the current room as a PNG. */
+  exportRef?: React.MutableRefObject<(() => Promise<void>) | null>
   catalogItems: DbCatalogItem[]
   /** Active room — supplies real bounding box dimensions from the DB. */
   currentRoom: DbRoom | null
@@ -43,6 +45,7 @@ type Props = {
 }
 
 export default function FloorPlanCanvas({
+  exportRef,
   catalogItems,
   currentRoom,
   onZoomChange,
@@ -63,6 +66,8 @@ export default function FloorPlanCanvas({
   draggingGuestId,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null)
+  // While true the canvas draws without editing chrome (grid, selection, handles) for the PNG export.
+  const [exporting, setExporting] = useState(false)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isPanning = useRef(false)
@@ -455,6 +460,47 @@ export default function FloorPlanCanvas({
     return validT
   }
 
+  // PNG of the current room as drawn: tables, chairs, zones, obstacles and labels,
+  // without grid, selection or handles. Renders at 2x for a sharp image.
+  const exportPng = async () => {
+    const stage = stageRef.current
+    if (!stage || !currentRoom) return
+    const xs = hasTracedBoundary ? boundaryPolygonPx.map((p) => p.x) : [roomOffsetX, roomOffsetX + roomWidthPx]
+    const ys = hasTracedBoundary ? boundaryPolygonPx.map((p) => p.y) : [roomOffsetY, roomOffsetY + roomDepthPx]
+    const margin = 16
+    const x = Math.max(0, Math.min(...xs) - margin)
+    const y = Math.max(0, Math.min(...ys) - margin)
+    const width = Math.max(...xs) + margin - x
+    const height = Math.max(...ys) + margin - y
+
+    setExporting(true)
+    // Let React redraw without the editing chrome before capturing.
+    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+    const prev = { scale: stage.scale(), pos: stage.position() }
+    try {
+      stage.scale({ x: 1, y: 1 })
+      stage.position({ x: 0, y: 0 })
+      const url = stage.toDataURL({ x, y, width, height, pixelRatio: 2, mimeType: 'image/png' })
+      const safe = currentRoom.name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'room'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `venuria-${safe}.png`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } finally {
+      stage.scale(prev.scale)
+      stage.position(prev.pos)
+      stage.batchDraw()
+      setExporting(false)
+    }
+  }
+  useEffect(() => {
+    if (!exportRef) return
+    exportRef.current = exportPng
+    return () => { exportRef.current = null }
+  })
+
   const renderGrid = () => {
     const lines = []
     for (let x = 0; x <= roomWidthPx; x += gridSizePx)
@@ -467,8 +513,8 @@ export default function FloorPlanCanvas({
   const renderObject = (obj: LayoutObject) => {
     const x = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
     const y = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
-    const isSelected = obj.id === selectedObjectId
-    const isMultiSelected = selectedObjectIds.includes(obj.id)
+    const isSelected = obj.id === selectedObjectId && !exporting
+    const isMultiSelected = selectedObjectIds.includes(obj.id) && !exporting
 
     const catalogItem = catalogItems.find((i) => i.id === obj.catalogItemId)
     const widthPx = cmToPixels(catalogItem?.width_cm ?? 50, BASE_SCALE)
@@ -1073,12 +1119,12 @@ export default function FloorPlanCanvas({
             {/* Room label */}
             <Text x={roomOffsetX + 8} y={roomOffsetY + 8} text={roomName} fontSize={11} fill="#9ca3af" />
 
-            {renderGrid()}
+            {!exporting && renderGrid()}
             {/* Zones sit under the furniture like painted floor areas */}
             <ZoneOverlay
               zones={zones}
-              editable={zoneMode}
-              selectedZoneId={selectedZoneId}
+              editable={zoneMode && !exporting}
+              selectedZoneId={exporting ? null : selectedZoneId}
               toPx={cmToCanvasPx}
               toCm={canvasPxToCm}
               pxPerCm={BASE_SCALE}
@@ -1091,7 +1137,7 @@ export default function FloorPlanCanvas({
             {layoutObjects.map(renderObject)}
 
             {/* Drag-selection rectangle */}
-            {selectionRect && (
+            {selectionRect && !exporting && (
               <Rect
                 x={selectionRect.x} y={selectionRect.y}
                 width={selectionRect.w} height={selectionRect.h}
@@ -1100,7 +1146,7 @@ export default function FloorPlanCanvas({
               />
             )}
 
-            <Transformer ref={transformerRef} rotateEnabled={true} resizeEnabled={false} enabledAnchors={[]} />
+            <Transformer ref={transformerRef} visible={!exporting} rotateEnabled={true} resizeEnabled={false} enabledAnchors={[]} />
           </Layer>
         </Stage>
       </div>

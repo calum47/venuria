@@ -9,11 +9,12 @@ type Props = {
   items: DbStockItem[]
   purchases: DbStockPurchase[]
   projects: ProjectOption[]
+  canManage: boolean
   onChanged: () => void
 }
 
 /** On Demand items are excluded from the item picker — they don't carry stock, so a purchase against one is rejected by the DB anyway (see migration 013). */
-export default function PurchasesTab({ items, purchases, projects, onChanged }: Props) {
+export default function PurchasesTab({ items, purchases, projects, canManage, onChanged }: Props) {
   const purchasable = useMemo(() => items.filter((i) => !i.on_demand), [items])
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p.label])), [projects])
@@ -59,7 +60,7 @@ export default function PurchasesTab({ items, purchases, projects, onChanged }: 
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
+      {canManage ? <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
         <p className="text-xs text-gray-500">Log stock bought for inventory — increases the item&apos;s stock count.</p>
         <div className="flex flex-wrap items-end gap-2">
           <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={input}>
@@ -82,7 +83,7 @@ export default function PurchasesTab({ items, purchases, projects, onChanged }: 
           </button>
         </div>
         {error && <p className="text-xs text-red-600">{error}</p>}
-      </div>
+      </div> : <p className="text-xs text-gray-400">View only — managers and leads log purchases.</p>}
 
       <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
         {purchases.map((p) => (
@@ -95,7 +96,7 @@ export default function PurchasesTab({ items, purchases, projects, onChanged }: 
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className="text-xs text-gray-400">{new Date(p.purchased_at).toLocaleDateString()}</span>
-              <button onClick={() => remove(p.id)} className="text-gray-300 hover:text-red-500">✕</button>
+              {canManage && <button onClick={() => remove(p.id)} className="text-gray-300 hover:text-red-500">✕</button>}
             </div>
           </li>
         ))}

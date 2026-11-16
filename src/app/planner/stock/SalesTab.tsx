@@ -10,11 +10,12 @@ type Props = {
   items: DbStockItem[]
   sales: DbStockSale[]
   projects: ProjectOption[]
+  canManage: boolean
   currency: string
   onChanged: () => void
 }
 
-export default function SalesTab({ items, sales, projects, currency, onChanged }: Props) {
+export default function SalesTab({ items, sales, projects, canManage, currency, onChanged }: Props) {
   const sellable = useMemo(() => items.filter((i) => !i.on_demand), [items])
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p.label])), [projects])
@@ -40,6 +41,8 @@ export default function SalesTab({ items, sales, projects, currency, onChanged }
     const price = Number(unitPrice)
     const item = itemById.get(itemId)
     if (!item) return setError('Pick a product.')
+    // Members can only record items used on a wedding (enforced by the database too).
+    if (!canManage && !projectId) return setError('Pick the wedding these items were used on.')
     if (!Number.isFinite(q) || q <= 0) return setError('Quantity must be a positive number.')
     if (!Number.isFinite(price) || price < 0) return setError('Sale price must be a number.')
 
@@ -74,7 +77,7 @@ export default function SalesTab({ items, sales, projects, currency, onChanged }
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
-        <p className="text-xs text-gray-500">Log stock sold to a client — decreases the item&apos;s stock count.</p>
+        <p className="text-xs text-gray-500">{canManage ? 'Log stock sold to a client — decreases the item\'s stock count.' : 'Record items used on a wedding — decreases the item\'s stock count.'}</p>
         <div className="flex flex-wrap items-end gap-2">
           <select value={itemId} onChange={(e) => onPickItem(e.target.value)} className={input}>
             <option value="">Product…</option>
@@ -85,7 +88,7 @@ export default function SalesTab({ items, sales, projects, currency, onChanged }
           <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" className={`${input} w-20`} />
           <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="Sale price" className={`${input} w-28`} />
           <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-            <option value="">Which wedding?</option>
+            <option value="">{canManage ? 'Which wedding?' : 'Which wedding? (required)'}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
@@ -110,7 +113,7 @@ export default function SalesTab({ items, sales, projects, currency, onChanged }
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-gray-400">{new Date(s.sold_at).toLocaleDateString()}</span>
-                <button onClick={() => remove(s.id)} className="text-gray-300 hover:text-red-500">✕</button>
+                {canManage && <button onClick={() => remove(s.id)} className="text-gray-300 hover:text-red-500">✕</button>}
               </div>
             </li>
           )
