@@ -42,6 +42,17 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     .select('due_date, paid_at')
     .eq('project_id', projectId)
 
+  const { data: guestRows } = await supabase
+    .from('guests')
+    .select('id, is_vip')
+    .eq('project_id', projectId)
+  const guestCount = guestRows?.length ?? 0
+  const vipCount = (guestRows ?? []).filter((g) => g.is_vip).length
+  const guestsHint =
+    guestCount === 0
+      ? 'No guests yet — photos, families, dietary needs, hotel per night'
+      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}`
+
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
   const all = payments ?? []
   const overdue = all.filter((p) => paymentStatus(p).kind === 'overdue').length
@@ -85,11 +96,10 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
             <p className={`text-sm mt-1 ${overdue > 0 ? 'text-red-600' : 'text-gray-500'}`}>{paymentsHint}</p>
           </Link>
 
-          {/* Not built yet — shown so the hub reads as the full picture, but not clickable. */}
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4" aria-disabled="true">
-            <p className="font-medium text-gray-400">Guest list details</p>
-            <p className="text-sm text-gray-400 mt-1">Coming soon — dietary needs, VIP photos, hotel per day</p>
-          </div>
+          <Link href={`/planner/projects/${projectId}/guests`} className={card}>
+            <p className="font-medium text-gray-900">Guest list details</p>
+            <p className="text-sm text-gray-500 mt-1">{guestsHint}</p>
+          </Link>
         </div>
       </div>
     </main>

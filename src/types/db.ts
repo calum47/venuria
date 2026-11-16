@@ -49,11 +49,38 @@ export type DbLayoutObject = {
   extra_data: Record<string, unknown> | null
 }
 
+export type DbAgeGroup = 'adult' | 'child' | 'baby'
+
 export type DbGuest = {
   id: string
   project_id: string
   name: string
   notes: string | null
+  created_at: string
+  // Migration 016
+  is_vip: boolean
+  gives_speech: boolean
+  dietary: string | null
+  age_group: DbAgeGroup
+  family_id: string | null
+  /** Path in the private `guest-photos` bucket: {team_id}/{project_id}/{uuid}.jpg */
+  photo_path: string | null
+}
+
+export type DbGuestFamily = {
+  id: string
+  project_id: string
+  name: string
+  created_at: string
+}
+
+/** One night of one guest's stay. `night` = the evening of that date. */
+export type DbGuestStay = {
+  id: string
+  project_id: string
+  guest_id: string
+  night: string
+  hotel: string
   created_at: string
 }
 

@@ -5,6 +5,7 @@ import { mapDbZone } from '@/lib/zones'
 import { DbLayoutObject, DbProjectActivity, DbProjectZone } from '@/types/db'
 import { polygonBoundingBox } from '@/lib/utils/geometry'
 import { generateId } from '@/lib/utils/coordinates'
+import { deleteGuestAndPhoto } from './guestQueries'
 
 // ─── Venues & Rooms ───────────────────────────────────────────────────────────
 
@@ -350,8 +351,20 @@ export async function addGuest(projectId: string, name: string, notes?: string) 
 }
 
 export async function deleteGuest(guestId: string) {
-  const { error } = await supabase.from('guests').delete().eq('id', guestId)
-  if (error) throw error
+  // Migration 016: a guest may have a photo in the private guest-photos bucket
+  // (and a family that this was the last member of) — delete through the same
+  // helper the guest details page uses, so the editor doesn't strand files.
+  const { data: guest } = await supabase
+    .from('guests')
+    .select('id, photo_path, family_id')
+    .eq('id', guestId)
+    .maybeSingle()
+  if (!guest) {
+    const { error } = await supabase.from('guests').delete().eq('id', guestId)
+    if (error) throw error
+    return
+  }
+  await deleteGuestAndPhoto(guest)
 }
 
 export async function bulkAddGuests(projectId: string, names: string[]) {

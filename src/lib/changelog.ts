@@ -28,6 +28,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-16-guest-list-details',
+    date: '2026-11-16',
+    title: 'Guest list details',
+    roles: ['planner', 'admin'],
+    items: [
+      'New Guest list details page on the project page: every guest in one table with their photo, family, dietary needs, seat and hotel. Search it, or filter to VIPs, speeches, dietary needs or guests without a seat.',
+      'Click a guest to edit them: add a photo (resized on your device and kept private to your team), mark them as a VIP or as giving a speech, and write down allergies and dietary needs.',
+      'Link families together: put parents and their children or babies in one family, then sort "families together" to see them side by side.',
+      'Record where each guest sleeps night by night, with a range for several nights at once.',
+      'Seats are shown here but still placed in the editor. Changes to guests appear in the "what changed" summary (hotel stays are not logged yet).',
+    ],
+  },
+  {
     id: '2026-11-16-project-page-payments',
     date: '2026-11-16',
     title: 'Project page and payment tracker',
