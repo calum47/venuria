@@ -1,0 +1,460 @@
+'use client'
+
+import { useMemo, useState } from 'react'
+import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
+import {
+  createPayment,
+  deletePayment,
+  deleteProjectDocument,
+  getDocumentUrl,
+  setPaymentPaid,
+  updatePayment,
+  uploadProjectDocument,
+  type PaymentInput,
+} from '@/lib/supabase/paymentQueries'
+import {
+  DOC_KIND_LABEL,
+  checkPdf,
+  formatBytes,
+  formatMoney,
+  parseAmount,
+  paymentStatus,
+  paymentTotals,
+  sortPayments,
+} from '@/lib/payments'
+import { formatDate, isIsoDate, todayIso } from '@/lib/projectDates'
+
+type Props = {
+  projectId: string
+  teamId: string
+  currency: string
+  initialPayments: DbProjectPayment[]
+  initialDocuments: DbProjectDocument[]
+}
+
+const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50'
+
+function errMsg(e: unknown): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+}
+
+export default function PaymentsApp({ projectId, teamId, currency, initialPayments, initialDocuments }: Props) {
+  // numeric(12,2) can arrive as a string from some clients — normalise once.
+  const [payments, setPayments] = useState<DbProjectPayment[]>(() =>
+    initialPayments.map((p) => ({ ...p, amount: Number(p.amount) })),
+  )
+  const [documents, setDocuments] = useState<DbProjectDocument[]>(initialDocuments)
+  const [error, setError] = useState<string | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [payingId, setPayingId] = useState<string | null>(null)
+  const [payDate, setPayDate] = useState(todayIso())
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [attachingFor, setAttachingFor] = useState<string | null>(null) // payment id, or 'general'
+  const [busy, setBusy] = useState<string | null>(null)
+
+  const sorted = useMemo(() => sortPayments(payments), [payments])
+  const totals = useMemo(() => paymentTotals(payments), [payments])
+  const docsByPayment = useMemo(() => {
+    const m = new Map<string, DbProjectDocument[]>()
+    for (const d of documents) if (d.payment_id) m.set(d.payment_id, [...(m.get(d.payment_id) ?? []), d])
+    return m
+  }, [documents])
+  const generalDocs = documents.filter((d) => !d.payment_id)
+  const money = (n: number) => formatMoney(n, currency)
+
+  const run = async (key: string, fn: () => Promise<void>) => {
+    setError(null)
+    setBusy(key)
+    try {
+      await fn()
+    } catch (e) {
+      setError(errMsg(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const replacePayment = (p: DbProjectPayment) =>
+    setPayments((cur) => cur.map((x) => (x.id === p.id ? { ...p, amount: Number(p.amount) } : x)))
+
+  const savePayment = (id: string | null, v: PaymentInput) =>
+    run(id ?? 'new', async () => {
+      if (id) {
+        replacePayment(await updatePayment(id, v))
+        setEditingId(null)
+      } else {
+        const p = await createPayment(projectId, v)
+        setPayments((cur) => [...cur, { ...p, amount: Number(p.amount) }])
+        setShowAdd(false)
+      }
+    })
+
+  const markPaid = (id: string) =>
+    run(id, async () => {
+      if (!isIsoDate(payDate)) throw new Error('Enter a valid payment date.')
+      replacePayment(await setPaymentPaid(id, payDate))
+      setPayingId(null)
+    })
+
+  const markUnpaid = (id: string) => run(id, async () => replacePayment(await setPaymentPaid(id, null)))
+
+  const removePayment = (id: string) =>
+    run(id, async () => {
+      await deletePayment(id)
+      setPayments((cur) => cur.filter((p) => p.id !== id))
+      // The database keeps the documents and nulls their payment link — mirror that.
+      setDocuments((cur) => cur.map((d) => (d.payment_id === id ? { ...d, payment_id: null } : d)))
+      setConfirmDeleteId(null)
+    })
+
+  const removeDocument = (doc: DbProjectDocument) =>
+    run(doc.id, async () => {
+      await deleteProjectDocument(doc)
+      setDocuments((cur) => cur.filter((d) => d.id !== doc.id))
+    })
+
+  const openDocument = (doc: DbProjectDocument) =>
+    run(doc.id, async () => {
+      // Open the tab synchronously (inside the click) so popup blockers allow it,
+      // then point it at the short-lived signed URL.
+      const w = window.open('', '_blank')
+      try {
+        const url = await getDocumentUrl(doc.storage_path)
+        if (w) {
+          w.opener = null
+          w.location.href = url
+        } else {
+          window.location.href = url
+        }
+      } catch (e) {
+        w?.close()
+        throw e
+      }
+    })
+
+  const onUploaded = (doc: DbProjectDocument) => {
+    setDocuments((cur) => [doc, ...cur])
+    setAttachingFor(null)
+  }
+
+  const renderDoc = (doc: DbProjectDocument) => (
+    <li key={doc.id} className="flex items-center gap-2 text-xs text-gray-600">
+      <span aria-hidden>📄</span>
+      <button onClick={() => openDocument(doc)} disabled={busy === doc.id} className="text-blue-600 hover:underline text-left">
+        {doc.label}
+      </button>
+      <span className="text-gray-400">
+        {DOC_KIND_LABEL[doc.kind]}
+        {doc.vendor_name ? ` · ${doc.vendor_name}` : ''} · {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at.slice(0, 10))}
+      </span>
+      <button onClick={() => removeDocument(doc)} disabled={busy === doc.id} className="ml-auto text-gray-400 hover:text-red-600" aria-label={`Remove ${doc.label}`}>
+        Remove
+      </button>
+    </li>
+  )
+
+  return (
+    <div className="space-y-6">
+      {error && (
+        <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
+
+      {/* ── Totals ── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Total" value={money(totals.total)} />
+        <Stat label="Paid" value={money(totals.paid)} />
+        <Stat label="Outstanding" value={money(totals.outstanding)} />
+        <Stat
+          label="Overdue"
+          value={totals.overdueCount === 0 ? 'None' : `${totals.overdueCount} · ${money(totals.overdueAmount)}`}
+          tone={totals.overdueCount > 0 ? 'bad' : undefined}
+        />
+      </div>
+
+      {/* ── Payments ── */}
+      <section className="rounded-lg border border-gray-200 bg-white">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-900">Payments</h2>
+          {!showAdd && <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>Add payment</button>}
+        </div>
+
+        {showAdd && (
+          <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+            <PaymentForm submitLabel="Add payment" busy={busy === 'new'} onSubmit={(v) => savePayment(null, v)} onCancel={() => setShowAdd(false)} />
+          </div>
+        )}
+
+        {sorted.length === 0 && !showAdd && (
+          <p className="px-4 py-6 text-sm text-gray-400">No payments yet. Add each deposit, instalment or balance with its due date.</p>
+        )}
+
+        <ul className="divide-y divide-gray-100">
+          {sorted.map((p) => {
+            const st = paymentStatus(p)
+            const receipts = docsByPayment.get(p.id) ?? []
+            return (
+              <li key={p.id} className="px-4 py-3">
+                {editingId === p.id ? (
+                  <PaymentForm
+                    initial={p}
+                    submitLabel="Save"
+                    busy={busy === p.id}
+                    onSubmit={(v) => savePayment(p.id, v)}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-gray-900">
+                          <span className="font-medium">{p.vendor_name}</span> — {p.label}
+                        </p>
+                        {p.notes && <p className="text-xs text-gray-500 mt-0.5">{p.notes}</p>}
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 tabular-nums">{money(p.amount)}</p>
+                      <p className="text-xs text-gray-500 w-28">Due {formatDate(p.due_date).replace(/^\w+, /, '')}</p>
+                      <StatusPill status={st} />
+                    </div>
+
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {p.paid_at ? (
+                        <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>Mark unpaid</button>
+                      ) : payingId === p.id ? (
+                        <span className="flex items-center gap-2">
+                          <label className="text-xs text-gray-500">Paid on</label>
+                          <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={input} />
+                          <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>Confirm</button>
+                          <button onClick={() => setPayingId(null)} className={btn}>Cancel</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>Mark paid</button>
+                      )}
+                      <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>Edit</button>
+                      <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt (PDF)</button>
+                      {confirmDeleteId === p.id ? (
+                        <span className="flex items-center gap-2 text-xs text-gray-600">
+                          Delete this payment?
+                          <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
+                          <button onClick={() => setConfirmDeleteId(null)} className={btn}>Keep</button>
+                        </span>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteId(p.id)} className="text-xs text-gray-400 hover:text-red-600">Delete</button>
+                      )}
+                    </div>
+
+                    {receipts.length > 0 && (
+                      <ul className="mt-2 space-y-1 border-l-2 border-gray-100 pl-3">
+                        {receipts.map(renderDoc)}
+                      </ul>
+                    )}
+                    {attachingFor === p.id && (
+                      <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
+                        <UploadForm
+                          teamId={teamId}
+                          projectId={projectId}
+                          fixedKind="receipt"
+                          paymentId={p.id}
+                          vendorName={p.vendor_name}
+                          defaultLabel={`Receipt — ${p.label}`}
+                          onUploaded={onUploaded}
+                          onCancel={() => setAttachingFor(null)}
+                          onError={setError}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      {/* ── Contracts & other documents ── */}
+      <section className="rounded-lg border border-gray-200 bg-white">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Contracts &amp; other documents</h2>
+            <p className="text-xs text-gray-500">Draft contracts, quotes, anything you want to keep with this project. PDF only, up to 10 MB.</p>
+          </div>
+          {attachingFor !== 'general' && <button onClick={() => setAttachingFor('general')} className={btnPrimary}>Add document</button>}
+        </div>
+        {attachingFor === 'general' && (
+          <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
+            <UploadForm
+              teamId={teamId}
+              projectId={projectId}
+              paymentId={null}
+              onUploaded={onUploaded}
+              onCancel={() => setAttachingFor(null)}
+              onError={setError}
+            />
+          </div>
+        )}
+        {generalDocs.length === 0 && attachingFor !== 'general' ? (
+          <p className="px-4 py-6 text-sm text-gray-400">No documents yet.</p>
+        ) : (
+          <ul className="space-y-2 px-4 py-3">
+            {generalDocs.map(renderDoc)}
+          </ul>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function Stat({ label, value, tone }: { label: string; value: string; tone?: 'bad' }) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className={`mt-0.5 text-base font-semibold tabular-nums ${tone === 'bad' ? 'text-red-600' : 'text-gray-900'}`}>{value}</p>
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: ReturnType<typeof paymentStatus> }) {
+  const base = 'w-36 rounded-full px-2.5 py-0.5 text-center text-xs font-medium'
+  if (status.kind === 'paid') return <span className={`${base} bg-green-50 text-green-700`}>Paid {formatDate(status.paidAt).replace(/^\w+, /, '')}</span>
+  if (status.kind === 'overdue') return <span className={`${base} bg-red-50 text-red-700`}>Overdue {status.days} day{status.days === 1 ? '' : 's'}</span>
+  if (status.days === 0) return <span className={`${base} bg-amber-50 text-amber-700`}>Due today</span>
+  return <span className={`${base} ${status.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>Due in {status.days} day{status.days === 1 ? '' : 's'}</span>
+}
+
+function PaymentForm({
+  initial,
+  submitLabel,
+  busy,
+  onSubmit,
+  onCancel,
+}: {
+  initial?: DbProjectPayment
+  submitLabel: string
+  busy: boolean
+  onSubmit: (v: PaymentInput) => void
+  onCancel: () => void
+}) {
+  const [vendor, setVendor] = useState(initial?.vendor_name ?? '')
+  const [label, setLabel] = useState(initial?.label ?? '')
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
+  const [dueDate, setDueDate] = useState(initial?.due_date ?? '')
+  const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsed = parseAmount(amount)
+    if (!vendor.trim()) return setFormError('Enter the vendor or supplier.')
+    if (!label.trim()) return setFormError('Enter what the payment is for, e.g. Deposit.')
+    if (parsed === null) return setFormError('Enter an amount like 1500 or 1500,50 (no thousands separators).')
+    if (!isIsoDate(dueDate)) return setFormError('Enter a due date.')
+    setFormError(null)
+    onSubmit({ vendorName: vendor.trim(), label: label.trim(), amount: parsed, dueDate, notes: notes.trim() || null })
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2">
+      <div className="grid gap-2 sm:grid-cols-4">
+        <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor / supplier" aria-label="Vendor" className={input} maxLength={120} />
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="For (Deposit, Balance…)" aria-label="Label" className={input} maxLength={120} />
+        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" aria-label="Amount" inputMode="decimal" className={input} />
+        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" className={input} />
+      </div>
+      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" aria-label="Notes" className={`${input} w-full`} maxLength={500} />
+      {formError && <p className="text-xs text-red-600">{formError}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : submitLabel}</button>
+        <button type="button" onClick={onCancel} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+      </div>
+    </form>
+  )
+}
+
+function UploadForm({
+  teamId,
+  projectId,
+  fixedKind,
+  paymentId,
+  vendorName,
+  defaultLabel,
+  onUploaded,
+  onCancel,
+  onError,
+}: {
+  teamId: string
+  projectId: string
+  fixedKind?: DbDocumentKind
+  paymentId: string | null
+  vendorName?: string
+  defaultLabel?: string
+  onUploaded: (d: DbProjectDocument) => void
+  onCancel: () => void
+  onError: (m: string | null) => void
+}) {
+  const [file, setFile] = useState<File | null>(null)
+  const [label, setLabel] = useState(defaultLabel ?? '')
+  const [kind, setKind] = useState<DbDocumentKind>(fixedKind ?? 'contract_draft')
+  const [vendor, setVendor] = useState(vendorName ?? '')
+  const [uploading, setUploading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+
+  const pick = async (f: File | null) => {
+    setFile(null)
+    setFormError(null)
+    if (!f) return
+    const problem = await checkPdf(f)
+    if (problem) return setFormError(problem)
+    setFile(f)
+    if (!label) setLabel(f.name.replace(/\.pdf$/i, ''))
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!file) return setFormError('Choose a PDF first.')
+    if (!label.trim()) return setFormError('Give the document a name.')
+    setUploading(true)
+    setFormError(null)
+    onError(null)
+    try {
+      const doc = await uploadProjectDocument({
+        teamId,
+        projectId,
+        file,
+        kind,
+        label: label.trim(),
+        vendorName: vendor.trim() || null,
+        paymentId,
+      })
+      onUploaded(doc)
+    } catch (err) {
+      setFormError(errMsg(err))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2">
+      <input type="file" accept="application/pdf,.pdf" onChange={(e) => pick(e.target.files?.[0] ?? null)} aria-label="PDF file" className="block text-sm text-gray-700" />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
+        {!fixedKind && (
+          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="Document type" className={input}>
+            <option value="contract_draft">{DOC_KIND_LABEL.contract_draft}</option>
+            <option value="other">{DOC_KIND_LABEL.other}</option>
+          </select>
+        )}
+        {!fixedKind && (
+          <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor (optional)" aria-label="Vendor" className={input} maxLength={120} />
+        )}
+      </div>
+      {formError && <p className="text-xs text-red-600">{formError}</p>}
+      <div className="flex gap-2">
+        <button type="submit" disabled={uploading || !file} className={btnPrimary}>{uploading ? 'Uploading…' : 'Upload'}</button>
+        <button type="button" onClick={onCancel} disabled={uploading} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+      </div>
+    </form>
+  )
+}

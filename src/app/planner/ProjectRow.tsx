@@ -90,8 +90,8 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
           <button onClick={() => { setEditing((v) => !v); setError(null) }} className="text-xs text-gray-400 hover:text-gray-700">
             {editing ? 'Close' : 'Edit'}
           </button>
-          <Link href={`/editor/${project.id}`} className="text-blue-600 hover:underline text-sm">
-            Open editor →
+          <Link href={`/planner/projects/${project.id}`} className="text-blue-600 hover:underline text-sm">
+            Open project →
           </Link>
         </div>
       </div>

@@ -148,6 +148,8 @@ function aggregate(events: DbProjectActivity[], roomName: (id: string | null) =>
 function displayName(e: DbProjectActivity): string | null {
   if (e.entity === 'layout_object') return e.summary.label || e.summary.name || null
   if (e.entity === 'guest') return e.summary.name ?? null
+  if (e.entity === 'payment') return e.summary.label ?? null
+  if (e.entity === 'document') return e.summary.label ?? null
   return e.summary.guest_name ?? null
 }
 
@@ -177,6 +179,18 @@ function describe(
       const verbs: Record<string, string> = { assigned: 'Seated', unassigned: 'Unseated', reassigned: 'Moved' }
       const verb = verbs[e.action] ?? 'Changed seating for'
       return `${verb} ${count} guest${plural}${where}${sample}`
+    }
+    case 'payment': {
+      // Amounts are deliberately never put in the activity log — only labels.
+      if (e.action === 'marked_paid') return `Marked ${count} payment${plural} as paid${sample}`
+      if (e.action === 'marked_unpaid') return `Marked ${count} payment${plural} as unpaid${sample}`
+      const verbs: Record<string, string> = { added: 'Added', updated: 'Edited', removed: 'Removed' }
+      const verb = verbs[e.action] ?? 'Changed'
+      return `${verb} ${count} payment${plural}${sample}`
+    }
+    case 'document': {
+      const verb = e.action === 'removed' ? 'Removed' : 'Attached'
+      return `${verb} ${count} document${plural}${sample}`
     }
   }
 }

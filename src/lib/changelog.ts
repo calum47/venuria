@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-16-project-page-payments',
+    date: '2026-11-16',
+    title: 'Project page and payment tracker',
+    roles: ['planner', 'admin'],
+    items: [
+      'Clicking a project in My projects now opens a project page first, with a card for each part of the project: the editor, the layout summary and payments.',
+      'New Payments & documents page: add each payment with its vendor, amount and due date, mark it paid with the date it was paid, and see what is due, overdue or paid at a glance.',
+      'Attach a PDF receipt to any payment, and keep draft contracts or other PDFs (up to 10 MB each) with the project. Files are private to your team.',
+      'Payment changes show up in the "what changed" summary for your teammates (labels only, never amounts).',
+    ],
+  },
+  {
     id: '2026-09-18-stock-tracking',
     date: '2026-09-18',
     title: 'My Stock — your own inventory',

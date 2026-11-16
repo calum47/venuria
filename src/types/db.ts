@@ -69,10 +69,49 @@ export type DbProjectActivity = {
   room_id: string | null
   actor_user_id: string | null
   actor_name: string | null
-  entity: 'layout_object' | 'guest' | 'seat_assignment'
-  action: 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
+  entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document'
+  action:
+    | 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
+    | 'marked_paid' | 'marked_unpaid'
   entity_id: string | null
-  summary: { name?: string | null; label?: string | null; guest_name?: string | null }
+  summary: {
+    name?: string | null
+    label?: string | null
+    guest_name?: string | null
+    vendor?: string | null // payment events
+    kind?: string | null // document events
+  }
+  created_at: string
+}
+
+/** project_payments (migration 015). `paid_at` null = unpaid; overdue is derived, never stored. */
+export type DbProjectPayment = {
+  id: string
+  project_id: string
+  vendor_name: string
+  label: string
+  amount: number // numeric(12,2)
+  due_date: string // YYYY-MM-DD
+  paid_at: string | null // YYYY-MM-DD
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type DbDocumentKind = 'contract_draft' | 'receipt' | 'other'
+
+/** project_documents (migration 015). The file lives in the private `project-documents` bucket. */
+export type DbProjectDocument = {
+  id: string
+  project_id: string
+  payment_id: string | null
+  vendor_name: string | null
+  kind: DbDocumentKind
+  label: string
+  storage_path: string // {team_id}/{project_id}/{uuid}.pdf
+  size_bytes: number
+  uploaded_by: string | null
   created_at: string
 }
 
