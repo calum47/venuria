@@ -150,6 +150,7 @@ function displayName(e: DbProjectActivity): string | null {
   if (e.entity === 'guest') return e.summary.name ?? null
   if (e.entity === 'payment') return e.summary.label ?? null
   if (e.entity === 'document') return e.summary.label ?? null
+  if (e.entity === 'timetable') return e.summary.title ?? null
   return e.summary.guest_name ?? null
 }
 
@@ -187,6 +188,11 @@ function describe(
       const verbs: Record<string, string> = { added: 'Added', updated: 'Edited', removed: 'Removed' }
       const verb = verbs[e.action] ?? 'Changed'
       return `${verb} ${count} payment${plural}${sample}`
+    }
+    case 'timetable': {
+      const verbs: Record<string, string> = { added: 'Added', updated: 'Changed', removed: 'Removed' }
+      const verb = verbs[e.action] ?? 'Changed'
+      return `${verb} ${count} timetable block${plural}${sample}`
     }
     case 'document': {
       const verb = e.action === 'removed' ? 'Removed' : 'Attached'

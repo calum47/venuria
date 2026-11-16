@@ -28,6 +28,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-16-timetable-rundown',
+    date: '2026-11-16',
+    title: 'Timetable and run-down list',
+    roles: ['planner', 'admin'],
+    items: [
+      'New Timetable on the project page: an hourly calendar for each event day. Add a day for the wedding, the welcome party, the brunch, and switch between them with the tabs.',
+      'Click an empty slot to add a block, drag a block up or down to shift it, drag its bottom edge to change its length, or click it to type exact times. Blocks can run past midnight, and overlapping blocks sit side by side.',
+      'Tag each block with a vendor from your team\'s vendor list. Each vendor has a colour, contact details and Instagram handle, shared by everyone on your team.',
+      'New Run-down list: the same schedule as a list for the day itself, with the vendor\'s contact details, the person in charge, notes and a materials list. Times come straight from the timetable, so you never type them twice.',
+      'Choose per entry whether the vendor, their contact and their Instagram show, pick one vendor or several to list, and print it or save it as a PDF.',
+      'Timetable changes show up in the \"what changed\" summary for your teammates.',
+    ],
+  },
+  {
     id: '2026-11-16-stock-roles-seats-png',
     date: '2026-11-16',
     title: 'Stock permissions, seat reminders and PNG export',

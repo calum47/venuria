@@ -60,6 +60,13 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
       ? 'No guests yet — photos, families, dietary needs, hotel per night'
       : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}${needSeat > 0 ? ` · ${needSeat} still ${needSeat === 1 ? 'needs' : 'need'} a seat` : ''}`
 
+  const { count: blockCount } = await supabase
+    .from('timetable_blocks')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+  const timetableHint =
+    !blockCount ? 'Hourly schedule per event day, tagged by vendor' : `${blockCount} ${blockCount === 1 ? 'block' : 'blocks'} scheduled`
+
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
   const all = payments ?? []
   const overdue = all.filter((p) => paymentStatus(p).kind === 'overdue').length
@@ -101,6 +108,16 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
           <Link href={`/planner/projects/${projectId}/payments`} className={card}>
             <p className="font-medium text-gray-900">Payments &amp; documents</p>
             <p className={`text-sm mt-1 ${overdue > 0 ? 'text-red-600' : 'text-gray-500'}`}>{paymentsHint}</p>
+          </Link>
+
+          <Link href={`/planner/projects/${projectId}/timetable`} className={card}>
+            <p className="font-medium text-gray-900">Timetable</p>
+            <p className="text-sm text-gray-500 mt-1">{timetableHint}</p>
+          </Link>
+
+          <Link href={`/planner/projects/${projectId}/rundown`} className={card}>
+            <p className="font-medium text-gray-900">Run-down list</p>
+            <p className="text-sm text-gray-500 mt-1">Day-of list for the team and vendors — print or save as PDF</p>
           </Link>
 
           <Link href={`/planner/projects/${projectId}/guests`} className={card}>

@@ -100,7 +100,7 @@ export type DbProjectActivity = {
   room_id: string | null
   actor_user_id: string | null
   actor_name: string | null
-  entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document'
+  entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document' | 'timetable'
   action:
     | 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
     | 'marked_paid' | 'marked_unpaid'
@@ -111,6 +111,7 @@ export type DbProjectActivity = {
     guest_name?: string | null
     vendor?: string | null // payment events
     kind?: string | null // document events
+    title?: string | null // timetable events
   }
   created_at: string
 }
@@ -211,4 +212,49 @@ export type DbStockOrder = {
   qty: number
   status: 'pending' | 'received'
   ordered_at: string
+}
+
+// Migration 019 — Timetable & Run-Down
+
+export type DbTeamVendor = {
+  id: string
+  team_id: string
+  name: string
+  colour: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  instagram: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type DbProjectDay = {
+  id: string
+  project_id: string
+  label: string
+  day_date: string | null
+  position: number
+  created_at: string
+}
+
+export type DbTimetableBlock = {
+  id: string
+  project_id: string
+  day_id: string
+  title: string
+  /** Minutes from midnight of the block's day (0–1439). */
+  start_min: number
+  /** Minutes from midnight of the same day; up to 1800 (06:00 next day). */
+  end_min: number
+  vendor_id: string | null
+  person: string | null
+  notes: string | null
+  materials: string[]
+  show_vendor: boolean
+  show_contact: boolean
+  show_instagram: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
