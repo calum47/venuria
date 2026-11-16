@@ -153,6 +153,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       <p className="text-sm text-gray-500">
         {filtering ? `${visible.length} of ${stats.total} guests` : `${stats.total} ${stats.total === 1 ? 'guest' : 'guests'}`}
         {stats.families > 0 ? ` · ${stats.families} ${stats.families === 1 ? 'family' : 'families'}` : ''}
+        {' · click a guest or Edit to change details, add a photo, family or hotel'}
       </p>
 
       {guests.length === 0 ? (
@@ -172,6 +173,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                 <th className="hidden px-3 py-2 md:table-cell">Dietary</th>
                 <th className="px-3 py-2">Seat</th>
                 <th className="hidden px-3 py-2 lg:table-cell">Hotel</th>
+                <th className="w-20 px-3 py-2"><span className="sr-only">Edit</span></th>
               </tr>
             </thead>
             <tbody>
@@ -181,10 +183,14 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                 const gSeats = seats[g.id] ?? []
                 const gStays = staysByGuest[g.id] ?? []
                 return (
-                  <tr key={g.id} className={`border-t ${newBlock ? 'border-t-2 border-gray-300' : 'border-gray-100'} ${selectedId === g.id ? 'bg-amber-50' : ''}`}>
+                  <tr
+                    key={g.id}
+                    onClick={() => setSelectedId(g.id)}
+                    className={`cursor-pointer border-t hover:bg-gray-50 ${newBlock ? 'border-t-2 border-gray-300' : 'border-gray-100'} ${selectedId === g.id ? 'bg-amber-50' : ''}`}
+                  >
                     <td className="px-3 py-2"><Avatar name={g.name} url={g.photo_path ? photoUrls[g.photo_path] : undefined} size={36} /></td>
                     <td className="px-3 py-2">
-                      <button type="button" onClick={() => setSelectedId(g.id)} className="text-left font-medium text-gray-900 hover:underline">{g.name}</button>
+                      <button type="button" onClick={() => setSelectedId(g.id)} className="text-left font-medium text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900">{g.name}</button>
                       <span className="ml-2 inline-flex gap-1 align-middle">
                         {g.is_vip && <Pill tone="amber">VIP</Pill>}
                         {g.gives_speech && <Pill tone="blue">Speech</Pill>}
@@ -203,6 +209,9 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                     </td>
                     <td className="hidden max-w-[16rem] px-3 py-2 text-gray-700 lg:table-cell">
                       {gStays.length === 0 ? <span className="text-gray-400">—</span> : <span className="line-clamp-2" title={staySummary(gStays)}>{staySummary(gStays)}</span>}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button type="button" onClick={() => setSelectedId(g.id)} className={btn} aria-label={`Edit ${g.name}`}>Edit</button>
                     </td>
                   </tr>
                 )
