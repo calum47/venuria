@@ -4,7 +4,7 @@
  * one place.
  */
 import type { DbDocumentKind, DbProjectPayment } from '@/types/db'
-import { daysUntil, isIsoDate } from '@/lib/projectDates'
+import { addDays, daysUntil, isIsoDate } from '@/lib/projectDates'
 
 export const DOCUMENTS_BUCKET = 'project-documents'
 /** Mirrors the bucket's file_size_limit — the bucket is the real enforcement, this is for a friendly message. */
@@ -105,4 +105,54 @@ export async function checkPdf(file: File): Promise<string | null> {
 
 export function formatBytes(n: number): string {
   return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`
+}
+
+// ─── Calendar view ───────────────────────────────────────────────────────────
+// Months are 'YYYY-MM' strings and all date maths is UTC-calendar, like
+// projectDates.ts, so a date never shifts by a day with the browser's zone.
+
+export type CalendarCell = { iso: string; day: number; inMonth: boolean }
+
+/** Weeks (Monday first, as in Spain) covering a month. `month0` is 0–11. Always whole weeks, 4–6 rows. */
+export function monthGrid(year: number, month0: number): CalendarCell[][] {
+  const first = new Date(Date.UTC(year, month0, 1))
+  const firstIso = first.toISOString().slice(0, 10)
+  const offset = (first.getUTCDay() + 6) % 7 // Mon=0 … Sun=6
+  const daysInMonth = new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate()
+  const rows = Math.ceil((offset + daysInMonth) / 7)
+  const start = addDays(firstIso, -offset)
+  const monthPrefix = firstIso.slice(0, 7)
+  const weeks: CalendarCell[][] = []
+  for (let r = 0; r < rows; r++) {
+    const week: CalendarCell[] = []
+    for (let c = 0; c < 7; c++) {
+      const iso = addDays(start, r * 7 + c)
+      week.push({ iso, day: Number(iso.slice(8, 10)), inMonth: iso.startsWith(monthPrefix) })
+    }
+    weeks.push(week)
+  }
+  return weeks
+}
+
+/** 'YYYY-MM' shifted by whole months (negative = back). */
+export function shiftMonth(ym: string, delta: number): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7)
+}
+
+export function monthLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number)
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+}
+
+/**
+ * Which month the calendar opens on: the month of the next unpaid payment
+ * due today or later (what you are about to need), else today's month. An
+ * empty current month with everything due next spring would look broken.
+ */
+export function initialCalendarMonth(payments: DbProjectPayment[], today: string): string {
+  const next = payments
+    .filter((p) => !p.paid_at && p.due_date >= today)
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
+  return (next ? next.due_date : today).slice(0, 7)
 }

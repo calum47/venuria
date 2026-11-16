@@ -38,7 +38,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
         <Link href="/planner" className="font-semibold text-gray-900 mr-4">Venuria</Link>
 
         {lastProjectId ? (
-          item(`/editor/${lastProjectId}`, '↩ Last project', false)
+          item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
         ) : (
           <span className="px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
         )}

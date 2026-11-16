@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import {
   createPayment,
@@ -17,17 +17,26 @@ import {
   checkPdf,
   formatBytes,
   formatMoney,
+  initialCalendarMonth,
+  monthGrid,
+  monthLabel,
   parseAmount,
   paymentStatus,
   paymentTotals,
+  shiftMonth,
   sortPayments,
+  sumAmounts,
 } from '@/lib/payments'
 import { formatDate, isIsoDate, todayIso } from '@/lib/projectDates'
+
+type View = 'list' | 'calendar'
 
 type Props = {
   projectId: string
   teamId: string
   currency: string
+  eventDate: string | null
+  initialView: View
   initialPayments: DbProjectPayment[]
   initialDocuments: DbProjectDocument[]
 }
@@ -40,7 +49,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function PaymentsApp({ projectId, teamId, currency, initialPayments, initialDocuments }: Props) {
+export default function PaymentsApp({ projectId, teamId, currency, eventDate, initialView, initialPayments, initialDocuments }: Props) {
   // numeric(12,2) can arrive as a string from some clients — normalise once.
   const [payments, setPayments] = useState<DbProjectPayment[]>(() =>
     initialPayments.map((p) => ({ ...p, amount: Number(p.amount) })),
@@ -54,6 +63,7 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [attachingFor, setAttachingFor] = useState<string | null>(null) // payment id, or 'general'
   const [busy, setBusy] = useState<string | null>(null)
+  const [view, setView] = useState<View>(initialView)
 
   const sorted = useMemo(() => sortPayments(payments), [payments])
   const totals = useMemo(() => paymentTotals(payments), [payments])
@@ -75,6 +85,16 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
     } finally {
       setBusy(null)
     }
+  }
+
+  // The choice lives in the URL (?view=calendar) so a refresh or a shared link keeps it.
+  // replaceState integrates with the Next router (see the SPA guide) — no navigation, no reload.
+  const changeView = (v: View) => {
+    setView(v)
+    const url = new URL(window.location.href)
+    if (v === 'calendar') url.searchParams.set('view', 'calendar')
+    else url.searchParams.delete('view')
+    window.history.replaceState(null, '', url)
   }
 
   const replacePayment = (p: DbProjectPayment) =>
@@ -156,6 +176,85 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
     </li>
   )
 
+  const renderPayment = (p: DbProjectPayment) => {
+    const st = paymentStatus(p)
+    const receipts = docsByPayment.get(p.id) ?? []
+    return (
+      <li key={p.id} className="px-4 py-3">
+        {editingId === p.id ? (
+          <PaymentForm
+            initial={p}
+            submitLabel="Save"
+            busy={busy === p.id}
+            onSubmit={(v) => savePayment(p.id, v)}
+            onCancel={() => setEditingId(null)}
+          />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-gray-900">
+                  <span className="font-medium">{p.vendor_name}</span> — {p.label}
+                </p>
+                {p.notes && <p className="text-xs text-gray-500 mt-0.5">{p.notes}</p>}
+              </div>
+              <p className="text-sm font-medium text-gray-900 tabular-nums">{money(p.amount)}</p>
+              <p className="text-xs text-gray-500 w-28">Due {formatDate(p.due_date).replace(/^\w+, /, '')}</p>
+              <StatusPill status={st} />
+            </div>
+
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              {p.paid_at ? (
+                <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>Mark unpaid</button>
+              ) : payingId === p.id ? (
+                <span className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500">Paid on</label>
+                  <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={input} />
+                  <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>Confirm</button>
+                  <button onClick={() => setPayingId(null)} className={btn}>Cancel</button>
+                </span>
+              ) : (
+                <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>Mark paid</button>
+              )}
+              <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>Edit</button>
+              <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt (PDF)</button>
+              {confirmDeleteId === p.id ? (
+                <span className="flex items-center gap-2 text-xs text-gray-600">
+                  Delete this payment?
+                  <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
+                  <button onClick={() => setConfirmDeleteId(null)} className={btn}>Keep</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmDeleteId(p.id)} className="text-xs text-gray-400 hover:text-red-600">Delete</button>
+              )}
+            </div>
+
+            {receipts.length > 0 && (
+              <ul className="mt-2 space-y-1 border-l-2 border-gray-100 pl-3">
+                {receipts.map(renderDoc)}
+              </ul>
+            )}
+            {attachingFor === p.id && (
+              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
+                <UploadForm
+                  teamId={teamId}
+                  projectId={projectId}
+                  fixedKind="receipt"
+                  paymentId={p.id}
+                  vendorName={p.vendor_name}
+                  defaultLabel={`Receipt — ${p.label}`}
+                  onUploaded={onUploaded}
+                  onCancel={() => setAttachingFor(null)}
+                  onError={setError}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </li>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {error && (
@@ -176,8 +275,23 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
 
       {/* ── Payments ── */}
       <section className="rounded-lg border border-gray-200 bg-white">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-          <h2 className="text-sm font-semibold text-gray-900">Payments</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-sm font-semibold text-gray-900">Payments</h2>
+            <div role="group" aria-label="Payments view" className="flex overflow-hidden rounded border border-gray-300 text-xs">
+              {(['list', 'calendar'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={view === v}
+                  onClick={() => changeView(v)}
+                  className={`px-2.5 py-1 ${view === v ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {v === 'list' ? 'List' : 'Calendar'}
+                </button>
+              ))}
+            </div>
+          </div>
           {!showAdd && <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>Add payment</button>}
         </div>
 
@@ -191,86 +305,13 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
           <p className="px-4 py-6 text-sm text-gray-400">No payments yet. Add each deposit, instalment or balance with its due date.</p>
         )}
 
-        <ul className="divide-y divide-gray-100">
-          {sorted.map((p) => {
-            const st = paymentStatus(p)
-            const receipts = docsByPayment.get(p.id) ?? []
-            return (
-              <li key={p.id} className="px-4 py-3">
-                {editingId === p.id ? (
-                  <PaymentForm
-                    initial={p}
-                    submitLabel="Save"
-                    busy={busy === p.id}
-                    onSubmit={(v) => savePayment(p.id, v)}
-                    onCancel={() => setEditingId(null)}
-                  />
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-gray-900">
-                          <span className="font-medium">{p.vendor_name}</span> — {p.label}
-                        </p>
-                        {p.notes && <p className="text-xs text-gray-500 mt-0.5">{p.notes}</p>}
-                      </div>
-                      <p className="text-sm font-medium text-gray-900 tabular-nums">{money(p.amount)}</p>
-                      <p className="text-xs text-gray-500 w-28">Due {formatDate(p.due_date).replace(/^\w+, /, '')}</p>
-                      <StatusPill status={st} />
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      {p.paid_at ? (
-                        <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>Mark unpaid</button>
-                      ) : payingId === p.id ? (
-                        <span className="flex items-center gap-2">
-                          <label className="text-xs text-gray-500">Paid on</label>
-                          <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={input} />
-                          <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>Confirm</button>
-                          <button onClick={() => setPayingId(null)} className={btn}>Cancel</button>
-                        </span>
-                      ) : (
-                        <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>Mark paid</button>
-                      )}
-                      <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>Edit</button>
-                      <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt (PDF)</button>
-                      {confirmDeleteId === p.id ? (
-                        <span className="flex items-center gap-2 text-xs text-gray-600">
-                          Delete this payment?
-                          <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
-                          <button onClick={() => setConfirmDeleteId(null)} className={btn}>Keep</button>
-                        </span>
-                      ) : (
-                        <button onClick={() => setConfirmDeleteId(p.id)} className="text-xs text-gray-400 hover:text-red-600">Delete</button>
-                      )}
-                    </div>
-
-                    {receipts.length > 0 && (
-                      <ul className="mt-2 space-y-1 border-l-2 border-gray-100 pl-3">
-                        {receipts.map(renderDoc)}
-                      </ul>
-                    )}
-                    {attachingFor === p.id && (
-                      <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
-                        <UploadForm
-                          teamId={teamId}
-                          projectId={projectId}
-                          fixedKind="receipt"
-                          paymentId={p.id}
-                          vendorName={p.vendor_name}
-                          defaultLabel={`Receipt — ${p.label}`}
-                          onUploaded={onUploaded}
-                          onCancel={() => setAttachingFor(null)}
-                          onError={setError}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+        {view === 'list' ? (
+          <ul className="divide-y divide-gray-100">
+            {sorted.map(renderPayment)}
+          </ul>
+        ) : (
+          <CalendarView payments={payments} eventDate={eventDate} money={money} renderPayment={renderPayment} />
+        )}
       </section>
 
       {/* ── Contracts & other documents ── */}
@@ -302,6 +343,112 @@ export default function PaymentsApp({ projectId, teamId, currency, initialPaymen
           </ul>
         )}
       </section>
+    </div>
+  )
+}
+
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+function chipTone(status: ReturnType<typeof paymentStatus>): string {
+  if (status.kind === 'paid') return 'bg-green-50 text-green-700'
+  if (status.kind === 'overdue') return 'bg-red-50 text-red-700'
+  return status.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
+}
+
+/**
+ * Month grid of payments by due date. Clicking a day opens its payments
+ * underneath using the same row as the list, so Mark paid / Edit / Attach
+ * receipt work identically in both views. Read-only otherwise: nothing here
+ * can move a due date by dragging.
+ */
+function CalendarView({
+  payments,
+  eventDate,
+  money,
+  renderPayment,
+}: {
+  payments: DbProjectPayment[]
+  eventDate: string | null
+  money: (n: number) => string
+  renderPayment: (p: DbProjectPayment) => React.ReactNode
+}) {
+  const today = todayIso()
+  const [ym, setYm] = useState(() => initialCalendarMonth(payments, today))
+  const [selected, setSelected] = useState<string | null>(null)
+
+  const [y, m] = ym.split('-').map(Number)
+  const weeks = useMemo(() => monthGrid(y, m - 1), [y, m])
+  const byDay = useMemo(() => {
+    const map = new Map<string, DbProjectPayment[]>()
+    for (const p of sortPayments(payments)) map.set(p.due_date, [...(map.get(p.due_date) ?? []), p])
+    return map
+  }, [payments])
+
+  const inMonth = payments.filter((p) => p.due_date.startsWith(ym))
+  const selectedPayments = selected ? byDay.get(selected) ?? [] : []
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2">
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={() => { setYm(shiftMonth(ym, -1)); setSelected(null) }} className={btn} aria-label="Previous month">←</button>
+          <button type="button" onClick={() => { setYm(shiftMonth(ym, 1)); setSelected(null) }} className={btn} aria-label="Next month">→</button>
+          <button type="button" onClick={() => { setYm(today.slice(0, 7)); setSelected(null) }} className={btn}>Today</button>
+        </div>
+        <p className="text-sm font-medium text-gray-900">{monthLabel(ym)}</p>
+        <p className="text-xs text-gray-500">
+          {inMonth.length === 0 ? 'Nothing due this month' : `${inMonth.length} due · ${money(sumAmounts(inMonth.map((p) => p.amount)))}`}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-7 border-b border-gray-100 text-center text-[11px] text-gray-400">
+        {WEEKDAYS.map((d) => <div key={d} className="py-1">{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7">
+        {weeks.flat().map((cell) => {
+          const ps = byDay.get(cell.iso) ?? []
+          const isToday = cell.iso === today
+          const isSelected = cell.iso === selected
+          return (
+            <button
+              key={cell.iso}
+              type="button"
+              onClick={() => setSelected(isSelected ? null : cell.iso)}
+              aria-pressed={isSelected}
+              aria-label={`${formatDate(cell.iso)}${ps.length ? `, ${ps.length} payment${ps.length === 1 ? '' : 's'} due` : ''}${cell.iso === eventDate ? ', event day' : ''}`}
+              className={`min-h-20 border-b border-r border-gray-100 p-1 text-left align-top ${cell.inMonth ? 'bg-white' : 'bg-gray-50'} ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:bg-gray-50'}`}
+            >
+              <span className="flex items-center gap-1">
+                <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
+                  {cell.day}
+                </span>
+                {cell.iso === eventDate && <span className="rounded bg-purple-100 px-1 text-[10px] text-purple-700">Event</span>}
+              </span>
+              <span className="mt-0.5 block space-y-0.5">
+                {ps.slice(0, 2).map((p) => (
+                  <span key={p.id} title={`${p.vendor_name} — ${p.label}: ${money(p.amount)}`} className={`block truncate rounded px-1 text-[10px] ${chipTone(paymentStatus(p))}`}>
+                    {p.vendor_name} {money(p.amount)}
+                  </span>
+                ))}
+                {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">+{ps.length - 2} more</span>}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      <p className="px-4 py-2 text-[11px] text-gray-400">
+        <span className="text-green-700">Green</span> paid · <span className="text-red-700">red</span> overdue · <span className="text-amber-700">amber</span> due within 7 days · grey later. Click a day to see and edit its payments.
+      </p>
+
+      {selected && (
+        <div className="border-t border-gray-100">
+          <p className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600">
+            {formatDate(selected)}{selectedPayments.length === 0 ? ' — no payments due' : ''}
+          </p>
+          {selectedPayments.length > 0 && <ul className="divide-y divide-gray-100">{selectedPayments.map(renderPayment)}</ul>}
+        </div>
+      )}
     </div>
   )
 }
@@ -399,6 +546,7 @@ function UploadForm({
   const [vendor, setVendor] = useState(vendorName ?? '')
   const [uploading, setUploading] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
 
   const pick = async (f: File | null) => {
     setFile(null)
@@ -437,7 +585,31 @@ function UploadForm({
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <input type="file" accept="application/pdf,.pdf" onChange={(e) => pick(e.target.files?.[0] ?? null)} aria-label="PDF file" className="block text-sm text-gray-700" />
+      {/* The native file input is hidden on purpose: rendered as-is it is a full-width,
+          browser-language control (e.g. "Seleccionar archivo") where a click anywhere along
+          it opens the picker. Only the explicit button below opens it now. */}
+      <input
+        ref={fileInput}
+        type="file"
+        accept="application/pdf,.pdf"
+        hidden
+        tabIndex={-1}
+        aria-hidden="true"
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null
+          // Clear the value so choosing the same file again (after a rejected one) still fires onChange.
+          e.target.value = ''
+          void pick(f)
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={btn + ' !py-1.5 !text-sm'}>
+          {file ? 'Change PDF' : 'Choose PDF…'}
+        </button>
+        <span className="text-sm text-gray-600" aria-live="polite">
+          {file ? `${file.name} · ${formatBytes(file.size)}` : 'No file chosen'}
+        </span>
+      </div>
       <div className="grid gap-2 sm:grid-cols-3">
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
         {!fixedKind && (

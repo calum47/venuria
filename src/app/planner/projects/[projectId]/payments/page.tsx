@@ -13,8 +13,15 @@ type Params = { projectId: string }
  * and contract drafts / other PDFs. Planner team only — no client access.
  * Currency comes from the team (teams.currency), not from each payment.
  */
-export default async function PaymentsPage({ params }: { params: Promise<Params> }) {
+export default async function PaymentsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>
+  searchParams: Promise<{ view?: string | string[] }>
+}) {
   const { projectId } = await params
+  const { view } = await searchParams
   const supabase = await createClient()
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
@@ -61,6 +68,8 @@ export default async function PaymentsPage({ params }: { params: Promise<Params>
           projectId={projectId}
           teamId={ctx.team.id}
           currency={ctx.team.currency}
+          eventDate={project.event_date}
+          initialView={view === 'calendar' ? 'calendar' : 'list'}
           initialPayments={(payments ?? []) as DbProjectPayment[]}
           initialDocuments={(documents ?? []) as DbProjectDocument[]}
         />

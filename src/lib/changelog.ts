@@ -36,6 +36,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       'Clicking a project in My projects now opens a project page first, with a card for each part of the project: the editor, the layout summary and payments.',
       'New Payments & documents page: add each payment with its vendor, amount and due date, mark it paid with the date it was paid, and see what is due, overdue or paid at a glance.',
       'Attach a PDF receipt to any payment, and keep draft contracts or other PDFs (up to 10 MB each) with the project. Files are private to your team.',
+      'Switch the payments between a list and a month calendar: each payment sits on its due date, coloured by paid, overdue or due soon, and clicking a day shows that day\'s payments to edit.',
+      'The "Last project" button in the top bar now opens the project page too.',
       'Payment changes show up in the "what changed" summary for your teammates (labels only, never amounts).',
     ],
   },
