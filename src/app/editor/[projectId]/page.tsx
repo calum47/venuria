@@ -488,7 +488,7 @@ export default function EditorPage() {
             projectId={projectId}
             room={currentRoom}
             chairsInRoom={layoutObjects.filter((o) => o.isChairFor || catalogItems.find((c) => c.id === o.catalogItemId)?.category === 'chairs').length}
-            guestTotal={guests.length}
+            guestTotal={guests.filter((g) => g.rsvp_status !== 'declined').length}
           />
 
           {/* Zoom hint / level */}
@@ -597,7 +597,7 @@ export default function EditorPage() {
           currentRoom={currentRoom}
           existingObjects={layoutObjects}
           zones={zones}
-          guestCount={guests.length}
+          guestCount={guests.filter((g) => g.rsvp_status !== 'declined').length}
           onClose={() => setShowAutoArrange(false)}
           onArranged={(objects) => {
             useLayoutStore.getState().addObjects(objects)

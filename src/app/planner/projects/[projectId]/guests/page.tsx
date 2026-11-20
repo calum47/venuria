@@ -1,10 +1,11 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { formatDate } from '@/lib/projectDates'
 import { GUEST_PHOTOS_BUCKET, buildSeatIndex } from '@/lib/guests'
-import type { DbGuest, DbGuestFamily, DbGuestStay } from '@/types/db'
+import type { DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp } from '@/types/db'
 import GuestsApp from './GuestsApp'
 
 type Params = { projectId: string }
@@ -44,7 +45,7 @@ export default async function GuestsPage({
     .maybeSingle()
   if (!project) notFound()
 
-  const [guestsRes, familiesRes, staysRes, assignRes, objectsRes, roomsRes] = await Promise.all([
+  const [guestsRes, familiesRes, staysRes, assignRes, objectsRes, roomsRes, rsvpRes] = await Promise.all([
     supabase.from('guests').select('*').eq('project_id', projectId).order('name'),
     supabase.from('guest_families').select('*').eq('project_id', projectId).order('name'),
     supabase.from('guest_stays').select('*').eq('project_id', projectId).order('night'),
@@ -53,6 +54,7 @@ export default async function GuestsPage({
     project.venue_id
       ? supabase.from('rooms').select('id, name').eq('venue_id', project.venue_id)
       : Promise.resolve({ data: [], error: null }),
+    supabase.from('project_rsvp').select('*').eq('project_id', projectId).maybeSingle(),
   ])
 
   const objects = objectsRes.data ?? []
@@ -74,7 +76,11 @@ export default async function GuestsPage({
   }
 
   const loadError =
-    guestsRes.error ?? familiesRes.error ?? staysRes.error ?? assignRes.error ?? objectsRes.error ?? roomsRes.error ?? catalogRes.error
+    guestsRes.error ?? familiesRes.error ?? staysRes.error ?? assignRes.error ?? objectsRes.error ?? roomsRes.error ?? rsvpRes.error ?? catalogRes.error
+  const h = await headers()
+  const host = h.get('x-forwarded-host') ?? h.get('host') ?? 'localhost:3000'
+  const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
+  const origin = `${proto}://${host}`
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
 
   return (
@@ -105,6 +111,8 @@ export default async function GuestsPage({
           seats={seats}
           initialSelectedId={guests.some((g) => g.id === preselect) ? preselect : null}
           initialPhotoUrls={photoUrls}
+          initialRsvp={(rsvpRes.data ?? null) as DbProjectRsvp | null}
+          origin={origin}
         />
       </div>
     </main>

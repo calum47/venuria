@@ -81,7 +81,8 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       catalog: {},
       zones,
       itemRows: [],
-      guests: ((guestRows ?? []) as DbGuest[]).map((g) => ({
+      // Guests who declined are not coming: leave them out of the counts, the guest list and the "not seated" list.
+      guests: ((guestRows ?? []) as DbGuest[]).filter((g) => g.rsvp_status !== 'declined').map((g) => ({
         id: g.id,
         name: g.name,
         vip: g.is_vip,

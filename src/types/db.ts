@@ -72,6 +72,27 @@ export type DbGuest = {
   seat_dismissed_note: string | null
   seat_dismissed_at: string | null
   seat_dismissed_by: string | null
+  // Migration 025: RSVP over a shared link. rsvp_status null = pending.
+  rsvp_status: 'attending' | 'declined' | 'maybe' | null
+  rsvp_at: string | null
+  rsvp_source: 'link' | 'planner' | null
+  rsvp_consent_at: string | null
+  /** Added through the link (not on the list) or a plus-one: the planner has not looked at it yet. */
+  rsvp_needs_review: boolean
+  /** Set on a plus-one: the guest who brought them. */
+  plus_one_of: string | null
+}
+
+/** One row per project (migration 025): the shared RSVP link and its settings. */
+export type DbProjectRsvp = {
+  project_id: string
+  token: string
+  enabled: boolean
+  deadline: string | null
+  welcome_message: string | null
+  allow_plus_one: boolean
+  created_at: string
+  updated_at: string
 }
 
 export type DbGuestFamily = {

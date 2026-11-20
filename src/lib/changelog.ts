@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-20-rsvp-link',
+    date: '2026-11-20',
+    title: 'Guest RSVP link',
+    roles: ['planner', 'admin'],
+    items: [
+      'Each project now has one RSVP link you can send to all your guests. Open the guest list and look for "Guest RSVP link" at the top to switch it on, set a last day to answer, add a welcome text and copy the link.',
+      'Guests type their name, we match it with your list, and they answer in Spanish, English or French: coming, not coming or maybe, plus dietary needs and an optional plus-one. Nobody needs an account.',
+      'The guest list shows each answer, and you can filter by Attending, Declined, Maybe or Pending. Guests who are not on your list, and plus-ones, are added and marked "To review".',
+      'The link only takes a guest\'s first answer. To change an answer, edit it in the guest\'s details. Guests who decline no longer count as needing a seat or towards room capacity.',
+    ],
+  },
+  {
     id: '2026-11-20-capacity-vendors-reusable',
     date: '2026-11-20',
     title: 'Room capacity, payments with vendors, and reusable stock',

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
-import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay } from '@/types/db'
+import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp } from '@/types/db'
 import {
   createFamily,
   createGuest,
@@ -28,6 +28,7 @@ import {
   nightsInRange,
   runLabel,
   seatLabel,
+  shortDate,
   sortGuests,
   stayRuns,
   staySummary,
@@ -35,6 +36,9 @@ import {
   type SeatInfo,
 } from '@/lib/guests'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
+import { markRsvpReviewed, setGuestRsvp } from '@/lib/supabase/rsvpQueries'
+import { RSVP_LABEL, RSVP_STATUSES, type RsvpStatus } from '@/lib/rsvp'
+import RsvpPanel from './RsvpPanel'
 import GuestImport from '@/components/guests/GuestImport'
 import { addDays, todayIso } from '@/lib/projectDates'
 
@@ -47,6 +51,10 @@ type Props = {
   initialStays: DbGuestStay[]
   seats: Record<string, SeatInfo[]>
   initialPhotoUrls: Record<string, string>
+  /** The project's RSVP link settings (null until the planner first opens them). */
+  initialRsvp: DbProjectRsvp | null
+  /** Site origin for building the public RSVP link. */
+  origin: string
   /** From ?guest=ID (the editor's "Edit details" link): open this guest's panel on load. */
   initialSelectedId?: string | null
 }
@@ -60,7 +68,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialSelectedId = null }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, initialSelectedId = null }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   const [families, setFamilies] = useState<DbGuestFamily[]>(initialFamilies)
   const [stays, setStays] = useState<DbGuestStay[]>(initialStays)
@@ -72,6 +80,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [rsvpFilter, setRsvpFilter] = useState<'' | RsvpStatus | 'pending' | 'review'>('')
 
   const staysByGuest = useMemo(() => {
     const m: Record<string, DbGuestStay[]> = {}
@@ -80,11 +89,15 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   }, [stays])
   const famById = useMemo(() => new Map(families.map((f) => [f.id, f])), [families])
   const stats = useMemo(() => guestStats(guests, seats), [guests, seats])
-  const visible = useMemo(
-    () => sortGuests(filterGuests(guests, filters, { families, seats, stays: staysByGuest }), families, sortMode),
-    [guests, filters, families, seats, staysByGuest, sortMode],
-  )
-  const filtering = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS)
+  const visible = useMemo(() => {
+    const base = sortGuests(filterGuests(guests, filters, { families, seats, stays: staysByGuest }), families, sortMode)
+    if (!rsvpFilter) return base
+    return base.filter((g) =>
+      rsvpFilter === 'review' ? g.rsvp_needs_review : rsvpFilter === 'pending' ? !g.rsvp_status : g.rsvp_status === rsvpFilter,
+    )
+  }, [guests, filters, families, seats, staysByGuest, sortMode, rsvpFilter])
+  const guestById = useMemo(() => new Map(guests.map((g) => [g.id, g])), [guests])
+  const filtering = JSON.stringify(filters) !== JSON.stringify(NO_FILTERS) || rsvpFilter !== ''
   const multiRoom = useMemo(() => new Set(Object.values(seats).flat().map((s) => s.room)).size > 1, [seats])
   const selected = selectedId ? guests.find((g) => g.id === selectedId) ?? null : null
 
@@ -112,6 +125,8 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   return (
     <div className="space-y-4">
       {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+
+      <RsvpPanel projectId={projectId} origin={origin} initial={initialRsvp} guests={guests} />
 
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
         <input
@@ -161,11 +176,17 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
             <option key={f.id} value={f.id}>{f.name}</option>
           ))}
         </select>
+        <select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value as typeof rsvpFilter)} className={input} aria-label="Filter by RSVP answer">
+          <option value="">All answers</option>
+          {RSVP_STATUSES.map((st) => <option key={st} value={st}>{RSVP_LABEL[st]}</option>)}
+          <option value="pending">Pending</option>
+          <option value="review">To review (added via link)</option>
+        </select>
         <select value={sortMode} onChange={(e) => setSortMode(e.target.value as 'name' | 'family')} className={input} aria-label="Sort guests">
           <option value="name">Sort: name</option>
           <option value="family">Sort: families together</option>
         </select>
-        {filtering && <button type="button" onClick={() => setFilters(NO_FILTERS)} className={btn}>Clear filters</button>}
+        {filtering && <button type="button" onClick={() => { setFilters(NO_FILTERS); setRsvpFilter('') }} className={btn}>Clear filters</button>}
       </div>
 
       <p className="text-sm text-gray-500">
@@ -188,6 +209,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                 <th className="w-14 px-3 py-2"><span className="sr-only">Photo</span></th>
                 <th className="px-3 py-2">Guest</th>
                 <th className="px-3 py-2">Family</th>
+                <th className="px-3 py-2">RSVP</th>
                 <th className="hidden px-3 py-2 md:table-cell">Dietary</th>
                 <th className="px-3 py-2">Seat</th>
                 <th className="hidden px-3 py-2 lg:table-cell">Hotel</th>
@@ -213,11 +235,16 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                         {g.is_vip && <Pill tone="amber">VIP</Pill>}
                         {g.gives_speech && <Pill tone="blue">Speech</Pill>}
                       </span>
+                      {g.plus_one_of && guestById.get(g.plus_one_of) && <p className="mt-0.5 text-xs text-gray-500">Plus-one of {guestById.get(g.plus_one_of)!.name}</p>}
                       {g.notes && <p className="mt-0.5 max-w-xs truncate text-xs text-gray-500" title={g.notes}>{g.notes}</p>}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
                       {fam ? fam.name : <span className="text-gray-400">—</span>}
                       {g.age_group !== 'adult' && <span className="ml-1.5"><Pill tone="gray">{AGE_LABEL[g.age_group]}</Pill></span>}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {g.rsvp_status ? <Pill tone={g.rsvp_status === 'attending' ? 'green' : g.rsvp_status === 'maybe' ? 'amber' : 'gray'}>{RSVP_LABEL[g.rsvp_status]}</Pill> : <span className="text-gray-400">Pending</span>}
+                      {g.rsvp_needs_review && <span className="ml-1.5"><Pill tone="blue">To review</Pill></span>}
                     </td>
                     <td className="hidden max-w-[14rem] px-3 py-2 text-gray-700 md:table-cell">
                       {hasDietary(g) ? <span className="line-clamp-2" title={g.dietary ?? ''}>{g.dietary}</span> : <span className="text-gray-400">—</span>}
@@ -225,6 +252,8 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                     <td className="px-3 py-2 text-gray-700">
                       {gSeats.length > 0
                         ? gSeats.map((s, i) => <div key={i}>{seatLabel(s, multiRoom)}</div>)
+                        : g.rsvp_status === 'declined'
+                          ? <span className="text-gray-400">Not attending</span>
                         : g.age_group === 'baby'
                           ? <span className="text-gray-400">No seat needed</span>
                           : g.seat_dismissed_at
@@ -273,8 +302,12 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
 
 // ── Small pieces ───────────────────────────────────────────────────────────────
 
-function Pill({ tone, children }: { tone: 'amber' | 'blue' | 'gray'; children: React.ReactNode }) {
-  const c = tone === 'amber' ? 'bg-amber-100 text-amber-800' : tone === 'blue' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'
+function Pill({ tone, children }: { tone: 'amber' | 'blue' | 'gray' | 'green'; children: React.ReactNode }) {
+  const c =
+    tone === 'amber' ? 'bg-amber-100 text-amber-800'
+    : tone === 'blue' ? 'bg-blue-100 text-blue-800'
+    : tone === 'green' ? 'bg-green-100 text-green-800'
+    : 'bg-gray-100 text-gray-700'
   return <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${c}`}>{children}</span>
 }
 
@@ -386,6 +419,18 @@ function GuestPanel(p: PanelProps) {
       })
       replaceGuest(g)
     })
+
+  const changeRsvp = (value: string) =>
+    run('rsvp', async () => {
+      replaceGuest(await setGuestRsvp(guest.id, value === '' ? null : (value as RsvpStatus)))
+    })
+
+  const reviewed = () =>
+    run('review', async () => {
+      replaceGuest(await markRsvpReviewed(guest.id))
+    })
+
+  const inviter = guest.plus_one_of ? p.guests.find((x) => x.id === guest.plus_one_of) : undefined
 
   const dismissFlag = () =>
     run('dismiss', async () => {
@@ -621,11 +666,44 @@ function GuestPanel(p: PanelProps) {
             )}
           </div>
 
+          {/* RSVP */}
+          <div className={section}>
+            <p className="text-sm font-medium text-gray-900">RSVP</p>
+            {guest.rsvp_needs_review && (
+              <div className="flex flex-wrap items-center gap-2 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+                <span>
+                  {guest.plus_one_of ? 'Added as a plus-one through the RSVP link.' : 'Not on your list: added through the RSVP link.'}{' '}
+                  Check the details. If it duplicates someone already on the list, set that guest&rsquo;s answer and delete this one.
+                </span>
+                <button type="button" disabled={busy !== null} onClick={reviewed} className={btn}>Mark as reviewed</button>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={guest.rsvp_status ?? ''} onChange={(e) => changeRsvp(e.target.value)} disabled={busy !== null} className={input} aria-label="RSVP answer">
+                <option value="">Pending</option>
+                {RSVP_STATUSES.map((st) => <option key={st} value={st}>{RSVP_LABEL[st]}</option>)}
+              </select>
+              <span className="text-xs text-gray-500">
+                {guest.rsvp_at
+                  ? `${guest.rsvp_source === 'link' ? 'Answered through the link' : 'Set by your team'} on ${shortDate(guest.rsvp_at.slice(0, 10))}`
+                  : 'No answer yet'}
+              </span>
+            </div>
+            {inviter && (
+              <p className="text-xs text-gray-600">
+                Plus-one of{' '}
+                <button type="button" onClick={() => p.onSelect(inviter.id)} disabled={dirty} className="underline hover:text-gray-900 disabled:no-underline disabled:opacity-60">{inviter.name}</button>
+              </p>
+            )}
+          </div>
+
           {/* Seats */}
           <div className={section}>
             <p className="text-sm font-medium text-gray-900">Seat</p>
             {p.seats.length > 0 ? (
               <ul className="text-sm text-gray-700">{p.seats.map((s, i) => <li key={i}>{seatLabel(s, true)}</li>)}</ul>
+            ) : guest.rsvp_status === 'declined' ? (
+              <p className="text-sm text-gray-500">Not attending, so no seat is needed.</p>
             ) : guest.age_group === 'baby' ? (
               <p className="text-sm text-gray-500">Babies don&rsquo;t need a seat.</p>
             ) : guest.seat_dismissed_at ? (

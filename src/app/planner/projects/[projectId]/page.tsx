@@ -50,7 +50,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
   const { data: guestRows } = await supabase
     .from('guests')
-    .select('id, is_vip, age_group, seat_dismissed_at')
+    .select('id, is_vip, age_group, seat_dismissed_at, rsvp_status')
     .eq('project_id', projectId)
   const { data: seatRows } = await supabase
     .from('seat_assignments')
@@ -58,12 +58,13 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     .eq('project_id', projectId)
   const seated = new Set((seatRows ?? []).map((s) => s.guest_id))
   const needSeat = (guestRows ?? []).filter((g) => needsSeat(g, seated.has(g.id) ? 1 : 0)).length
-  const guestCount = guestRows?.length ?? 0
+  const declined = (guestRows ?? []).filter((g) => g.rsvp_status === 'declined').length
+  const guestCount = (guestRows?.length ?? 0) - declined
   const vipCount = (guestRows ?? []).filter((g) => g.is_vip).length
   const guestsHint =
-    guestCount === 0
+    (guestRows?.length ?? 0) === 0
       ? 'No guests yet — photos, families, dietary needs, hotel per night'
-      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}${needSeat > 0 ? ` · ${needSeat} still ${needSeat === 1 ? 'needs' : 'need'} a seat` : ''}`
+      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}${declined > 0 ? ` · ${declined} declined` : ''}${needSeat > 0 ? ` · ${needSeat} still ${needSeat === 1 ? 'needs' : 'need'} a seat` : ''}`
 
   const { count: blockCount } = await supabase
     .from('timetable_blocks')
@@ -80,7 +81,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     supabase.from('stock_orders').select('*').eq('project_id', projectId).order('ordered_at', { ascending: false }).limit(200),
     supabase.from('stock_items').select('id, name').order('name'),
     supabase.from('project_room_settings').select('*').eq('project_id', projectId),
-    supabase.from('guests').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
+    supabase.from('guests').select('id', { count: 'exact', head: true }).eq('project_id', projectId).or('rsvp_status.is.null,rsvp_status.neq.declined'),
   ])
   const settingByRoom = new Map(((settingRows ?? []) as DbProjectRoomSetting[]).map((s) => [s.room_id, s]))
   const roomById = new Map((roomRows ?? []).map((r) => [r.id, r]))

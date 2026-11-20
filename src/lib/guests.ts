@@ -180,6 +180,7 @@ export type GuestLike = {
   age_group: AgeGroup
   family_id: string | null
   seat_dismissed_at?: string | null
+  rsvp_status?: string | null
 }
 export type FamilyLike = { id: string; name: string }
 
@@ -204,8 +205,12 @@ const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true })
  * True when the guest should have a seat but has none: babies are exempt (they
  * sit on a lap) and a planner can dismiss the flag with a reason.
  */
-export function needsSeat(g: { age_group: AgeGroup; seat_dismissed_at?: string | null }, seatCount: number): boolean {
-  return seatCount === 0 && g.age_group !== 'baby' && !g.seat_dismissed_at
+export function needsSeat(
+  g: { age_group: AgeGroup; seat_dismissed_at?: string | null; rsvp_status?: string | null },
+  seatCount: number,
+): boolean {
+  // Someone who answered "declined" is not coming, so they need no seat.
+  return seatCount === 0 && g.age_group !== 'baby' && !g.seat_dismissed_at && g.rsvp_status !== 'declined'
 }
 
 export function filterGuests<G extends GuestLike>(

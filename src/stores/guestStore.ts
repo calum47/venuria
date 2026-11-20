@@ -6,6 +6,8 @@ export type Guest = {
   name: string
   notes: string | null
   createdAt: string
+  /** The editor loads raw database rows, so this is the column name (migration 025). null = pending. */
+  rsvp_status?: 'attending' | 'declined' | 'maybe' | null
 }
 
 export type SeatAssignment = {
