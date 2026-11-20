@@ -6,6 +6,8 @@ import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { countdownLabel, formatDate } from '@/lib/projectDates'
 import { paymentStatus } from '@/lib/payments'
 import { areaHint, summariseAreas } from '@/lib/hubAreas'
+import { capacityLine } from '@/lib/capacity'
+import type { DbProjectRoomSetting } from '@/types/db'
 import ProjectOrders from './ProjectOrders'
 import type { DbStockOrder } from '@/types/db'
 
@@ -71,13 +73,17 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     !blockCount ? 'Hourly schedule per event day, tagged by vendor' : `${blockCount} ${blockCount === 1 ? 'block' : 'blocks'} scheduled`
 
   // Areas: every room of the venue, with what this project has placed in it.
-  const [{ data: roomRows }, { data: objectRows }, { data: assignRows }, { data: orderRows }, { data: itemRows }] = await Promise.all([
-    supabase.from('rooms').select('id, name, type').eq('venue_id', project.venue_id).order('name'),
+  const [{ data: roomRows }, { data: objectRows }, { data: assignRows }, { data: orderRows }, { data: itemRows }, { data: settingRows }, { count: guestTotal }] = await Promise.all([
+    supabase.from('rooms').select('id, name, type, capacity_seated, capacity_standing').eq('venue_id', project.venue_id).order('name'),
     supabase.from('layout_objects').select('id, room_id, catalog_item_id').eq('project_id', projectId),
     supabase.from('seat_assignments').select('layout_object_id').eq('project_id', projectId),
     supabase.from('stock_orders').select('*').eq('project_id', projectId).order('ordered_at', { ascending: false }).limit(200),
     supabase.from('stock_items').select('id, name').order('name'),
+    supabase.from('project_room_settings').select('*').eq('project_id', projectId),
+    supabase.from('guests').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
   ])
+  const settingByRoom = new Map(((settingRows ?? []) as DbProjectRoomSetting[]).map((s) => [s.room_id, s]))
+  const roomById = new Map((roomRows ?? []).map((r) => [r.id, r]))
   const usedItemIds = [...new Set((objectRows ?? []).map((o) => o.catalog_item_id).filter((x): x is string => !!x))]
   const { data: catRows } = usedItemIds.length
     ? await supabase.from('catalog_items').select('id, category').in('id', usedItemIds)
@@ -158,6 +164,16 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
                 <Link key={a.id} href={`/editor/${projectId}?room=${a.id}`} className={card}>
                   <p className="font-medium text-gray-900">{a.name}</p>
                   <p className="mt-1 text-sm text-gray-500">{areaHint(a)}</p>
+                  {(() => {
+                    const room = roomById.get(a.id)
+                    const setting = settingByRoom.get(a.id)
+                    const line = room
+                      ? capacityLine(room, setting?.mode ?? null, a.chairs, guestTotal ?? 0, setting?.override_load ?? null)
+                      : null
+                    if (!line) return null
+                    const tone = line.state === 'over' ? 'text-red-600' : line.state === 'acknowledged' || line.state === 'near' ? 'text-amber-700' : 'text-gray-500'
+                    return <p className={`mt-1 text-xs ${tone}`}>{line.text}</p>
+                  })()}
                   <p className="mt-2 text-xs text-gray-400">Open in the editor →</p>
                 </Link>
               ))}

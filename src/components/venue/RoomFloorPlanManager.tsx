@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { DbRoom } from '@/types/db'
 import { createRoom } from '@/lib/supabase/queries'
 import FloorPlanEditor from './FloorPlanEditor'
+import RoomCapacityForm from './RoomCapacityForm'
 import StockManager from '@/components/stock/StockManager'
 
 type Props = {
@@ -115,6 +116,8 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
         </form>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
+
+      {selectedRoom && <RoomCapacityForm key={`cap-${selectedRoom.id}`} room={selectedRoom} onSaved={handleRoomUpdated} />}
 
       {selectedRoom && (
         // key forces a remount on room switch so FloorPlanEditor's local draft

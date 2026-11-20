@@ -31,6 +31,9 @@ export type DbRoom = {
   // part of this type or read anywhere — dead field. Now the traced boundary.
   floor_polygon: { x: number; y: number }[]
   obstacles: import('./index').ObstacleShape[]
+  /** People limit when the room is set up seated / standing, set by the Venue Manager (migration 024). null = not set. */
+  capacity_seated: number | null
+  capacity_standing: number | null
   floor_plan_image_url: string | null
   floor_plan_image_width_px: number | null
   floor_plan_image_height_px: number | null
@@ -100,10 +103,10 @@ export type DbProjectActivity = {
   room_id: string | null
   actor_user_id: string | null
   actor_name: string | null
-  entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document' | 'timetable'
+  entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document' | 'timetable' | 'capacity'
   action:
     | 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
-    | 'marked_paid' | 'marked_unpaid' | 'new_version'
+    | 'marked_paid' | 'marked_unpaid' | 'new_version' | 'override'
   entity_id: string | null
   summary: {
     name?: string | null
@@ -270,6 +273,18 @@ export type DbTimetableBlock = {
   show_contact: boolean
   show_instagram: boolean
   created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+/** Per project and room: is the room a Seated or a Standing scene here, and an acknowledged over-the-limit note (migration 024). */
+export type DbProjectRoomSetting = {
+  id: string
+  project_id: string
+  room_id: string
+  mode: 'seated' | 'standing'
+  override_note: string | null
+  override_load: number | null
   created_at: string
   updated_at: string
 }

@@ -194,6 +194,8 @@ function describe(
       const verb = verbs[e.action] ?? 'Changed'
       return `${verb} ${count} timetable block${plural}${sample}`
     }
+    case 'capacity':
+      return `Went over the ${(e.summary as { mode?: string }).mode ?? ''} limit${where} and continued with a note`.replace('  ', ' ')
     case 'document': {
       if (e.action === 'new_version') return `Uploaded a new version of ${count} document${plural}${sample}`
       const verb = e.action === 'removed' ? 'Removed' : 'Attached'

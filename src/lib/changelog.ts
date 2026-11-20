@@ -28,6 +28,27 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-20-capacity-vendors-reusable',
+    date: '2026-11-20',
+    title: 'Room capacity, payments with vendors, and reusable stock',
+    roles: ['planner', 'admin'],
+    items: [
+      'Rooms now have their own capacity. The first time you open a room in a project you choose whether it is Seated or Standing there, and the toolbar shows how many seats (or guests) you are using against the venue\'s limit. Going over only shows a warning: you can continue after writing a note, and the note appears in the project\'s "what changed" summary.',
+      'The project page shows each area\'s capacity next to what you have placed in it.',
+      'Payments can now use your team\'s vendor list. Start typing a vendor name and pick it from the list; names that match a vendor are linked automatically, and anything else stays as typed text with a "not in vendor list" note.',
+      'My Stock: mark a product as Reusable if it comes back after each wedding. A sale takes the items out; later, a manager or lead confirms how many came back, so losses are recorded and you can see what is out with clients.',
+    ],
+  },
+  {
+    id: '2026-11-20-venue-capacity',
+    date: '2026-11-20',
+    title: 'Set the capacity of each room',
+    roles: ['venue'],
+    items: [
+      'In your room settings you can now enter how many people each room holds when set up seated and when standing. Planners see the matching limit in their projects and get a warning if they go over it.',
+    ],
+  },
+  {
     id: '2026-11-16-timetable-rundown',
     date: '2026-11-16',
     title: 'Timetable and run-down list',

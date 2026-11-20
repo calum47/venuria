@@ -25,6 +25,7 @@ import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromS
 import { generateId } from '@/lib/utils/coordinates'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
+import RoomCapacity from '@/components/canvas/RoomCapacity'
 import {
   getCatalogItems,
   getProject,
@@ -481,6 +482,14 @@ export default function EditorPage() {
           >
             🎨 {zoneMode ? 'Zones ON' : 'Zones'}
           </button>
+
+          {/* Area capacity: seated / standing choice, load vs the venue's limit, over-the-limit warning */}
+          <RoomCapacity
+            projectId={projectId}
+            room={currentRoom}
+            chairsInRoom={layoutObjects.filter((o) => o.isChairFor || catalogItems.find((c) => c.id === o.catalogItemId)?.category === 'chairs').length}
+            guestTotal={guests.length}
+          />
 
           {/* Zoom hint / level */}
           <span className="text-xs text-gray-400 ml-auto">
