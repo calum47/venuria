@@ -176,6 +176,18 @@ export async function getStockOrders(): Promise<DbStockOrder[]> {
   return data as DbStockOrder[]
 }
 
+/** Orders tagged to one project (Project Hub). RLS already limits this to the signed-in planner's team. */
+export async function getProjectStockOrders(projectId: string): Promise<DbStockOrder[]> {
+  const { data, error } = await supabase
+    .from('stock_orders')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('ordered_at', { ascending: false })
+    .limit(200)
+  if (error) throw error
+  return data as DbStockOrder[]
+}
+
 export async function addStockOrder(input: {
   teamId: string
   itemId: string | null

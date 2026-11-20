@@ -141,8 +141,9 @@ export default function EditorPage() {
         // getSeatAssignments already returns the correct shape including roomId — no remapping needed
         setSeatAssignments(assignments)
 
-        // Load the first room's layout
-        const firstRoom = venueRooms[0]
+        // Load the room named in ?room=ID (the Project Hub links here per area), else the first room
+        const wantedRoom = new URLSearchParams(window.location.search).get('room')
+        const firstRoom = venueRooms.find((r) => r.id === wantedRoom) ?? venueRooms[0]
         if (firstRoom) {
           setCurrentRoomId(firstRoom.id)
           currentRoomIdRef.current = firstRoom.id

@@ -5,6 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { countdownLabel, formatDate } from '@/lib/projectDates'
 import { paymentStatus } from '@/lib/payments'
+import { areaHint, summariseAreas } from '@/lib/hubAreas'
+import ProjectOrders from './ProjectOrders'
+import type { DbStockOrder } from '@/types/db'
 
 type Params = { projectId: string }
 
@@ -33,7 +36,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, status, event_date, venues(name)')
+    .select('id, status, event_date, venue_id, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
@@ -66,6 +69,25 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     .eq('project_id', projectId)
   const timetableHint =
     !blockCount ? 'Hourly schedule per event day, tagged by vendor' : `${blockCount} ${blockCount === 1 ? 'block' : 'blocks'} scheduled`
+
+  // Areas: every room of the venue, with what this project has placed in it.
+  const [{ data: roomRows }, { data: objectRows }, { data: assignRows }, { data: orderRows }, { data: itemRows }] = await Promise.all([
+    supabase.from('rooms').select('id, name, type').eq('venue_id', project.venue_id).order('name'),
+    supabase.from('layout_objects').select('id, room_id, catalog_item_id').eq('project_id', projectId),
+    supabase.from('seat_assignments').select('layout_object_id').eq('project_id', projectId),
+    supabase.from('stock_orders').select('*').eq('project_id', projectId).order('ordered_at', { ascending: false }).limit(200),
+    supabase.from('stock_items').select('id, name').order('name'),
+  ])
+  const usedItemIds = [...new Set((objectRows ?? []).map((o) => o.catalog_item_id).filter((x): x is string => !!x))]
+  const { data: catRows } = usedItemIds.length
+    ? await supabase.from('catalog_items').select('id, category').in('id', usedItemIds)
+    : { data: [] as { id: string; category: string }[] }
+  const areas = summariseAreas(
+    roomRows ?? [],
+    objectRows ?? [],
+    new Map((catRows ?? []).map((c) => [c.id, c.category])),
+    assignRows ?? [],
+  )
 
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
   const all = payments ?? []
@@ -125,6 +147,30 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
             <p className={`text-sm mt-1 ${needSeat > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{guestsHint}</p>
           </Link>
         </div>
+
+        <section className="space-y-2" aria-labelledby="areas-h">
+          <h2 id="areas-h" className="text-sm font-semibold text-gray-900">Areas of the venue</h2>
+          {areas.length === 0 ? (
+            <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {areas.map((a) => (
+                <Link key={a.id} href={`/editor/${projectId}?room=${a.id}`} className={card}>
+                  <p className="font-medium text-gray-900">{a.name}</p>
+                  <p className="mt-1 text-sm text-gray-500">{areaHint(a)}</p>
+                  <p className="mt-2 text-xs text-gray-400">Open in the editor →</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <ProjectOrders
+          projectId={projectId}
+          teamId={ctx.team.id}
+          items={(itemRows ?? []) as { id: string; name: string }[]}
+          initialOrders={(orderRows ?? []) as DbStockOrder[]}
+        />
       </div>
     </main>
   )
