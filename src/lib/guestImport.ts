@@ -59,14 +59,78 @@ export function importKind(file: { name: string; type: string }): ImportKind | n
 
 export const IMPORT_ACCEPT = '.txt,.csv,.pdf'
 
-/** Browser side. Resolves to cleaned names; rejects with a message that is safe to show. */
-export async function readGuestFile(file: File): Promise<string[]> {
+export type ImportAge = 'adult' | 'child' | 'baby'
+
+/** One guest as read from a file. `family` is a key into ImportResult.families ('' = none). */
+export type ImportGuest = {
+  name: string
+  vip: boolean
+  speech: boolean
+  age: ImportAge
+  dietary: string
+  notes: string
+  family: string
+}
+export type ImportFamily = { key: string; name: string }
+export type ImportResult = { guests: ImportGuest[]; families: ImportFamily[] }
+
+export const MAX_DIETARY = 500 // guests.dietary check in migration 016
+export const MAX_NOTES = 300
+export const MAX_FAMILY_NAME = 80 // guest_families.name check in migration 016
+
+export const blankGuest = (name: string): ImportGuest => ({ name, vip: false, speech: false, age: 'adult', dietary: '', notes: '', family: '' })
+
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '')
+
+/**
+ * Sanitises an untrusted model/file result: names cleaned and de-duplicated, flags only when strictly `true`,
+ * unknown ages become 'adult', family keys must exist, and a family needs at least two members.
+ */
+export function cleanImport(raw: unknown): ImportResult {
+  const r = (raw ?? {}) as { guests?: unknown; families?: unknown }
+  const rawGuests = Array.isArray(r.guests) ? r.guests : []
+  const famName = new Map<string, string>()
+  for (const f of Array.isArray(r.families) ? r.families : []) {
+    const o = f as { key?: unknown; name?: unknown }
+    const key = text(o?.key, 40)
+    const name = text(o?.name, MAX_FAMILY_NAME)
+    if (key && name && !famName.has(key)) famName.set(key, name)
+  }
+  const guests: ImportGuest[] = []
+  const seen = new Set<string>()
+  for (const g of rawGuests) {
+    const o = (typeof g === 'string' ? { name: g } : g) as Record<string, unknown> | null
+    const name = cleanNames([o?.name])[0]
+    if (!name || seen.has(fold(name))) continue
+    seen.add(fold(name))
+    const age = o?.age_group === 'child' || o?.age_group === 'baby' ? o.age_group : 'adult'
+    const fam = text(o?.family_key, 40)
+    guests.push({
+      name,
+      vip: o?.vip === true,
+      speech: o?.speech === true,
+      age,
+      dietary: text(o?.dietary, MAX_DIETARY),
+      notes: text(o?.notes, MAX_NOTES),
+      family: famName.has(fam) ? fam : '',
+    })
+    if (guests.length >= MAX_IMPORT_NAMES) break
+  }
+  const count = new Map<string, number>()
+  for (const g of guests) if (g.family) count.set(g.family, (count.get(g.family) ?? 0) + 1)
+  for (const g of guests) if (g.family && (count.get(g.family) ?? 0) < 2) g.family = ''
+  const families = [...famName].filter(([k]) => (count.get(k) ?? 0) >= 2).map(([key, name]) => ({ key, name }))
+  return { guests, families }
+}
+
+/** Browser side. Resolves to the guests found; rejects with a message that is safe to show. */
+export async function readGuestFile(file: File): Promise<ImportResult> {
   const kind = importKind(file)
   if (!kind) throw new Error('Unsupported file. Use a .txt, .csv or .pdf file.')
   if (file.size === 0) throw new Error('That file is empty.')
   if (file.size > GUEST_IMPORT_MAX_BYTES) throw new Error('That file is too large (limit 3 MB).')
 
-  if (kind === 'text') return namesFromText(await file.text())
+  if (kind === 'text') return { guests: namesFromText(await file.text()).map(blankGuest), families: [] }
 
   const body = new FormData()
   body.append('file', file)
@@ -76,9 +140,9 @@ export async function readGuestFile(file: File): Promise<string[]> {
   } catch {
     throw new Error('Could not reach the server. Check your connection and try again.')
   }
-  const json = (await res.json().catch(() => null)) as { ok?: boolean; names?: unknown; message?: string } | null
-  if (!res.ok || !json?.ok || !Array.isArray(json.names)) {
+  const json = (await res.json().catch(() => null)) as { ok?: boolean; guests?: unknown; families?: unknown; message?: string } | null
+  if (!res.ok || !json?.ok || !Array.isArray(json.guests)) {
     throw new Error(json?.message || 'Could not read that file. Paste the names instead.')
   }
-  return cleanNames(json.names)
+  return cleanImport(json)
 }

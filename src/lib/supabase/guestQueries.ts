@@ -25,13 +25,41 @@ export async function createGuest(projectId: string, name: string): Promise<DbGu
   return data as DbGuest
 }
 
-/** Adds several guests in ONE insert, so a failure adds none of them. */
-export async function createGuests(projectId: string, names: string[]): Promise<DbGuest[]> {
-  const rows = names.map((n) => ({ project_id: projectId, name: n.trim() })).filter((r) => r.name)
-  if (rows.length === 0) return []
-  const { data, error } = await supabase.from('guests').insert(rows).select('*')
-  if (error) throw error
-  return (data ?? []) as DbGuest[]
+export type NewGuestRow = {
+  name: string
+  notes: string | null
+  is_vip: boolean
+  gives_speech: boolean
+  dietary: string | null
+  age_group: DbAgeGroup
+  family_id: string | null
+}
+
+/** Import: creates the families, then ALL guests in one insert. If the guest insert fails the new families are removed again. */
+export async function importGuests(
+  projectId: string,
+  familyNames: { key: string; name: string }[],
+  rows: (Omit<NewGuestRow, 'family_id'> & { familyKey: string })[],
+): Promise<{ guests: DbGuest[]; families: DbGuestFamily[] }> {
+  const families: DbGuestFamily[] = []
+  const idByKey = new Map<string, string>()
+  try {
+    for (const f of familyNames) {
+      const fam = await createFamily(projectId, f.name)
+      families.push(fam)
+      idByKey.set(f.key, fam.id)
+    }
+    const payload = rows
+      .filter((r) => r.name.trim())
+      .map(({ familyKey, ...r }) => ({ ...r, name: r.name.trim(), project_id: projectId, family_id: idByKey.get(familyKey) ?? null }))
+    if (payload.length === 0) return { guests: [], families: [] }
+    const { data, error } = await supabase.from('guests').insert(payload).select('*')
+    if (error) throw error
+    return { guests: (data ?? []) as DbGuest[], families }
+  } catch (e) {
+    if (families.length) await supabase.from('guest_families').delete().in('id', families.map((f) => f.id))
+    throw e
+  }
 }
 
 export async function updateGuest(id: string, patch: GuestPatch): Promise<DbGuest> {

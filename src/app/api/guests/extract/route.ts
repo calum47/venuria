@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { GUEST_IMPORT_MAX_BYTES, importKind } from '@/lib/guestImport'
-import { extractNamesWithClaude } from '@/lib/guestImportServer'
+import { extractGuestsWithClaude } from '@/lib/guestImportServer'
 
-// Reads guest names out of an uploaded PDF or CSV. The browser sends the file here, never to
+// Reads guests (names, VIP, speeches, age group, dietary, notes, families) out of an uploaded PDF or CSV. The browser sends the file here, never to
 // Anthropic, and never sees the API key. Signed-in users only. Nothing is stored: the file is
 // read in memory, sent to Claude and discarded.
 
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     source = { kind: 'text' as const, text: bytes.toString('utf8') }
   }
 
-  const out = await extractNamesWithClaude(source, { apiKey, model: process.env.ANTHROPIC_MODEL })
+  const out = await extractGuestsWithClaude(source, { apiKey, model: process.env.ANTHROPIC_MODEL })
   if (!out.ok) return fail(out.status, out.code, out.message)
-  return NextResponse.json({ ok: true, names: out.names })
+  return NextResponse.json({ ok: true, guests: out.guests, families: out.families })
 }

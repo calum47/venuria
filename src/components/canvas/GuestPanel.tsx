@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useGuestStore, Guest } from '@/stores/guestStore'
-import { addGuest, deleteGuest, bulkAddGuests } from '@/lib/supabase/queries'
-import { IMPORT_ACCEPT, namesFromText, readGuestFile, splitNew } from '@/lib/guestImport'
+import { useState } from 'react'
+import { useGuestStore } from '@/stores/guestStore'
+import { addGuest, deleteGuest } from '@/lib/supabase/queries'
+import GuestImport from '@/components/guests/GuestImport'
 
 type Props = {
   projectId: string
@@ -15,12 +15,8 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
   const { guests, seatAssignments, addGuest: addGuestLocal, removeGuest } = useGuestStore()
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
-  const [isImporting, setIsImporting] = useState(false)
-  const [importText, setImportText] = useState('')
   const [showImport, setShowImport] = useState(false)
-  const [importError, setImportError] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const filtered = guests.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
   const assignedCount = seatAssignments.length
@@ -46,43 +42,6 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
       removeGuest(guestId)
     } catch (err) {
       console.error('Failed to delete guest:', err)
-    }
-  }
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setIsImporting(true)
-    setImportError(null)
-    try {
-      // .txt is read here; .csv and .pdf are read by the server (/api/guests/extract), never by the browser.
-      const names = await readGuestFile(file)
-      setImportText(names.join('\n'))
-      if (names.length === 0) setImportError('No names were found in that file. You can paste them below.')
-    } catch (err) {
-      setImportText('')
-      setImportError(err instanceof Error ? err.message : 'Could not read that file.')
-    } finally {
-      setShowImport(true)
-      setIsImporting(false)
-      if (fileInputRef.current) fileInputRef.current.value = ''
-    }
-  }
-
-  const importNames = namesFromText(importText)
-  const { fresh: freshNames, skipped: skippedNames } = splitNew(importNames, guests.map((g) => g.name))
-
-  const handleConfirmImport = async () => {
-    if (freshNames.length === 0) return
-    try {
-      const newGuests = await bulkAddGuests(projectId, freshNames)
-      newGuests.forEach((g: Guest) => addGuestLocal(g))
-      setShowImport(false)
-      setImportText('')
-      setImportError(null)
-    } catch (err) {
-      console.error('Bulk import failed:', err)
-      setImportError('Could not save the guests. Nothing was added; try again.')
     }
   }
 
@@ -181,52 +140,22 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
 
         {/* Import */}
         <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isImporting}
-          className="w-full text-xs text-gray-500 border border-gray-200 rounded-lg py-2 hover:bg-gray-50 transition-colors disabled:opacity-40"
+          onClick={() => setShowImport(true)}
+          className="w-full text-xs text-gray-500 border border-gray-200 rounded-lg py-2 hover:bg-gray-50 transition-colors"
         >
-          {isImporting ? 'Reading file...' : '📎 Import from file'}
+          📎 Import from file
         </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={IMPORT_ACCEPT}
-          className="hidden"
-          onChange={handleFileUpload}
-        />
       </div>
 
-      {/* Import confirmation modal */}
       {showImport && (
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl p-4 w-full max-w-sm">
-            <h3 className="text-sm font-semibold text-gray-800 mb-1">Review imported names</h3>
-            <p className="text-xs text-gray-400 mb-3">Edit the list below before importing. One name per line.</p>
-            {importError && <p className="text-xs text-red-600 mb-2" role="alert">{importError}</p>}
-            <textarea
-              value={importText}
-              onChange={(e) => setImportText(e.target.value)}
-              rows={10}
-              className="w-full text-xs border border-gray-200 rounded-lg p-3 focus:outline-none focus:ring-1 focus:ring-gray-300 resize-none"
-              placeholder="One name per line..."
-            />
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => { setShowImport(false); setImportText(''); setImportError(null) }}
-                className="flex-1 text-xs border border-gray-200 text-gray-500 rounded-lg py-2 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmImport}
-                className="flex-1 text-xs bg-gray-900 text-white rounded-lg py-2 hover:bg-gray-700"
-              >
-                Import {freshNames.length} guests
-              </button>
-            </div>
-            {skippedNames > 0 && <p className="text-[10px] text-gray-400 mt-2">{skippedNames} already in the list will be skipped.</p>}
-          </div>
-        </div>
+        <GuestImport
+          projectId={projectId}
+          existingNames={guests.map((g) => g.name)}
+          onImported={(added) =>
+            added.forEach((g) => addGuestLocal({ id: g.id, projectId: g.project_id, name: g.name, notes: g.notes, createdAt: g.created_at }))
+          }
+          onClose={() => setShowImport(false)}
+        />
       )}
     </div>
   )

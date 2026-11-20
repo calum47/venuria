@@ -35,7 +35,7 @@ import {
   type SeatInfo,
 } from '@/lib/guests'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
-import GuestImport from './GuestImport'
+import GuestImport from '@/components/guests/GuestImport'
 import { addDays, todayIso } from '@/lib/projectDates'
 
 type Props = {
@@ -130,7 +130,10 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         <GuestImport
           projectId={projectId}
           existingNames={guests.map((g) => g.name)}
-          onImported={(added) => setGuests((prev) => [...prev, ...added])}
+          onImported={(added, fams) => {
+            setGuests((prev) => [...prev, ...added])
+            if (fams.length) setFamilies((prev) => [...prev, ...fams])
+          }}
           onClose={() => setImporting(false)}
         />
       )}
