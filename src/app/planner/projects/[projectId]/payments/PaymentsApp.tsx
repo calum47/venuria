@@ -1,12 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import type { DbProjectDocument, DbProjectPayment } from '@/types/db'
+import { useMemo, useRef, useState } from 'react'
+import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import {
   createPayment,
+  createPayments,
   deletePayment,
   deleteProjectDocument,
   getDocumentUrl,
+  registerDocument,
+  removeStagedPdf,
   setPaymentPaid,
   updatePayment,
   type PaymentInput,
@@ -18,7 +21,6 @@ import {
   initialCalendarMonth,
   monthGrid,
   monthLabel,
-  parseAmount,
   paymentStatus,
   paymentTotals,
   shiftMonth,
@@ -27,6 +29,10 @@ import {
 } from '@/lib/payments'
 import { formatDate, isIsoDate, todayIso } from '@/lib/projectDates'
 import DocumentsSection from './DocumentsSection'
+import PaymentForm, { type PendingPdf } from './PaymentForm'
+import PdfImportReview from './PdfImportReview'
+import { stagePdf, type StagedPdf } from './pdfStaging'
+import { commonVendor } from '@/lib/pdfPayments'
 import { UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
 
 type View = 'list' | 'calendar'
@@ -56,6 +62,9 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
   const [attachingFor, setAttachingFor] = useState<string | null>(null) // payment id, or 'general'
   const [busy, setBusy] = useState<string | null>(null)
   const [view, setView] = useState<View>(initialView)
+  // "Add payment from PDF": null | reading the PDF | reviewing what was read (nothing saved yet)
+  const [importing, setImporting] = useState<{ stage: 'reading'; fileName: string } | { stage: 'review'; staged: StagedPdf } | null>(null)
+  const importInput = useRef<HTMLInputElement>(null)
 
   const sorted = useMemo(() => sortPayments(payments), [payments])
   const totals = useMemo(() => paymentTotals(payments), [payments])
@@ -92,17 +101,78 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
   const replacePayment = (p: DbProjectPayment) =>
     setPayments((cur) => cur.map((x) => (x.id === p.id ? { ...p, amount: Number(p.amount) } : x)))
 
-  const savePayment = (id: string | null, v: PaymentInput) =>
+  const savePayment = (id: string | null, v: PaymentInput, pdf?: PendingPdf) =>
     run(id ?? 'new', async () => {
       if (id) {
         replacePayment(await updatePayment(id, v))
         setEditingId(null)
+        if (pdf) await attachPdf(pdf, id, v.vendorName)
       } else {
         const p = await createPayment(projectId, v)
         setPayments((cur) => [...cur, { ...p, amount: Number(p.amount) }])
         setShowAdd(false)
       }
     })
+
+  /**
+   * Records the database row for a PDF that was staged in the bucket. If that fails the payment is
+   * already saved, so say exactly that instead of pretending everything failed.
+   */
+  const attachPdf = async (pdf: PendingPdf, paymentId: string | null, vendorName: string | null) => {
+    try {
+      const doc = await registerDocument({
+        projectId,
+        paymentId,
+        vendorName,
+        kind: pdf.kind,
+        label: pdf.label,
+        storagePath: pdf.path,
+        sizeBytes: pdf.size,
+      })
+      setDocuments((cur) => [doc, ...cur])
+    } catch (e) {
+      await removeStagedPdf(pdf.path)
+      setError(`The payment was saved, but the PDF could not be attached: ${errMsg(e)} Use “Attach receipt (PDF)” to add it again.`)
+    }
+  }
+
+  // ── Add payment from PDF ──
+  const startImport = async (file: File | null) => {
+    if (!file) return
+    setError(null)
+    setShowAdd(false)
+    setEditingId(null)
+    setImporting({ stage: 'reading', fileName: file.name })
+    try {
+      setImporting({ stage: 'review', staged: await stagePdf(file, teamId, projectId) })
+    } catch (e) {
+      setError(errMsg(e))
+      setImporting(null)
+    }
+  }
+
+  const cancelImport = () => {
+    if (importing?.stage === 'review') void removeStagedPdf(importing.staged.path)
+    setImporting(null)
+  }
+
+  const saveImport = (inputs: PaymentInput[], pdf: { kind: DbDocumentKind; label: string }) => {
+    if (importing?.stage !== 'review') return
+    const staged = importing.staged
+    return run('import', async () => {
+      // One insert for all rows: they are all saved or none are.
+      const created = await createPayments(projectId, inputs)
+      setPayments((cur) => [...cur, ...created.map((p) => ({ ...p, amount: Number(p.amount) }))])
+      setImporting(null)
+      // One payment: the PDF belongs to it. Several: it is a project-level document.
+      const single = created.length === 1
+      await attachPdf(
+        { path: staged.path, size: staged.size, label: pdf.label, kind: pdf.kind },
+        single ? created[0].id : null,
+        single ? inputs[0].vendorName : commonVendor(inputs.map((i) => i.vendorName)),
+      )
+    })
+  }
 
   const markPaid = (id: string) =>
     run(id, async () => {
@@ -178,8 +248,9 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
             initial={p}
             submitLabel="Save"
             busy={busy === p.id}
-            onSubmit={(v) => savePayment(p.id, v)}
+            onSubmit={(v, pdf) => savePayment(p.id, v, pdf)}
             onCancel={() => setEditingId(null)}
+            fill={{ teamId, projectId, currency }}
           />
         ) : (
           <>
@@ -284,8 +355,35 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
               ))}
             </div>
           </div>
-          {!showAdd && <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>Add payment</button>}
+          {!showAdd && !importing && (
+            <div className="flex items-center gap-2">
+              <input
+                ref={importInput}
+                type="file"
+                accept="application/pdf,.pdf"
+                hidden
+                tabIndex={-1}
+                aria-hidden="true"
+                onChange={(e) => {
+                  const f = e.target.files?.[0] ?? null
+                  e.target.value = ''
+                  void startImport(f)
+                }}
+              />
+              <button onClick={() => importInput.current?.click()} className={btn + ' !py-1.5 !text-sm'}>Add payment from PDF</button>
+              <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>Add payment</button>
+            </div>
+          )}
         </div>
+
+        {importing?.stage === 'reading' && (
+          <p role="status" className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            Reading <strong>{importing.fileName}</strong>… this can take a few seconds.
+          </p>
+        )}
+        {importing?.stage === 'review' && (
+          <PdfImportReview staged={importing.staged} currency={currency} busy={busy === 'import'} onSave={saveImport} onCancel={cancelImport} />
+        )}
 
         {showAdd && (
           <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
@@ -293,7 +391,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
           </div>
         )}
 
-        {sorted.length === 0 && !showAdd && (
+        {sorted.length === 0 && !showAdd && !importing && (
           <p className="px-4 py-6 text-sm text-gray-400">No payments yet. Add each deposit, instalment or balance with its due date.</p>
         )}
 
@@ -441,51 +539,3 @@ function StatusPill({ status }: { status: ReturnType<typeof paymentStatus> }) {
   return <span className={`${base} ${status.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>Due in {status.days} day{status.days === 1 ? '' : 's'}</span>
 }
 
-function PaymentForm({
-  initial,
-  submitLabel,
-  busy,
-  onSubmit,
-  onCancel,
-}: {
-  initial?: DbProjectPayment
-  submitLabel: string
-  busy: boolean
-  onSubmit: (v: PaymentInput) => void
-  onCancel: () => void
-}) {
-  const [vendor, setVendor] = useState(initial?.vendor_name ?? '')
-  const [label, setLabel] = useState(initial?.label ?? '')
-  const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
-  const [dueDate, setDueDate] = useState(initial?.due_date ?? '')
-  const [notes, setNotes] = useState(initial?.notes ?? '')
-  const [formError, setFormError] = useState<string | null>(null)
-
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const parsed = parseAmount(amount)
-    if (!vendor.trim()) return setFormError('Enter the vendor or supplier.')
-    if (!label.trim()) return setFormError('Enter what the payment is for, e.g. Deposit.')
-    if (parsed === null) return setFormError('Enter an amount like 1500 or 1500,50 (no thousands separators).')
-    if (!isIsoDate(dueDate)) return setFormError('Enter a due date.')
-    setFormError(null)
-    onSubmit({ vendorName: vendor.trim(), label: label.trim(), amount: parsed, dueDate, notes: notes.trim() || null })
-  }
-
-  return (
-    <form onSubmit={submit} className="space-y-2">
-      <div className="grid gap-2 sm:grid-cols-4">
-        <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor / supplier" aria-label="Vendor" className={input} maxLength={120} />
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="For (Deposit, Balance…)" aria-label="Label" className={input} maxLength={120} />
-        <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount" aria-label="Amount" inputMode="decimal" className={input} />
-        <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} aria-label="Due date" className={input} />
-      </div>
-      <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" aria-label="Notes" className={`${input} w-full`} maxLength={500} />
-      {formError && <p className="text-xs text-red-600">{formError}</p>}
-      <div className="flex gap-2">
-        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : submitLabel}</button>
-        <button type="button" onClick={onCancel} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
-      </div>
-    </form>
-  )
-}

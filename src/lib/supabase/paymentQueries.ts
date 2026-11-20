@@ -1,6 +1,7 @@
 import { supabase } from './client'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import { DOCUMENTS_BUCKET } from '@/lib/payments'
+import type { ExtractionResult } from '@/lib/pdfPayments'
 
 // Payment tracker data access (migration 015). Browser client, like
 // stockQueries — RLS (planner_can_access_project) is the real gate; nothing
@@ -29,6 +30,25 @@ export async function createPayment(projectId: string, input: PaymentInput): Pro
     .single()
   if (error) throw error
   return data as DbProjectPayment
+}
+
+/** Several payments in ONE insert, so they are all saved or none are (used by "Add from PDF"). */
+export async function createPayments(projectId: string, inputs: PaymentInput[]): Promise<DbProjectPayment[]> {
+  const { data, error } = await supabase
+    .from('project_payments')
+    .insert(
+      inputs.map((input) => ({
+        project_id: projectId,
+        vendor_name: input.vendorName,
+        label: input.label,
+        amount: input.amount,
+        due_date: input.dueDate,
+        notes: input.notes,
+      })),
+    )
+    .select('*')
+  if (error) throw error
+  return (data ?? []) as DbProjectPayment[]
 }
 
 export async function updatePayment(id: string, input: PaymentInput): Promise<DbProjectPayment> {
@@ -89,35 +109,97 @@ export type DocumentUpload = {
  * a table CHECK both key off the project segment.
  */
 export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjectDocument> {
-  const path = `${u.teamId}/${u.projectId}/${crypto.randomUUID()}.pdf`
-  const { error: upErr } = await supabase.storage
-    .from(DOCUMENTS_BUCKET)
-    .upload(path, u.file, { contentType: 'application/pdf', upsert: false })
-  if (upErr) throw upErr
-
-  const { data, error } = await supabase
-    .from('project_documents')
-    .insert({
-      project_id: u.projectId,
-      payment_id: u.paymentId,
-      vendor_name: u.vendorName,
+  const path = await uploadPdfObject(u.teamId, u.projectId, u.file)
+  try {
+    return await registerDocument({
+      projectId: u.projectId,
+      paymentId: u.paymentId,
+      vendorName: u.vendorName,
       kind: u.kind,
       label: u.label,
-      storage_path: path,
-      size_bytes: u.file.size,
-      ...(u.versionGroupId && u.version ? { version_group_id: u.versionGroupId, version: u.version } : {}),
+      storagePath: path,
+      sizeBytes: u.file.size,
+      versionGroupId: u.versionGroupId,
+      version: u.version,
     })
-    .select('*')
-    .single()
-  if (error) {
-    await supabase.storage.from(DOCUMENTS_BUCKET).remove([path])
+  } catch (error) {
+    await removeStagedPdf(path)
     // The (group, version) unique index: someone else uploaded this version number first.
-    if (error.code === '23505' && u.versionGroupId) {
+    if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === '23505' && u.versionGroupId) {
       throw new Error('Someone just uploaded another version of this document. Refresh the page and try again.')
     }
     throw error
   }
+}
+
+/** Uploads only the file (no database row yet). Returns its storage path {team_id}/{project_id}/{uuid}.pdf. */
+export async function uploadPdfObject(teamId: string, projectId: string, file: File): Promise<string> {
+  const path = `${teamId}/${projectId}/${crypto.randomUUID()}.pdf`
+  const { error } = await supabase.storage
+    .from(DOCUMENTS_BUCKET)
+    .upload(path, file, { contentType: 'application/pdf', upsert: false })
+  if (error) throw error
+  return path
+}
+
+/** Best-effort removal of an uploaded file that never got a database row (cancelled review, failed save). */
+export async function removeStagedPdf(path: string): Promise<void> {
+  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([path])
+  if (error) console.warn('Could not remove staged PDF (orphaned object):', path, error.message)
+}
+
+export type DocumentRegistration = {
+  projectId: string
+  paymentId: string | null
+  vendorName: string | null
+  kind: DbDocumentKind
+  label: string
+  storagePath: string
+  sizeBytes: number
+  versionGroupId?: string
+  version?: number
+}
+
+/** Records the database row for a file that is already in the bucket. */
+export async function registerDocument(d: DocumentRegistration): Promise<DbProjectDocument> {
+  const { data, error } = await supabase
+    .from('project_documents')
+    .insert({
+      project_id: d.projectId,
+      payment_id: d.paymentId,
+      vendor_name: d.vendorName,
+      kind: d.kind,
+      label: d.label,
+      storage_path: d.storagePath,
+      size_bytes: d.sizeBytes,
+      ...(d.versionGroupId && d.version ? { version_group_id: d.versionGroupId, version: d.version } : {}),
+    })
+    .select('*')
+    .single()
+  if (error) throw error
   return data as DbProjectDocument
+}
+
+/** Asks the server to read payment details out of an uploaded PDF. Throws an Error with a user-readable message. */
+export async function extractPaymentsFromPdf(storagePath: string): Promise<ExtractionResult> {
+  let res: Response
+  try {
+    res = await fetch('/api/payments/extract', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ path: storagePath }),
+    })
+  } catch {
+    throw new Error('Could not reach the server to read the PDF.')
+  }
+  const body = (await res.json().catch(() => null)) as
+    | { ok: true; currency: string | null; payments: ExtractionResult['payments'] }
+    | { ok: false; message?: string }
+    | null
+  if (!res.ok || !body || body.ok !== true) {
+    throw new Error((body && body.ok === false && body.message) || 'Could not read the PDF.')
+  }
+  return { currency: body.currency, payments: body.payments }
 }
 
 /**
