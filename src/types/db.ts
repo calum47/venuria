@@ -122,6 +122,8 @@ export type DbProjectPayment = {
   id: string
   project_id: string
   vendor_name: string
+  /** Link to the team vendor list (migration 023); null = free text, not in the list. */
+  vendor_id: string | null
   label: string
   amount: number // numeric(12,2)
   due_date: string // YYYY-MM-DD

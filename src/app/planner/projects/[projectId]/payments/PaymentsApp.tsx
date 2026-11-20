@@ -45,9 +45,14 @@ type Props = {
   initialView: View
   initialPayments: DbProjectPayment[]
   initialDocuments: DbProjectDocument[]
+  /** The team's vendor list (team_vendors): suggestions while typing, and the current name of linked vendors. */
+  vendors: { id: string; name: string }[]
 }
 
-export default function PaymentsApp({ projectId, teamId, currency, eventDate, initialView, initialPayments, initialDocuments }: Props) {
+export default function PaymentsApp({ projectId, teamId, currency, eventDate, initialView, initialPayments, initialDocuments, vendors }: Props) {
+  const vendorNameById = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors])
+  /** A linked vendor shows its current name (it may have been renamed since the payment was saved). */
+  const vendorOf = (p: DbProjectPayment) => (p.vendor_id ? vendorNameById.get(p.vendor_id) : undefined) ?? p.vendor_name
   // numeric(12,2) can arrive as a string from some clients — normalise once.
   const [payments, setPayments] = useState<DbProjectPayment[]>(() =>
     initialPayments.map((p) => ({ ...p, amount: Number(p.amount) })),
@@ -245,7 +250,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       <li key={p.id} className="px-4 py-3">
         {editingId === p.id ? (
           <PaymentForm
-            initial={p}
+            initial={{ ...p, vendor_name: vendorOf(p) }}
             submitLabel="Save"
             busy={busy === p.id}
             onSubmit={(v, pdf) => savePayment(p.id, v, pdf)}
@@ -257,7 +262,8 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-gray-900">
-                  <span className="font-medium">{p.vendor_name}</span> — {p.label}
+                  <span className="font-medium">{vendorOf(p)}</span> — {p.label}
+                  {!p.vendor_id && <span className="ml-2 text-[11px] text-gray-400">not in vendor list</span>}
                 </p>
                 {p.notes && <p className="text-xs text-gray-500 mt-0.5">{p.notes}</p>}
               </div>
@@ -304,7 +310,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   projectId={projectId}
                   fixedKind="receipt"
                   paymentId={p.id}
-                  vendorName={p.vendor_name}
+                  vendorName={vendorOf(p)}
                   defaultLabel={`Receipt — ${p.label}`}
                   onUploaded={onUploaded}
                   onCancel={() => setAttachingFor(null)}
@@ -320,6 +326,12 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
 
   return (
     <div className="space-y-6">
+      {/* Vendor suggestions for every payment form on this page; PaymentFields points its vendor input at this id. */}
+      <datalist id="team-vendor-names">
+        {vendors.map((v) => (
+          <option key={v.id} value={v.name} />
+        ))}
+      </datalist>
       {error && (
         <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -400,7 +412,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
             {sorted.map(renderPayment)}
           </ul>
         ) : (
-          <CalendarView payments={payments} eventDate={eventDate} money={money} renderPayment={renderPayment} />
+          <CalendarView payments={payments} eventDate={eventDate} money={money} renderPayment={renderPayment} vendorOf={vendorOf} />
         )}
       </section>
 
@@ -435,11 +447,13 @@ function CalendarView({
   eventDate,
   money,
   renderPayment,
+  vendorOf,
 }: {
   payments: DbProjectPayment[]
   eventDate: string | null
   money: (n: number) => string
   renderPayment: (p: DbProjectPayment) => React.ReactNode
+  vendorOf: (p: DbProjectPayment) => string
 }) {
   const today = todayIso()
   const [ym, setYm] = useState(() => initialCalendarMonth(payments, today))
@@ -495,8 +509,8 @@ function CalendarView({
               </span>
               <span className="mt-0.5 block space-y-0.5">
                 {ps.slice(0, 2).map((p) => (
-                  <span key={p.id} title={`${p.vendor_name} — ${p.label}: ${money(p.amount)}`} className={`block truncate rounded px-1 text-[10px] ${chipTone(paymentStatus(p))}`}>
-                    {p.vendor_name} {money(p.amount)}
+                  <span key={p.id} title={`${vendorOf(p)} — ${p.label}: ${money(p.amount)}`} className={`block truncate rounded px-1 text-[10px] ${chipTone(paymentStatus(p))}`}>
+                    {vendorOf(p)} {money(p.amount)}
                   </span>
                 ))}
                 {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">+{ps.length - 2} more</span>}

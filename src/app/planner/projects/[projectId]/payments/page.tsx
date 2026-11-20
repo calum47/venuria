@@ -39,9 +39,10 @@ export default async function PaymentsPage({
     .maybeSingle()
   if (!project) notFound()
 
-  const [{ data: payments, error: pErr }, { data: documents, error: dErr }] = await Promise.all([
+  const [{ data: payments, error: pErr }, { data: documents, error: dErr }, { data: vendorRows }] = await Promise.all([
     supabase.from('project_payments').select('*').eq('project_id', projectId).order('due_date'),
     supabase.from('project_documents').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+    supabase.from('team_vendors').select('id, name').eq('team_id', ctx.team.id).order('name'),
   ])
 
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
@@ -72,6 +73,7 @@ export default async function PaymentsPage({
           initialView={view === 'calendar' ? 'calendar' : 'list'}
           initialPayments={(payments ?? []) as DbProjectPayment[]}
           initialDocuments={(documents ?? []) as DbProjectDocument[]}
+          vendors={(vendorRows ?? []) as { id: string; name: string }[]}
         />
       </div>
     </main>

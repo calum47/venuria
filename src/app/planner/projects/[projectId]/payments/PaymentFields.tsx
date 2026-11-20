@@ -54,6 +54,7 @@ export function PaymentFields({
                 placeholder={placeholder}
                 aria-label={aria}
                 maxLength={field === 'vendor' || field === 'label' ? 120 : undefined}
+                list={field === 'vendor' ? 'team-vendor-names' : undefined}
                 className={`${input} w-full${tint}`}
                 {...extra}
               />
