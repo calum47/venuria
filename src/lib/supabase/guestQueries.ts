@@ -25,6 +25,15 @@ export async function createGuest(projectId: string, name: string): Promise<DbGu
   return data as DbGuest
 }
 
+/** Adds several guests in ONE insert, so a failure adds none of them. */
+export async function createGuests(projectId: string, names: string[]): Promise<DbGuest[]> {
+  const rows = names.map((n) => ({ project_id: projectId, name: n.trim() })).filter((r) => r.name)
+  if (rows.length === 0) return []
+  const { data, error } = await supabase.from('guests').insert(rows).select('*')
+  if (error) throw error
+  return (data ?? []) as DbGuest[]
+}
+
 export async function updateGuest(id: string, patch: GuestPatch): Promise<DbGuest> {
   const { data, error } = await supabase.from('guests').update(patch).eq('id', id).select('*').single()
   if (error) throw error

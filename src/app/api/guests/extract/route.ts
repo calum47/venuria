@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { GUEST_IMPORT_MAX_BYTES, importKind } from '@/lib/guestImport'
+import { extractNamesWithClaude } from '@/lib/guestImportServer'
+
+// Reads guest names out of an uploaded PDF or CSV. The browser sends the file here, never to
+// Anthropic, and never sees the API key. Signed-in users only. Nothing is stored: the file is
+// read in memory, sent to Claude and discarded.
+
+export const runtime = 'nodejs'
+// Reading can take several seconds. Vercel caps this by plan; the value is a ceiling, not a promise.
+export const maxDuration = 60
+
+function fail(status: number, code: string, message: string) {
+  return NextResponse.json({ ok: false, code, message }, { status })
+}
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData.user) return fail(401, 'unauthorized', 'Please sign in again.')
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return fail(503, 'not_configured', 'File reading is not set up yet (ANTHROPIC_API_KEY is missing on the server). Paste the names instead.')
+
+  let file: unknown
+  try {
+    file = (await request.formData()).get('file')
+  } catch {
+    return fail(400, 'bad_request', 'Invalid upload.')
+  }
+  if (!(file instanceof File)) return fail(400, 'bad_request', 'No file received.')
+  if (file.size === 0 || file.size > GUEST_IMPORT_MAX_BYTES) return fail(413, 'too_large', 'That file is empty or too large (limit 3 MB).')
+
+  const kind = importKind(file)
+  if (kind !== 'pdf' && kind !== 'csv') return fail(400, 'bad_type', 'Only PDF and CSV files are read here.')
+
+  const bytes = Buffer.from(await file.arrayBuffer())
+  let source
+  if (kind === 'pdf') {
+    if (bytes.subarray(0, 5).toString('latin1') !== '%PDF-') return fail(400, 'bad_pdf', 'That file does not look like a valid PDF.')
+    source = { kind: 'pdf' as const, data: bytes }
+  } else {
+    source = { kind: 'text' as const, text: bytes.toString('utf8') }
+  }
+
+  const out = await extractNamesWithClaude(source, { apiKey, model: process.env.ANTHROPIC_MODEL })
+  if (!out.ok) return fail(out.status, out.code, out.message)
+  return NextResponse.json({ ok: true, names: out.names })
+}

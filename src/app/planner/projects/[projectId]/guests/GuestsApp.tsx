@@ -35,6 +35,7 @@ import {
   type SeatInfo,
 } from '@/lib/guests'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
+import GuestImport from './GuestImport'
 import { addDays, todayIso } from '@/lib/projectDates'
 
 type Props = {
@@ -70,6 +71,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   const [error, setError] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const staysByGuest = useMemo(() => {
     const m: Record<string, DbGuestStay[]> = {}
@@ -121,8 +123,17 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
           aria-label="New guest name"
         />
         <button type="submit" disabled={adding || !newName.trim()} className={btnPrimary}>{adding ? 'Adding…' : 'Add guest'}</button>
-        <span className="text-xs text-gray-500">Import a whole list from the editor&rsquo;s guest list mode.</span>
+        <button type="button" onClick={() => setImporting(true)} className={btn}>Import from file…</button>
       </form>
+
+      {importing && (
+        <GuestImport
+          projectId={projectId}
+          existingNames={guests.map((g) => g.name)}
+          onImported={(added) => setGuests((prev) => [...prev, ...added])}
+          onClose={() => setImporting(false)}
+        />
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -162,7 +173,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
 
       {guests.length === 0 ? (
         <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-          No guests yet. Add one above, or import a list in the editor.
+          No guests yet. Add one above, or import a list from a file.
         </p>
       ) : visible.length === 0 ? (
         <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">No guests match these filters.</p>

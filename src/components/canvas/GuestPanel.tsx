@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react'
 import { useGuestStore, Guest } from '@/stores/guestStore'
 import { addGuest, deleteGuest, bulkAddGuests } from '@/lib/supabase/queries'
+import { IMPORT_ACCEPT, namesFromText, readGuestFile, splitNew } from '@/lib/guestImport'
 
 type Props = {
   projectId: string
@@ -17,6 +18,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
   const [isImporting, setIsImporting] = useState(false)
   const [importText, setImportText] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -51,70 +53,36 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
     const file = e.target.files?.[0]
     if (!file) return
     setIsImporting(true)
-
+    setImportError(null)
     try {
-      // Read file as base64 for Claude API
-      const base64 = await new Promise<string>((res, rej) => {
-        const reader = new FileReader()
-        reader.onload = () => res((reader.result as string).split(',')[1])
-        reader.onerror = rej
-        reader.readAsDataURL(file)
-      })
-
-      const isText = file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.csv')
-
-      let messages: any[]
-      if (isText) {
-        // For text/csv read as plain text
-        const text = await file.text()
-        messages = [{ role: 'user', content: `Extract all guest/person names from this text. Return ONLY a JSON array of name strings, nothing else, no markdown.\n\n${text}` }]
-      } else {
-        // For PDF/DOCX send as document to Claude
-        const mediaType = file.type || 'application/pdf'
-        messages = [{
-          role: 'user',
-          content: [
-            { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } },
-            { type: 'text', text: 'Extract all guest/person names from this document. Return ONLY a JSON array of name strings, nothing else, no markdown.' }
-          ]
-        }]
-      }
-
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, messages }),
-      })
-
-      const result = await response.json()
-      const raw = result.content?.[0]?.text ?? '[]'
-      const names: string[] = JSON.parse(raw.replace(/```json|```/g, '').trim())
+      // .txt is read here; .csv and .pdf are read by the server (/api/guests/extract), never by the browser.
+      const names = await readGuestFile(file)
       setImportText(names.join('\n'))
-      setShowImport(true)
+      if (names.length === 0) setImportError('No names were found in that file. You can paste them below.')
     } catch (err) {
-      console.error('File parse failed:', err)
-      setShowImport(true)
       setImportText('')
+      setImportError(err instanceof Error ? err.message : 'Could not read that file.')
     } finally {
+      setShowImport(true)
       setIsImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
   }
 
-  const handleConfirmImport = async () => {
-    const names = importText
-      .split('\n')
-      .map((n) => n.trim())
-      .filter((n) => n.length > 0)
-    if (names.length === 0) return
+  const importNames = namesFromText(importText)
+  const { fresh: freshNames, skipped: skippedNames } = splitNew(importNames, guests.map((g) => g.name))
 
+  const handleConfirmImport = async () => {
+    if (freshNames.length === 0) return
     try {
-      const newGuests = await bulkAddGuests(projectId, names)
+      const newGuests = await bulkAddGuests(projectId, freshNames)
       newGuests.forEach((g: Guest) => addGuestLocal(g))
       setShowImport(false)
       setImportText('')
+      setImportError(null)
     } catch (err) {
       console.error('Bulk import failed:', err)
+      setImportError('Could not save the guests. Nothing was added; try again.')
     }
   }
 
@@ -222,7 +190,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".txt,.csv,.pdf,.docx,.doc"
+          accept={IMPORT_ACCEPT}
           className="hidden"
           onChange={handleFileUpload}
         />
@@ -234,6 +202,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
           <div className="bg-white rounded-xl shadow-xl p-4 w-full max-w-sm">
             <h3 className="text-sm font-semibold text-gray-800 mb-1">Review imported names</h3>
             <p className="text-xs text-gray-400 mb-3">Edit the list below before importing. One name per line.</p>
+            {importError && <p className="text-xs text-red-600 mb-2" role="alert">{importError}</p>}
             <textarea
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
@@ -243,7 +212,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
             />
             <div className="flex gap-2 mt-3">
               <button
-                onClick={() => { setShowImport(false); setImportText('') }}
+                onClick={() => { setShowImport(false); setImportText(''); setImportError(null) }}
                 className="flex-1 text-xs border border-gray-200 text-gray-500 rounded-lg py-2 hover:bg-gray-50"
               >
                 Cancel
@@ -252,9 +221,10 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
                 onClick={handleConfirmImport}
                 className="flex-1 text-xs bg-gray-900 text-white rounded-lg py-2 hover:bg-gray-700"
               >
-                Import {importText.split('\n').filter((n) => n.trim()).length} guests
+                Import {freshNames.length} guests
               </button>
             </div>
+            {skippedNames > 0 && <p className="text-[10px] text-gray-400 mt-2">{skippedNames} already in the list will be skipped.</p>}
           </div>
         </div>
       )}
