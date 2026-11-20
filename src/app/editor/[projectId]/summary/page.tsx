@@ -3,7 +3,11 @@ import { getAllLayoutObjectsForProject, getAllProjectZones } from '@/lib/supabas
 import { zoneAreaM2 } from '@/lib/zones'
 import type { ProjectZone } from '@/types'
 import Link from 'next/link'
-import { DbCatalogItem } from '@/types/db'
+import { DbCatalogItem, DbGuest, DbGuestFamily, DbRoom } from '@/types/db'
+import { mapDbObject } from '@/lib/supabase/queries'
+import type { DbLayoutObject } from '@/types/db'
+import type { PdfExportData, PdfItemRow } from '@/lib/pdfExport/types'
+import ExportPanel from './ExportPanel'
 
 type Params = { projectId: string }
 
@@ -24,7 +28,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id, venue_id, status, venues(name)')
+    .select('id, venue_id, team_id, event_date, status, venues(name)')
     .eq('id', projectId)
     .single()
 
@@ -46,6 +50,52 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     supabase.from('rooms').select('id, name').eq('venue_id', project.venue_id),
   ])
   const roomNameById = new Map<string, string>((roomRows ?? []).map((r) => [r.id, r.name]))
+
+  // ── PDF export data (planner team only; RLS on the tables below is the real gate) ──
+  const { data: canPlan } = await supabase.rpc('planner_can_access_project', { pid: projectId })
+  let exportData: PdfExportData | null = null
+  if (canPlan === true) {
+    const [{ data: team }, { data: fullRooms }, { data: rawObjects }, { data: guestRows }, { data: familyRows }, { data: seatRows }] =
+      await Promise.all([
+        project.team_id ? supabase.from('teams').select('name').eq('id', project.team_id).maybeSingle() : Promise.resolve({ data: null }),
+        supabase.from('rooms').select('*').eq('venue_id', project.venue_id).order('name'),
+        supabase.from('layout_objects').select('*').eq('project_id', projectId),
+        supabase.from('guests').select('*').eq('project_id', projectId),
+        supabase.from('guest_families').select('*').eq('project_id', projectId),
+        supabase.from('seat_assignments').select('guest_id, layout_object_id').eq('project_id', projectId),
+      ])
+    const familyName = new Map(((familyRows ?? []) as DbGuestFamily[]).map((f) => [f.id, f.name]))
+    exportData = {
+      venueName,
+      teamName: (team as { name: string } | null)?.name ?? '',
+      eventDate: (project as { event_date: string | null }).event_date ?? null,
+      rooms: ((fullRooms ?? []) as DbRoom[]).map((r) => ({
+        id: r.id,
+        name: r.name,
+        polygon: r.floor_polygon ?? [],
+        widthCm: r.bounding_box_width_cm,
+        depthCm: r.bounding_box_depth_cm,
+        obstacles: r.obstacles ?? [],
+      })),
+      objects: ((rawObjects ?? []) as DbLayoutObject[]).map((o) => ({ ...mapDbObject(o), roomId: o.room_id })),
+      catalog: {},
+      zones,
+      itemRows: [],
+      guests: ((guestRows ?? []) as DbGuest[]).map((g) => ({
+        id: g.id,
+        name: g.name,
+        vip: g.is_vip,
+        speech: g.gives_speech,
+        ageGroup: g.age_group,
+        dietary: g.dietary,
+        notes: g.notes,
+        family: g.family_id ? (familyName.get(g.family_id) ?? null) : null,
+        seatDismissed: !!g.seat_dismissed_at,
+      })),
+      assignments: (seatRows ?? []).map((a) => ({ guestId: a.guest_id as string, layoutObjectId: a.layout_object_id as string })),
+    }
+  }
+
   const zoneLegend = <ZoneLegend zones={zones} roomNameById={roomNameById} />
 
   // How many of each catalog item are actually placed across every room.
@@ -58,6 +108,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   if (usedItemIds.length === 0) {
     return (
       <SummaryShell projectId={projectId} venueName={venueName}>
+        {exportData && <ExportPanel data={exportData} />}
         <p className="text-sm text-gray-400">Nothing placed in this project yet.</p>
         {zoneLegend}
       </SummaryShell>
@@ -114,8 +165,29 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   const totalShortfallItems = rows.filter((r) => r.shortfall > 0).length
 
+  if (exportData) {
+    exportData.itemRows = rows.map(
+      (r): PdfItemRow => ({
+        name: r.name,
+        category: r.category,
+        used: r.used,
+        venueStock: r.venueStock,
+        isStockTracked: r.isStockTracked,
+        shortfall: r.shortfall,
+        rentalAvailability: r.rentalAvailability,
+      }),
+    )
+    exportData.catalog = Object.fromEntries(
+      (catalogItems ?? []).map((c: DbCatalogItem) => [
+        c.id,
+        { name: c.name, category: c.category, widthCm: c.width_cm, depthCm: c.depth_cm },
+      ]),
+    )
+  }
+
   return (
     <SummaryShell projectId={projectId} venueName={venueName}>
+      {exportData && <ExportPanel data={exportData} />}
       {totalShortfallItems > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {totalShortfallItems} item{totalShortfallItems === 1 ? '' : 's'} exceed what {venueName} has in stock —
