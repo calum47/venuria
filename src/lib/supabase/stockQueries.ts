@@ -42,6 +42,7 @@ export type StockItemInput = {
   sellPrice: number
   minStockAlert: number
   onDemand: boolean
+  reusable: boolean
   notes: string | null
 }
 
@@ -58,6 +59,7 @@ export async function createStockItem(input: StockItemInput): Promise<DbStockIte
       sell_price: input.sellPrice,
       min_stock_alert: input.minStockAlert,
       on_demand: input.onDemand,
+      reusable: input.reusable,
       notes: input.notes,
     })
     .select('*')
@@ -78,6 +80,7 @@ export async function updateStockItem(id: string, input: Omit<StockItemInput, 't
       sell_price: input.sellPrice,
       min_stock_alert: input.minStockAlert,
       on_demand: input.onDemand,
+      reusable: input.reusable,
       notes: input.notes,
     })
     .eq('id', id)
@@ -158,6 +161,15 @@ export async function addStockSale(input: {
     unit_cost_snapshot: input.unitCostSnapshot,
     project_id: input.projectId,
   })
+  if (error) throw error
+}
+
+/** Planner confirms how many of a reusable sale came back (0 = all lost). Manager / lead only — enforced by RLS. */
+export async function confirmSaleReturn(id: string, returnedQty: number): Promise<void> {
+  const { error } = await supabase
+    .from('stock_sales')
+    .update({ returned_qty: returnedQty, return_confirmed_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }
 

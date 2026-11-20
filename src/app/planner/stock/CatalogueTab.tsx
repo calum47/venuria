@@ -19,11 +19,13 @@ type Props = {
   items: DbStockItem[]
   groups: DbStockGroup[]
   canManage: boolean
+  /** itemId → units out with clients (reusable items awaiting return) */
+  outByItem: Map<string, number>
   onItemsChanged: () => void
   onGroupsChanged: () => void
 }
 
-export default function CatalogueTab({ teamId, currency, items, groups, canManage, onItemsChanged, onGroupsChanged }: Props) {
+export default function CatalogueTab({ teamId, currency, items, groups, canManage, outByItem, onItemsChanged, onGroupsChanged }: Props) {
   const [activeGroup, setActiveGroup] = useState<string | 'all'>('all')
   const [editing, setEditing] = useState<DbStockItem | 'new' | null>(null)
   const [newGroupName, setNewGroupName] = useState('')
@@ -87,7 +89,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visible.map((item) => (
-            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} onClick={canManage ? () => setEditing(item) : () => {}} />
+            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} out={outByItem.get(item.id) ?? 0} onClick={canManage ? () => setEditing(item) : () => {}} />
           ))}
         </div>
       )}
@@ -123,11 +125,13 @@ function ItemCard({
   item,
   currency,
   groupName,
+  out,
   onClick,
 }: {
   item: DbStockItem
   currency: string
   groupName: string | undefined
+  out: number
   onClick: () => void
 }) {
   const margin = item.sell_price > 0 ? ((item.sell_price - item.cost_price) / item.sell_price) * 100 : 0
@@ -153,6 +157,9 @@ function ItemCard({
         <span>{money(item.sell_price, currency)}</span>
         <span>{margin.toFixed(0)}% margin</span>
       </div>
+      {item.reusable && (
+        <p className="text-[10px] text-indigo-600">Reusable{out > 0 ? ` · ${out} out with clients` : ''}</p>
+      )}
       {groupName && <p className="text-[10px] text-gray-400">{groupName}</p>}
     </button>
   )
@@ -196,6 +203,7 @@ function EditProductModal({
   const [sellPrice, setSellPrice] = useState(String(item?.sell_price ?? ''))
   const [minStockAlert, setMinStockAlert] = useState(String(item?.min_stock_alert ?? 0))
   const [onDemand, setOnDemand] = useState(item?.on_demand ?? false)
+  const [reusable, setReusable] = useState(item?.reusable ?? false)
   const [notes, setNotes] = useState(item?.notes ?? '')
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -232,6 +240,7 @@ function EditProductModal({
       sellPrice: sell,
       minStockAlert: Number(minStockAlert) || 0,
       onDemand,
+      reusable: onDemand ? false : reusable,
       notes: notes.trim() || null,
     }
 
@@ -317,9 +326,18 @@ function EditProductModal({
         </div>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={onDemand} onChange={(e) => setOnDemand(e.target.checked)} className="rounded border-gray-300" />
+          <input type="checkbox" checked={onDemand} onChange={(e) => { setOnDemand(e.target.checked); if (e.target.checked) setReusable(false) }} className="rounded border-gray-300" />
           On Demand (made to order — no stock count, routed through Orders instead of Purchases/Sales)
         </label>
+
+        {!onDemand && (
+          <label className="flex items-start gap-2 text-sm text-gray-700">
+            <input type="checkbox" checked={reusable} onChange={(e) => setReusable(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
+            <span>
+              Reusable (sold every wedding but comes back afterwards). A sale takes items out; after the wedding you confirm how many came back, so loss or breakage is recorded.
+            </span>
+          </label>
+        )}
 
         {!onDemand && (
           <div className="space-y-1">

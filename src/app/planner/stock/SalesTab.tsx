@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from 'react'
 import type { DbStockItem, DbStockSale } from '@/types/db'
-import { addStockSale, deleteStockSale } from '@/lib/supabase/stockQueries'
+import { addStockSale, confirmSaleReturn, deleteStockSale } from '@/lib/supabase/stockQueries'
+import { isAwaitingReturn, saleProfit } from '@/lib/stockReusable'
 import type { ProjectOption } from './StockApp'
 import { money } from './StockApp'
 
@@ -26,6 +27,8 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
   const [projectId, setProjectId] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [returnedQty, setReturnedQty] = useState('')
 
   // Prefilling sell price from the item's current price when picked, but
   // still editable — a planner may sell at a discount.
@@ -66,6 +69,20 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
     }
   }
 
+  const confirmReturn = async (id: string, qty: number) => {
+    setError(null)
+    const n = Number(returnedQty)
+    if (!Number.isInteger(n) || n < 0 || n > qty) return setError(`Returned must be a whole number from 0 to ${qty}.`)
+    try {
+      await confirmSaleReturn(id, n)
+      setConfirmingId(null)
+      setReturnedQty('')
+      onChanged()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to confirm the return.')
+    }
+  }
+
   const remove = async (id: string) => {
     if (!confirm('Remove this sale? Stock will be added back.')) return
     await deleteStockSale(id)
@@ -102,14 +119,39 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
 
       <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
         {sales.map((s) => {
-          const profit = (s.unit_price - s.unit_cost_snapshot) * s.qty
+          const item = itemById.get(s.item_id)
+          const profit = saleProfit(s, item)
+          const awaiting = isAwaitingReturn(s, item)
           return (
             <li key={s.id} className="px-4 py-2.5 text-sm flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <span className="text-gray-900">{itemById.get(s.item_id)?.name ?? 'Deleted product'}</span>
                 <span className="text-gray-400 ml-2">×{s.qty} @ {money(s.unit_price, currency)}</span>
-                <span className={`ml-2 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{money(profit, currency)} profit</span>
+                <span className={`ml-2 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{money(profit, currency)} profit{awaiting ? ' so far' : ''}</span>
                 {s.project_id && <span className="text-gray-400 ml-2">· {projectById.get(s.project_id) ?? 'project'}</span>}
+                {s.return_confirmed_at && (
+                  <span className="text-indigo-600 ml-2">
+                    · {s.returned_qty} of {s.qty} came back{s.returned_qty < s.qty ? ` (${s.qty - s.returned_qty} lost)` : ''}
+                  </span>
+                )}
+                {awaiting && (
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-amber-700">Out with the client, awaiting return</span>
+                    {canManage && confirmingId !== s.id && (
+                      <button onClick={() => { setConfirmingId(s.id); setReturnedQty(String(s.qty)) }} className="text-indigo-600 hover:underline">
+                        Confirm return
+                      </button>
+                    )}
+                    {canManage && confirmingId === s.id && (
+                      <>
+                        <input type="number" min="0" max={s.qty} value={returnedQty} onChange={(e) => setReturnedQty(e.target.value)} className={`${input} w-20 py-0.5`} />
+                        <span className="text-gray-400">of {s.qty} came back</span>
+                        <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded bg-gray-900 text-white px-2 py-0.5">Save</button>
+                        <button onClick={() => setConfirmingId(null)} className="text-gray-400">Cancel</button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-gray-400">{new Date(s.sold_at).toLocaleDateString()}</span>

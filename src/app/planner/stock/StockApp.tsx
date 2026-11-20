@@ -13,6 +13,7 @@ import CatalogueTab from './CatalogueTab'
 import PurchasesTab from './PurchasesTab'
 import SalesTab from './SalesTab'
 import OrdersTab from './OrdersTab'
+import { outNowByItem } from '@/lib/stockReusable'
 
 export type ProjectOption = { id: string; label: string }
 
@@ -74,6 +75,7 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
     return { products: items.length, lowStockCount: lowStock.length, costValue, sellValue }
   }, [items])
 
+  const outByItem = useMemo(() => outNowByItem(items, sales), [items, sales])
   const pendingOrders = orders.filter((o) => o.status === 'pending').length
 
   if (isLoading) return <p className="text-sm text-gray-400">Loading stock…</p>
@@ -120,6 +122,7 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
           items={items}
           groups={groups}
           canManage={canManage}
+          outByItem={outByItem}
           onItemsChanged={reloadItems}
           onGroupsChanged={reloadGroups}
         />

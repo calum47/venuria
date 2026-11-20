@@ -186,6 +186,9 @@ export type DbStockItem = {
   sell_price: number
   min_stock_alert: number
   on_demand: boolean
+  /** Sold every wedding but comes back afterwards (migration 022). */
+  reusable: boolean
+  reusable_since: string | null
   notes: string | null
   current_stock: number
   created_at: string
@@ -209,6 +212,9 @@ export type DbStockSale = {
   unit_cost_snapshot: number
   project_id: string | null
   sold_at: string
+  /** Reusable items: how many came back (0 until confirmed). Migration 022. */
+  returned_qty: number
+  return_confirmed_at: string | null
 }
 
 export type DbStockOrder = {
