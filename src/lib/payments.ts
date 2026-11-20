@@ -14,9 +14,23 @@ export const MAX_AMOUNT = 9_999_999_999.99
 
 export const DOC_KIND_LABEL: Record<DbDocumentKind, string> = {
   contract_draft: 'Contract draft',
+  signed_contract: 'Signed contract',
+  quote: 'Quote / proposal',
+  invoice: 'Invoice',
+  insurance_permit: 'Insurance / permit',
   receipt: 'Receipt',
   other: 'Other',
 }
+
+/** Types offered for project-level documents. 'receipt' is reserved for PDFs attached to a payment. */
+export const PROJECT_DOC_KINDS: DbDocumentKind[] = [
+  'contract_draft',
+  'signed_contract',
+  'quote',
+  'invoice',
+  'insurance_permit',
+  'other',
+]
 
 export type PaymentStatus =
   | { kind: 'paid'; paidAt: string }

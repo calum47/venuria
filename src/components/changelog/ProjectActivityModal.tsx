@@ -195,6 +195,7 @@ function describe(
       return `${verb} ${count} timetable block${plural}${sample}`
     }
     case 'document': {
+      if (e.action === 'new_version') return `Uploaded a new version of ${count} document${plural}${sample}`
       const verb = e.action === 'removed' ? 'Removed' : 'Attached'
       return `${verb} ${count} document${plural}${sample}`
     }

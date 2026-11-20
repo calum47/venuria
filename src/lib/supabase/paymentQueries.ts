@@ -77,6 +77,9 @@ export type DocumentUpload = {
   label: string
   vendorName: string | null
   paymentId: string | null
+  /** Set both to upload a new version of an existing document (migration 021). Omit for a brand-new document. */
+  versionGroupId?: string
+  version?: number
 }
 
 /**
@@ -102,11 +105,16 @@ export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjec
       label: u.label,
       storage_path: path,
       size_bytes: u.file.size,
+      ...(u.versionGroupId && u.version ? { version_group_id: u.versionGroupId, version: u.version } : {}),
     })
     .select('*')
     .single()
   if (error) {
     await supabase.storage.from(DOCUMENTS_BUCKET).remove([path])
+    // The (group, version) unique index: someone else uploaded this version number first.
+    if (error.code === '23505' && u.versionGroupId) {
+      throw new Error('Someone just uploaded another version of this document. Refresh the page and try again.')
+    }
     throw error
   }
   return data as DbProjectDocument
@@ -122,6 +130,36 @@ export async function deleteProjectDocument(doc: Pick<DbProjectDocument, 'id' | 
   if (error) throw error
   const { error: rmErr } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([doc.storage_path])
   if (rmErr) console.warn('Document row deleted but file removal failed (orphaned object):', doc.storage_path, rmErr.message)
+}
+
+export type DocumentEdit = { label: string; kind: DbDocumentKind; vendorName: string | null }
+
+/** Edits the whole document (every version) so versions never disagree on name, type or vendor. */
+export async function updateDocumentGroup(groupId: string, e: DocumentEdit): Promise<DbProjectDocument[]> {
+  const { data, error } = await supabase
+    .from('project_documents')
+    .update({ label: e.label, kind: e.kind, vendor_name: e.vendorName })
+    .eq('version_group_id', groupId)
+    .select('*')
+  if (error) throw error
+  if (!data || data.length === 0) throw new Error('Could not save — the document may have been removed.')
+  return data as DbProjectDocument[]
+}
+
+/** Removes every version of a document (rows first, then the files — same order as deleteProjectDocument). */
+export async function deleteDocumentGroup(groupId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('project_documents')
+    .delete()
+    .eq('version_group_id', groupId)
+    .select('id, storage_path')
+  if (error) throw error
+  const rows = (data ?? []) as Pick<DbProjectDocument, 'id' | 'storage_path'>[]
+  if (rows.length > 0) {
+    const { error: rmErr } = await supabase.storage.from(DOCUMENTS_BUCKET).remove(rows.map((r) => r.storage_path))
+    if (rmErr) console.warn('Document rows deleted but file removal failed (orphaned objects):', rmErr.message)
+  }
+  return rows.map((r) => r.id)
 }
 
 /** Private bucket → short-lived signed URL, minted on click rather than stored. */

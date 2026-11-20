@@ -103,7 +103,7 @@ export type DbProjectActivity = {
   entity: 'layout_object' | 'guest' | 'seat_assignment' | 'payment' | 'document' | 'timetable'
   action:
     | 'added' | 'moved' | 'updated' | 'removed' | 'assigned' | 'unassigned' | 'reassigned'
-    | 'marked_paid' | 'marked_unpaid'
+    | 'marked_paid' | 'marked_unpaid' | 'new_version'
   entity_id: string | null
   summary: {
     name?: string | null
@@ -111,6 +111,7 @@ export type DbProjectActivity = {
     guest_name?: string | null
     vendor?: string | null // payment events
     kind?: string | null // document events
+    version?: number | null // document events
     title?: string | null // timetable events
   }
   created_at: string
@@ -131,9 +132,13 @@ export type DbProjectPayment = {
   updated_at: string
 }
 
-export type DbDocumentKind = 'contract_draft' | 'receipt' | 'other'
+export type DbDocumentKind =
+  | 'contract_draft' | 'signed_contract' | 'quote' | 'invoice' | 'insurance_permit' | 'receipt' | 'other'
 
-/** project_documents (migration 015). The file lives in the private `project-documents` bucket. */
+/**
+ * project_documents (migration 015, versions in 021). The file lives in the private `project-documents` bucket.
+ * A document is a group of rows sharing `version_group_id`; the highest `version` is the current one.
+ */
 export type DbProjectDocument = {
   id: string
   project_id: string
@@ -145,6 +150,8 @@ export type DbProjectDocument = {
   size_bytes: number
   uploaded_by: string | null
   created_at: string
+  version_group_id: string
+  version: number
 }
 
 export type DbProjectZone = {
