@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SignOutButton } from '@/components/auth/SignOutButton'
+import NotificationBell from '@/components/nav/NotificationBell'
 import { ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
 
 type Props = {
@@ -48,6 +49,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
         {item('/planner/settings', 'Settings', pathname.startsWith('/planner/settings'))}
 
         <div className="ml-auto flex items-center gap-3">
+          <NotificationBell />
           <div className="text-right leading-tight">
             <p className="text-sm text-gray-900">{plannerName}</p>
             <p className="text-[11px] text-gray-400">{ROLE_LABEL[role]} · {teamName}</p>

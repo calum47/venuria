@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-notification-bell',
+    date: '2026-11-21',
+    title: 'Notification bell',
+    roles: ['planner', 'admin'],
+    items: [
+      'A bell in the top bar now shows what needs your attention. No emails are sent.',
+      'RSVPs: guests who answered through the link and were not on your list (or who came as a plus-one) are listed per wedding until you mark them as reviewed.',
+      'Payments: from 7 days before the due date, every unpaid payment appears in the bell, and it keeps appearing every day, also after the due date, until you mark it as paid. The red number comes back once a day, and clears when you open the bell.',
+    ],
+  },
+  {
     id: '2026-11-21-rsvp-page-content',
     date: '2026-11-21',
     title: 'Make the RSVP page your own',

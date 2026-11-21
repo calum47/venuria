@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import {
   createPayment,
@@ -34,6 +34,7 @@ import PdfImportReview from './PdfImportReview'
 import { stagePdf, type StagedPdf } from './pdfStaging'
 import { commonVendor } from '@/lib/pdfPayments'
 import { UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
+import { requestBellRefresh } from '@/lib/notifications'
 
 type View = 'list' | 'calendar'
 
@@ -57,6 +58,10 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
   const [payments, setPayments] = useState<DbProjectPayment[]>(() =>
     initialPayments.map((p) => ({ ...p, amount: Number(p.amount) })),
   )
+  // The nav bell lists payments due soon: tell it whenever the payments change here.
+  useEffect(() => {
+    requestBellRefresh()
+  }, [payments])
   const [documents, setDocuments] = useState<DbProjectDocument[]>(initialDocuments)
   const [error, setError] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)

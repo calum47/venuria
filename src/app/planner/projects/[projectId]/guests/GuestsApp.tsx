@@ -41,6 +41,7 @@ import { RSVP_LABEL, RSVP_STATUSES, type RsvpStatus } from '@/lib/rsvp'
 import RsvpPanel from './RsvpPanel'
 import GuestImport from '@/components/guests/GuestImport'
 import { addDays, todayIso } from '@/lib/projectDates'
+import { requestBellRefresh } from '@/lib/notifications'
 
 type Props = {
   projectId: string
@@ -74,6 +75,11 @@ function errMsg(e: unknown): string {
 
 export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
+  // The nav bell lists guests waiting for review: tell it when that number changes.
+  const reviewCount = guests.filter((g) => g.rsvp_needs_review).length
+  useEffect(() => {
+    requestBellRefresh()
+  }, [reviewCount])
   const [families, setFamilies] = useState<DbGuestFamily[]>(initialFamilies)
   const [stays, setStays] = useState<DbGuestStay[]>(initialStays)
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>(initialPhotoUrls)
