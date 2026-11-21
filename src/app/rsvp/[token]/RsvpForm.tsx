@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { LANGS, LANG_NAME, TEXT, fill, type Lang } from '@/lib/rsvpText'
 import type { RsvpStatus } from '@/lib/rsvp'
+import type { PublicContent } from '@/lib/rsvpContent'
 import { lookupGuest, submitRsvp, type LookupResult, type SubmitResult } from './actions'
 
 type Props = {
@@ -13,6 +14,9 @@ type Props = {
   allowPlusOne: boolean
   venueName: string | null
   eventDate: string | null
+  content: PublicContent
+  /** Planner preview: 'live' = guests see the same page, 'off' = guests currently see "closed". */
+  preview: 'live' | 'off' | null
 }
 
 type Step = 'name' | 'confirm' | 'answers' | 'done'
@@ -27,7 +31,7 @@ function longDate(iso: string, lang: Lang): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function RsvpForm({ token, initialLang, welcome, deadline, allowPlusOne, venueName, eventDate }: Props) {
+export default function RsvpForm({ token, initialLang, welcome, deadline, allowPlusOne, venueName, eventDate, content, preview }: Props) {
   const [lang, setLang] = useState<Lang>(initialLang)
   const t = TEXT[lang]
 
@@ -143,30 +147,106 @@ export default function RsvpForm({ token, initialLang, welcome, deadline, allowP
     </div>
   )
 
-  if (closed) {
-    return (
-      <div className="space-y-2">
-        <h1 className="text-xl font-semibold text-gray-900">{t.closedTitle}</h1>
-        <p className="text-sm text-gray-500">{t.closedBody}</p>
-      </div>
-    )
-  }
+  const details = content.details && (
+    <section className="space-y-3 border-t border-gray-100 pt-5">
+      {content.details.lines.length > 0 && (
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold text-gray-900">{t.scheduleTitle}</h2>
+          <ul className="space-y-0.5 text-sm text-gray-700">
+            {content.details.lines.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+        </div>
+      )}
+      {content.details.dressCode && (
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold text-gray-900">{t.dressCodeTitle}</h2>
+          <p className="whitespace-pre-line text-sm text-gray-700">{content.details.dressCode}</p>
+        </div>
+      )}
+      {content.details.mapUrl && (
+        <a href={content.details.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-block rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-800 hover:bg-gray-50">
+          {t.openMap} ↗
+        </a>
+      )}
+    </section>
+  )
 
-  if (step === 'done') {
-    return (
+  const area = content.area && (
+    <section className="space-y-3 border-t border-gray-100 pt-5">
+      <h2 className="text-sm font-semibold text-gray-900">{t.areaTitle}</h2>
+      {content.area.text && <p className="whitespace-pre-line text-sm text-gray-700">{content.area.text}</p>}
+      {content.area.photos.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {content.area.photos.map((p, i) => (
+            <figure key={i} className="space-y-1">
+              {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset */}
+              <img src={p.url} alt={p.caption ?? ''} loading="lazy" className="aspect-[4/3] w-full rounded-md object-cover" />
+              {p.caption && <figcaption className="text-xs text-gray-500">{p.caption}</figcaption>}
+            </figure>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+
+  const hotels = content.hotels.length > 0 && (
+    <section className="space-y-3 border-t border-gray-100 pt-5">
+      <h2 className="text-sm font-semibold text-gray-900">{t.hotelsTitle}</h2>
       <div className="space-y-3">
-        {header}
-        <p className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-800" role="status">
-          {status === 'declined' ? t.thanksDeclined : status === 'maybe' ? t.thanksMaybe : t.thanksAttending}
-        </p>
+        {content.hotels.map((h) => (
+          <div key={h.id} className="overflow-hidden rounded-lg border border-gray-200">
+            {h.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset
+              <img src={h.imageUrl} alt="" loading="lazy" className="aspect-[16/9] w-full object-cover" />
+            )}
+            <div className="space-y-1 p-3">
+              <p className="text-sm font-medium text-gray-900">{h.name}</p>
+              {h.address && <p className="text-xs text-gray-500">{h.address}</p>}
+              {h.description && <p className="whitespace-pre-line text-sm text-gray-700">{h.description}</p>}
+              {h.bookingNote && <p className="text-sm text-gray-700"><span className="font-medium">{t.bookingInfo}:</span> {h.bookingNote}</p>}
+              {h.url && (
+                <a href={h.url} target="_blank" rel="noopener noreferrer nofollow" className="inline-block pt-1 text-sm text-gray-800 underline underline-offset-2 hover:text-gray-600">
+                  {t.visitWebsite} ↗
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
-    )
-  }
+    </section>
+  )
+
+  const previewBanner = preview && (
+    <p className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900" role="note">
+      Planner preview. {preview === 'off' ? 'Guests currently see “RSVP is closed”: switch the link on (and check the last day to answer) to open it.' : 'This is what guests see.'} Answers sent from here are real.
+    </p>
+  )
+
+  const closedBlock = (
+    <div className="space-y-2">
+      <h2 className="text-xl font-semibold text-gray-900">{t.closedTitle}</h2>
+      <p className="text-sm text-gray-500">{t.closedBody}</p>
+    </div>
+  )
+
+  const doneBlock = (
+    <p className="rounded-md border border-green-200 bg-green-50 px-3 py-3 text-sm text-green-800" role="status">
+      {status === 'declined' ? t.thanksDeclined : status === 'maybe' ? t.thanksMaybe : t.thanksAttending}
+    </p>
+  )
 
   return (
-    <div className="space-y-5">
-      {header}
-
+    <article className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+      {content.coverUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset
+        <img src={content.coverUrl} alt="" className="aspect-[16/9] w-full object-cover" />
+      )}
+      <div className="space-y-5 p-6 sm:p-8">
+        {previewBanner}
+        {header}
+        {details}
+        {closed ? closedBlock : step === 'done' ? doneBlock : (
+          <div className="space-y-5 border-t border-gray-100 pt-5">
       {message && <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">{message}</p>}
 
       {step === 'name' && (
@@ -252,6 +332,11 @@ export default function RsvpForm({ token, initialLang, welcome, deadline, allowP
           <button type="button" onClick={() => { setStep('name'); setMessage(null) }} className={secondary}>{t.back}</button>
         </form>
       )}
-    </div>
+          </div>
+        )}
+        {area}
+        {hotels}
+      </div>
+    </article>
   )
 }

@@ -50,6 +50,13 @@ const EN = {
   deadline: 'Please answer by {date}.',
   language: 'Language',
   invited: 'You are invited',
+  scheduleTitle: 'Schedule',
+  dressCodeTitle: 'Dress code',
+  openMap: 'Open map',
+  areaTitle: 'Getting there & the area',
+  hotelsTitle: 'Where to stay',
+  bookingInfo: 'Booking',
+  visitWebsite: 'Website',
 }
 
 const ES: typeof EN = {
@@ -90,6 +97,13 @@ const ES: typeof EN = {
   deadline: 'Por favor, responde antes del {date}.',
   language: 'Idioma',
   invited: 'Estás invitado/a',
+  scheduleTitle: 'Programa',
+  dressCodeTitle: 'Código de vestimenta',
+  openMap: 'Abrir mapa',
+  areaTitle: 'Cómo llegar y la zona',
+  hotelsTitle: 'Dónde alojarse',
+  bookingInfo: 'Reserva',
+  visitWebsite: 'Web',
 }
 
 const FR: typeof EN = {
@@ -130,6 +144,13 @@ const FR: typeof EN = {
   deadline: 'Merci de répondre avant le {date}.',
   language: 'Langue',
   invited: 'Vous êtes invité(e)',
+  scheduleTitle: 'Programme',
+  dressCodeTitle: 'Tenue',
+  openMap: 'Ouvrir la carte',
+  areaTitle: 'Accès et alentours',
+  hotelsTitle: 'Où dormir',
+  bookingInfo: 'Réservation',
+  visitWebsite: 'Site web',
 }
 
 export type Dict = typeof EN

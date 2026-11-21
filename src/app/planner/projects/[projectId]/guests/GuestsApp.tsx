@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
-import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp } from '@/types/db'
+import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import {
   createFamily,
   createGuest,
@@ -55,6 +55,10 @@ type Props = {
   initialRsvp: DbProjectRsvp | null
   /** Site origin for building the public RSVP link. */
   origin: string
+  /** RSVP page content (migration 026): area photos, hotels, and signed URLs for their images. */
+  initialRsvpPhotos: DbRsvpPhoto[]
+  initialRsvpHotels: DbRsvpHotel[]
+  initialRsvpUrls: Record<string, string>
   /** From ?guest=ID (the editor's "Edit details" link): open this guest's panel on load. */
   initialSelectedId?: string | null
 }
@@ -68,7 +72,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, initialSelectedId = null }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   const [families, setFamilies] = useState<DbGuestFamily[]>(initialFamilies)
   const [stays, setStays] = useState<DbGuestStay[]>(initialStays)
@@ -126,7 +130,16 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
     <div className="space-y-4">
       {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
-      <RsvpPanel projectId={projectId} origin={origin} initial={initialRsvp} guests={guests} />
+      <RsvpPanel
+        projectId={projectId}
+        origin={origin}
+        initial={initialRsvp}
+        guests={guests}
+        teamId={teamId}
+        initialPhotos={initialRsvpPhotos}
+        initialHotels={initialRsvpHotels}
+        initialUrls={initialRsvpUrls}
+      />
 
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
         <input

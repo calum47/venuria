@@ -9,7 +9,7 @@
  */
 import { MAX_PHOTO_BYTES, MAX_SOURCE_PHOTO_BYTES, PHOTO_MAX_EDGE, fitWithin, sniffImage } from '@/lib/guests'
 
-export async function prepareGuestPhoto(file: File): Promise<Blob> {
+export async function prepareGuestPhoto(file: File, maxEdge: number = PHOTO_MAX_EDGE): Promise<Blob> {
   if (file.size > MAX_SOURCE_PHOTO_BYTES) throw new Error('That photo is over 20 MB — pick a smaller one.')
 
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
@@ -22,7 +22,7 @@ export async function prepareGuestPhoto(file: File): Promise<Blob> {
     throw new Error('Could not read that image — it may be damaged.')
   }
 
-  const { width, height } = fitWithin(bitmap.width, bitmap.height, PHOTO_MAX_EDGE)
+  const { width, height } = fitWithin(bitmap.width, bitmap.height, maxEdge)
   const canvas = document.createElement('canvas')
   canvas.width = width
   canvas.height = height

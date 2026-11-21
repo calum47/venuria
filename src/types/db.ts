@@ -93,6 +93,39 @@ export type DbProjectRsvp = {
   allow_plus_one: boolean
   created_at: string
   updated_at: string
+  // Migration 026: page content
+  /** Path in the private `rsvp-media` bucket. */
+  cover_path: string | null
+  /** One line per row, e.g. "17:00 Ceremony". */
+  schedule: string | null
+  dress_code: string | null
+  map_url: string | null
+  area_text: string | null
+  show_details: boolean
+  show_area: boolean
+  show_hotels: boolean
+}
+
+export type DbRsvpPhoto = {
+  id: string
+  project_id: string
+  path: string
+  caption: string | null
+  position: number
+  created_at: string
+}
+
+export type DbRsvpHotel = {
+  id: string
+  project_id: string
+  name: string
+  address: string | null
+  url: string | null
+  booking_note: string | null
+  description: string | null
+  image_path: string | null
+  position: number
+  created_at: string
 }
 
 export type DbGuestFamily = {

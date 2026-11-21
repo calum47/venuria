@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-rsvp-page-content',
+    date: '2026-11-21',
+    title: 'Make the RSVP page your own',
+    roles: ['planner', 'admin'],
+    items: [
+      'The guest RSVP page can now have a cover photo, a schedule, a dress code and a map link.',
+      'Add a "Getting there & the area" section with your own text and up to 6 photos with captions, and list up to 8 recommended hotels with address, website, a booking note, a short description and a photo.',
+      'Every section can be switched off without losing what you typed, and sections with nothing in them are not shown. Use "Preview the page" to see exactly what guests see, even before you switch the link on.',
+    ],
+  },
+  {
     id: '2026-11-20-rsvp-link',
     date: '2026-11-20',
     title: 'Guest RSVP link',

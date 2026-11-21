@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { DbGuest, DbProjectRsvp } from '@/types/db'
+import type { DbGuest, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import { regenerateRsvpToken, saveRsvpSettings } from '@/lib/supabase/rsvpQueries'
 import { madridToday, rsvpPath, rsvpSummary } from '@/lib/rsvp'
+import RsvpContentEditor from './RsvpContentEditor'
 
 const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
 const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
@@ -19,6 +20,11 @@ type Props = {
   origin: string
   initial: DbProjectRsvp | null
   guests: DbGuest[]
+  teamId: string
+  initialPhotos: DbRsvpPhoto[]
+  initialHotels: DbRsvpHotel[]
+  /** Signed URLs (path → URL) for the page's saved images. */
+  initialUrls: Record<string, string>
 }
 
 /**
@@ -26,7 +32,7 @@ type Props = {
  * running counts. One link per project; anyone holding it can answer, so a
  * guest's FIRST answer is the only one the link accepts (changes are made here).
  */
-export default function RsvpPanel({ projectId, origin, initial, guests }: Props) {
+export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialUrls }: Props) {
   const [cfg, setCfg] = useState<DbProjectRsvp | null>(initial)
   const [open, setOpen] = useState(!!initial?.enabled)
   const [enabled, setEnabled] = useState(initial?.enabled ?? false)
@@ -162,6 +168,17 @@ export default function RsvpPanel({ projectId, origin, initial, guests }: Props)
               </p>
             </div>
           )}
+
+          <RsvpContentEditor
+            projectId={projectId}
+            teamId={teamId}
+            origin={origin}
+            cfg={cfg}
+            onCfg={setCfg}
+            initialPhotos={initialPhotos}
+            initialHotels={initialHotels}
+            initialUrls={initialUrls}
+          />
         </div>
       )}
     </section>
