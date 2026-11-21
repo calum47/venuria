@@ -9,6 +9,7 @@ import { mapDbObject } from '@/lib/supabase/queries'
 import type { DbLayoutObject } from '@/types/db'
 import type { PdfExportData, PdfItemRow } from '@/lib/pdfExport/types'
 import ExportPanel from './ExportPanel'
+import { STOCK_TRACKED_CATEGORIES, tableSettingDemand } from '@/lib/tableSetting'
 
 type Params = { projectId: string }
 
@@ -102,12 +103,18 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   const zoneLegend = <ZoneLegend zones={zones} roomNameById={roomNameById} />
 
-  // How many of each catalog item are actually placed across every room.
-  const usedCounts = new Map<string, number>()
+  // How many of each catalog item are actually placed across every room, plus the plates,
+  // glasses, candles… that the tables' settings call for (those aren't placed objects).
+  const placedCounts = new Map<string, number>()
   for (const obj of layoutObjects) {
-    usedCounts.set(obj.catalogItemId, (usedCounts.get(obj.catalogItemId) ?? 0) + 1)
+    placedCounts.set(obj.catalogItemId, (placedCounts.get(obj.catalogItemId) ?? 0) + 1)
   }
-  const usedItemIds = [...usedCounts.keys()]
+  const settingItemIds = new Set<string>()
+  for (const obj of layoutObjects) {
+    if (obj.isChairFor) continue
+    for (const line of obj.tableSetting?.items ?? []) settingItemIds.add(line.catalogItemId)
+  }
+  const usedItemIds = [...new Set([...placedCounts.keys(), ...settingItemIds])]
 
   if (usedItemIds.length === 0) {
     return (
@@ -129,6 +136,11 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   ])
 
   const catalogById = new Map<string, DbCatalogItem>((catalogItems ?? []).map((c) => [c.id, c]))
+
+  // Per-seat items multiply by each table's chairs; per-table items count once per table.
+  const onTablesCounts = tableSettingDemand(layoutObjects, new Map([...catalogById].map(([id, c]) => [id, c.scope ?? null])))
+  const usedCounts = new Map<string, number>()
+  for (const id of usedItemIds) usedCounts.set(id, (placedCounts.get(id) ?? 0) + (onTablesCounts.get(id) ?? 0))
   const venueStockById = new Map<string, number>((venueStockRows ?? []).map((r) => [r.catalog_item_id, r.quantity]))
   const rentalCompanyNameById = new Map<string, string>((rentalCompanies ?? []).map((rc) => [rc.id, rc.name]))
 
@@ -146,12 +158,12 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     .map((id) => {
       const item = catalogById.get(id)
       const used = usedCounts.get(id) ?? 0
-      // Stock tracking only covers tables/chairs for now — everything else
-      // (decorations) has no catalog_item_stock rows, so venueStock reads as
-      // 0 and every unit would look like a "shortfall." Track that
-      // distinction so the UI can show "not tracked" instead of a false
-      // shortfall for categories that were never in scope for stock.
-      const isStockTracked = item?.category === 'tables' || item?.category === 'chairs'
+      // Stock tracking covers tables, chairs and the table-setting categories (plates,
+      // cutlery, glassware, candles, flowers). Everything else (decorations) has no
+      // catalog_item_stock rows, so venueStock reads as 0 and every unit would look like
+      // a "shortfall." Track that distinction so the UI can show "not tracked" instead
+      // of a false shortfall for categories that were never in scope for stock.
+      const isStockTracked = !!item && STOCK_TRACKED_CATEGORIES.includes(item.category)
       const venueStock = venueStockById.get(id) ?? 0
       const shortfall = isStockTracked ? Math.max(0, used - venueStock) : 0
       return {
@@ -159,6 +171,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
         name: item?.name ?? 'Unknown item',
         category: item?.category ?? 'other',
         used,
+        onTables: onTablesCounts.get(id) ?? 0,
         venueStock,
         isStockTracked,
         shortfall,
@@ -211,7 +224,14 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
         <tbody className="divide-y divide-gray-100">
           {rows.map((row) => (
             <tr key={row.id} className={row.shortfall > 0 ? 'bg-amber-50' : undefined}>
-              <td className="px-4 py-2.5 text-gray-900">{row.name}</td>
+              <td className="px-4 py-2.5 text-gray-900">
+                {row.name}
+                {row.onTables > 0 && (
+                  <span className="ml-2 text-xs text-gray-400">
+                    {row.onTables === row.used ? 'on tables' : `${row.onTables} on tables`}
+                  </span>
+                )}
+              </td>
               <td className="px-4 py-2.5 text-right text-gray-700">{row.used}</td>
               <td className="px-4 py-2.5 text-right text-gray-700">
                 {row.isStockTracked ? row.venueStock : <span className="text-gray-300">not tracked</span>}

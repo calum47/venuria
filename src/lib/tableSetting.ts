@@ -34,6 +34,9 @@ export function isIndividualOnlyTable(catalogItemName: string | undefined): bool
   return !!catalogItemName && INDIVIDUAL_ONLY_TABLES.includes(catalogItemName)
 }
 
+/** Categories whose stock is tracked per venue / rental company (Stock screens and the planner summary). */
+export const STOCK_TRACKED_CATEGORIES = ['tables', 'chairs', 'plates', 'cutlery', 'glassware', 'candles', 'flowers']
+
 /** Real tables only: not chairs, and not a placed decoration such as a Flower Arch. */
 export function isTableObject(object: LayoutObject, catalogItems: DbCatalogItem[]): boolean {
   if (object.isChairFor) return false
@@ -56,6 +59,32 @@ export function chairsAtTable(tableId: string, objects: LayoutObject[]): number 
 /** How many of one setting line the table needs, after the per-seat multiplier. */
 export function lineTotal(item: TableSettingItem, scope: DbCatalogItem['scope'], chairs: number): number {
   return scope === 'per_seat' ? item.quantity * chairs : item.quantity
+}
+
+/**
+ * How many of each catalog item all tables' settings need, across every room.
+ * Per-seat items multiply by the chairs placed at that table. Items missing from
+ * `scopeById` (deleted from the catalog) are skipped.
+ */
+export function tableSettingDemand(
+  objects: LayoutObject[],
+  scopeById: Map<string, DbCatalogItem['scope']>,
+): Map<string, number> {
+  const chairsPerTable = new Map<string, number>()
+  for (const o of objects) {
+    if (o.isChairFor) chairsPerTable.set(o.isChairFor, (chairsPerTable.get(o.isChairFor) ?? 0) + 1)
+  }
+  const demand = new Map<string, number>()
+  for (const table of objects) {
+    if (table.isChairFor || !table.tableSetting) continue
+    const chairs = chairsPerTable.get(table.id) ?? 0
+    for (const line of table.tableSetting.items) {
+      if (!scopeById.has(line.catalogItemId) || line.quantity < 1) continue
+      const n = lineTotal(line, scopeById.get(line.catalogItemId) ?? null, chairs)
+      if (n > 0) demand.set(line.catalogItemId, (demand.get(line.catalogItemId) ?? 0) + n)
+    }
+  }
+  return demand
 }
 
 /** Copy items so a table never shares an array with a template or another table. */

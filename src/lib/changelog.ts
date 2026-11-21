@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-table-settings-summary',
+    date: '2026-11-21',
+    title: 'Plates, glasses and candles in the summary',
+    roles: ['planner', 'admin'],
+    items: [
+      'The project summary now counts what your table settings need — plates, cutlery, glasses, candles, flowers — alongside tables and chairs, and shows what is short against the venue and rental companies’ stock.',
+      'Items that come from table settings are marked “on tables”.',
+    ],
+  },
+  {
     id: '2026-11-21-table-settings-on-plan',
     date: '2026-11-21',
     title: 'Table settings now show on the floor plan',
