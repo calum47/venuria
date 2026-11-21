@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
-import { CHANGELOG, unseenEntries, type ChangelogEntry } from '@/lib/changelog'
+import { CHANGELOG, unseenEntries, whatsNewAllowedOn, type ChangelogEntry } from '@/lib/changelog'
 
 const SEEN_KEY = 'last_seen_changelog_id'
 
@@ -22,12 +23,13 @@ const SEEN_KEY = 'last_seen_changelog_id'
 export default function WhatsNewModal() {
   const [entries, setEntries] = useState<ChangelogEntry[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const allowed = whatsNewAllowedOn(usePathname())
 
   useEffect(() => {
     let cancelled = false
 
     async function check() {
-      if (CHANGELOG.length === 0) return
+      if (!allowed || CHANGELOG.length === 0) return
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
@@ -41,9 +43,9 @@ export default function WhatsNewModal() {
 
     check().catch((err) => console.error('WhatsNewModal check failed:', err))
     return () => { cancelled = true }
-  }, [])
+  }, [allowed])
 
-  if (entries.length === 0) return null
+  if (!allowed || entries.length === 0) return null
 
   const dismiss = async () => {
     setIsSaving(true)
