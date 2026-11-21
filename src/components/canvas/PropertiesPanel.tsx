@@ -191,192 +191,162 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  return (
-    <div className="w-56 h-full bg-white border-l border-gray-200 flex flex-col">
+  const isRealTable   = !object.isChairFor && catalogItem?.category === 'tables'
+  const settingCount  = object.tableSetting?.items.length ?? 0
+  const showSeating   = isTable && (currentChairCount > 0 || canAddChairs)
 
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">Selected</p>
-        <h3 className="font-semibold text-gray-800 mt-0.5">
-          {catalogItem?.name ?? object.catalogItemId}
-        </h3>
+  const numberInput = 'mt-0.5 w-full min-w-0 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400'
+
+  return (
+    <div className="w-72 h-full bg-white border-l border-gray-200 flex flex-col">
+
+      {/* Header: what is selected, its size, and (for tables) its label */}
+      <div className="px-4 pt-4 pb-3 border-b border-gray-200 space-y-2">
+        <div>
+          <p className="text-[11px] text-gray-400 uppercase tracking-wide">Selected</p>
+          <h3 className="font-semibold text-gray-800 mt-0.5 leading-snug">
+            {catalogItem?.name ?? object.catalogItemId}
+          </h3>
+          {catalogItem && (
+            <p className="text-xs text-gray-400 mt-0.5">{catalogItem.width_cm} × {catalogItem.depth_cm} cm</p>
+          )}
+        </div>
+        {isTable && (
+          <input
+            type="text"
+            aria-label="Table label"
+            placeholder="Label — e.g. Table 1, Bride & Groom…"
+            value={object.tableLabel ?? ''}
+            onChange={(e) => updateObject(object.id, { tableLabel: e.target.value || undefined })}
+            className="w-full min-w-0 text-sm border border-gray-200 rounded-lg px-2 py-1.5
+                       focus:outline-none focus:border-blue-400"
+          />
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
-        {/* Position */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Position</p>
-          <div className="space-y-2">
-            {(['x', 'y'] as const).map((axis) => (
-              <div key={axis} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-4">{axis.toUpperCase()}</span>
-                <input
-                  type="number"
-                  value={Math.round(object.positionCm[axis])}
-                  onChange={(e) => handlePositionChange(axis, e)}
-                  className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1
-                             focus:outline-none focus:border-blue-400"
-                />
-                <span className="text-xs text-gray-400">cm</span>
-              </div>
-            ))}
+        {/* Placement */}
+        <Section title="Placement">
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block min-w-0">
+              <span className="text-[11px] text-gray-400">X (cm)</span>
+              <input type="number" value={Math.round(object.positionCm.x)} onChange={(e) => handlePositionChange('x', e)} className={numberInput} />
+            </label>
+            <label className="block min-w-0">
+              <span className="text-[11px] text-gray-400">Y (cm)</span>
+              <input type="number" value={Math.round(object.positionCm.y)} onChange={(e) => handlePositionChange('y', e)} className={numberInput} />
+            </label>
+            <label className="block min-w-0">
+              <span className="text-[11px] text-gray-400">Rotation °</span>
+              <input type="number" value={Math.round(object.rotationDeg)} onChange={handleRotationChange} className={numberInput} />
+            </label>
           </div>
-        </div>
-
-        {/* Size (read-only) */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Size</p>
-          <div className="space-y-2">
-            {[
-              { label: 'W', value: catalogItem?.width_cm },
-              { label: 'D', value: catalogItem?.depth_cm },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-4">{label}</span>
-                <div className="flex-1 text-sm bg-gray-50 border border-gray-200
-                                rounded-lg px-2 py-1 text-gray-600">
-                  {value ?? '—'}
-                </div>
-                <span className="text-xs text-gray-400">cm</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Rotation */}
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Rotation</p>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              value={Math.round(object.rotationDeg)}
-              onChange={handleRotationChange}
-              className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1
-                         focus:outline-none focus:border-blue-400"
-            />
-            <span className="text-xs text-gray-400">°</span>
-          </div>
-          <div className="grid grid-cols-4 gap-1 mt-2">
+          <div className="grid grid-cols-4 gap-1">
             {[0, 90, 180, 270].map((deg) => (
               <button
                 key={deg}
                 onClick={() => rotateObjectWithChairs(object.id, deg)}
-                className="text-xs py-1 rounded-lg border border-gray-200
-                           text-gray-600 hover:bg-blue-50 hover:border-blue-400
-                           hover:text-blue-700 transition-colors"
+                className="text-xs py-1 rounded-lg border border-gray-200 text-gray-600
+                           hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-colors"
               >
                 {deg}°
               </button>
             ))}
           </div>
-        </div>
+        </Section>
 
-        {/* Table label */}
-        {isTable && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Label</p>
-            <input
-              type="text"
-              placeholder="e.g. Table 1, Bride & Groom…"
-              value={object.tableLabel ?? ''}
-              onChange={(e) => updateObject(object.id, { tableLabel: e.target.value || undefined })}
-              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1
-                         focus:outline-none focus:border-blue-400"
-            />
-          </div>
-        )}
+        {/* Seating */}
+        {showSeating && (
+          <Section title="Seating" hint={`${currentChairCount} chair${currentChairCount === 1 ? '' : 's'}`}>
+            {isRectTable && currentChairCount > 0 && (
+              <div>
+                <p className="text-[11px] text-gray-400 mb-1">Chair sides</p>
+                <div className="grid grid-cols-4 gap-1">
+                  {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
+                    <button
+                      key={side}
+                      onClick={() => handleSideToggle(side)}
+                      className={`text-xs py-1.5 rounded-lg border capitalize transition-colors ${
+                        currentSides[side]
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {side}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-        {/* Table note */}
-        {isTable && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Note</p>
-            <textarea
-              placeholder="e.g. 2 vegetarian guests…"
-              value={object.tableNote ?? ''}
-              onChange={(e) => updateObject(object.id, { tableNote: e.target.value || undefined })}
-              rows={2}
-              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1
-                         focus:outline-none focus:border-blue-400 resize-none"
-            />
-          </div>
+            {canAddChairs && (
+              <div>
+                <p className="text-[11px] text-gray-400 mb-1">
+                  Add chairs <span className="text-gray-300">({currentChairCount}/{tableConfig?.maxChairs})</span>
+                </p>
+                <div className="grid grid-cols-3 gap-1">
+                  {[1, 2, 4]
+                    .filter((n) => currentChairCount + n <= (tableConfig?.maxChairs ?? 0))
+                    .map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => handleAddChairs(n)}
+                        className="text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600
+                                   hover:bg-green-50 hover:border-green-400 hover:text-green-700 transition-colors"
+                      >
+                        +{n}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {currentChairCount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600">Mirror drag</span>
+                <button
+                  onClick={() => updateObject(object.id, { mirrorEnabled: !(object.mirrorEnabled ?? true) })}
+                  aria-label="Toggle mirror drag"
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    (object.mirrorEnabled ?? true) ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                    (object.mirrorEnabled ?? true) ? 'translate-x-5' : 'translate-x-1'
+                  }`} />
+                </button>
+              </div>
+            )}
+          </Section>
         )}
 
         {/* Table setting — real tables only (not chairs, not placed decorations) */}
-        {!object.isChairFor && catalogItem?.category === 'tables' && (
-          <TableSettingSection
-            object={object}
-            catalogItems={catalogItems}
-            settingItems={settingItems}
-            templates={templates}
-            onManageTemplates={onManageTemplates}
-          />
+        {isRealTable && (
+          <Section title="Table setting" hint={settingCount > 0 ? `${settingCount} item${settingCount === 1 ? '' : 's'}` : 'none'}>
+            <TableSettingSection
+              object={object}
+              catalogItems={catalogItems}
+              settingItems={settingItems}
+              templates={templates}
+              onManageTemplates={onManageTemplates}
+            />
+          </Section>
         )}
 
-        {/* Per-side chair arrangement (rectangular tables only) */}
-        {isRectTable && currentChairCount > 0 && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">Chair Sides</p>
-            <div className="grid grid-cols-2 gap-1">
-              {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
-                <button
-                  key={side}
-                  onClick={() => handleSideToggle(side)}
-                  className={`text-xs py-1.5 rounded-lg border capitalize transition-colors ${
-                    currentSides[side]
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  {side}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Mirror drag toggle */}
-        {isTable && currentChairCount > 0 && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-gray-600">Mirror drag</span>
-            <button
-              onClick={() => updateObject(object.id, { mirrorEnabled: !(object.mirrorEnabled ?? true) })}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                (object.mirrorEnabled ?? true) ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-            >
-              <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                (object.mirrorEnabled ?? true) ? 'translate-x-5' : 'translate-x-1'
-              }`} />
-            </button>
-          </div>
-        )}
-
-        {/* Add more chairs */}
-        {canAddChairs && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-2">
-              Add Chairs
-              <span className="text-gray-300 ml-1">
-                ({currentChairCount}/{tableConfig?.maxChairs})
-              </span>
-            </p>
-            <div className="grid grid-cols-3 gap-1">
-              {[1, 2, 4]
-                .filter((n) => currentChairCount + n <= (tableConfig?.maxChairs ?? 0))
-                .map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => handleAddChairs(n)}
-                    className="text-xs py-1.5 rounded-lg border border-gray-200
-                               text-gray-600 hover:bg-green-50 hover:border-green-400
-                               hover:text-green-700 transition-colors"
-                  >
-                    +{n}
-                  </button>
-                ))}
-            </div>
-          </div>
+        {/* Note */}
+        {isTable && (
+          <Section title="Note" hint={object.tableNote ? 'added' : undefined} defaultOpen={!!object.tableNote}>
+            <textarea
+              aria-label="Table note"
+              placeholder="e.g. 2 vegetarian guests…"
+              value={object.tableNote ?? ''}
+              onChange={(e) => updateObject(object.id, { tableNote: e.target.value || undefined })}
+              rows={3}
+              className="w-full min-w-0 text-sm border border-gray-200 rounded-lg px-2 py-1.5
+                         focus:outline-none focus:border-blue-400 resize-none"
+            />
+          </Section>
         )}
       </div>
 
@@ -391,5 +361,30 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
         </button>
       </div>
     </div>
+  )
+}
+
+// ─── Collapsible section ──────────────────────────────────────────────────────
+
+function Section({
+  title,
+  hint,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  hint?: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <details open={defaultOpen} className="group border-b border-gray-100">
+      <summary className="flex items-center gap-2 px-4 py-2.5 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden hover:bg-gray-50">
+        <span className="text-[9px] text-gray-400 transition-transform group-open:rotate-90">▶</span>
+        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{title}</span>
+        {hint && <span className="ml-auto text-[11px] text-gray-400">{hint}</span>}
+      </summary>
+      <div className="px-4 pb-4 space-y-3">{children}</div>
+    </details>
   )
 }

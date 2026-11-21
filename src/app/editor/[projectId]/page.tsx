@@ -506,6 +506,7 @@ export default function EditorPage() {
             <FloorPlanCanvas
               exportRef={exportPngRef}
               catalogItems={catalogItems}
+              settingItems={settingItems}
               currentRoom={currentRoom}
               onZoomChange={setZoom}
               onTableDropped={handleTableDropped}

@@ -5,6 +5,7 @@ import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer, Image as Ko
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { cmToPixels, pixelsToCm, snapToGrid, generateId } from '@/lib/utils/coordinates'
+import TableSettingGlyphs from './TableSettingGlyphs'
 import { LayoutObject, ObstacleShape, Point2D, ProjectZone } from '@/types'
 import ZoneOverlay, { type ZoneDraft } from '@/components/zones/ZoneOverlay'
 import type { ZoneTool } from '@/lib/zones'
@@ -22,6 +23,8 @@ type Props = {
   /** The editor fills this with a function that downloads the current room as a PNG. */
   exportRef?: React.MutableRefObject<(() => Promise<void>) | null>
   catalogItems: DbCatalogItem[]
+  /** Items a table setting can use (plates, glasses, candles…) — drawn on tables that have a setting. */
+  settingItems?: DbCatalogItem[]
   /** Active room — supplies real bounding box dimensions from the DB. */
   currentRoom: DbRoom | null
   onZoomChange?: (zoom: number) => void
@@ -47,6 +50,7 @@ type Props = {
 export default function FloorPlanCanvas({
   exportRef,
   catalogItems,
+  settingItems = [],
   currentRoom,
   onZoomChange,
   onTableDropped,
@@ -510,6 +514,8 @@ export default function FloorPlanCanvas({
     return lines
   }
 
+  const settingItemMap = new Map(settingItems.map((i) => [i.id, i]))
+
   const renderObject = (obj: LayoutObject) => {
     const x = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
     const y = cmToPixels(obj.positionCm.y, BASE_SCALE) + roomOffsetY
@@ -869,6 +875,18 @@ export default function FloorPlanCanvas({
           <Rect width={widthPx} height={depthPx} offsetX={widthPx / 2} offsetY={depthPx / 2} fill={fillColor} stroke={strokeColor} strokeWidth={1} cornerRadius={2} />
         ) : (
           <Rect width={widthPx} height={depthPx} offsetX={widthPx / 2} offsetY={depthPx / 2} fill={fillColor} stroke={strokeColor} strokeWidth={1} />
+        )}
+        {/* Table setting: place settings at the chairs and decor down the middle. Under the label. */}
+        {!isChair && category === 'tables' && obj.tableSetting && catalogItem && (
+          <TableSettingGlyphs
+            table={obj}
+            tableItem={catalogItem}
+            isRound={isRound}
+            chairs={layoutObjects.filter((o) => o.isChairFor === obj.id)}
+            settingItems={settingItemMap}
+            scale={BASE_SCALE}
+            detailed={zoom >= 0.5 || exporting}
+          />
         )}
         <Text
           text={label}
