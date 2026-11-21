@@ -1032,9 +1032,9 @@ export default function FloorPlanCanvas({
 
       {/* Zoom controls */}
       <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-white border border-gray-200 rounded-lg shadow-sm px-2 py-1">
-        <button onClick={handleZoomOut}   className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">−</button>
-        <button onClick={handleZoomReset} className="px-2 text-xs text-gray-500 hover:bg-gray-100 rounded min-w-[48px] text-center">{Math.round(zoom * 100)}%</button>
-        <button onClick={handleZoomIn}    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded font-medium text-lg">+</button>
+        <button onClick={handleZoomOut}   className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg font-medium text-lg">−</button>
+        <button onClick={handleZoomReset} className="px-2 text-xs text-gray-500 hover:bg-gray-100 rounded-lg min-w-[48px] text-center">{Math.round(zoom * 100)}%</button>
+        <button onClick={handleZoomIn}    className="w-7 h-7 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg font-medium text-lg">+</button>
       </div>
 
       {/* Zone mode banner */}

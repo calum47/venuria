@@ -44,8 +44,8 @@ export function PaymentFields({
               {showLabels && (
                 <div className="mb-0.5 flex items-center gap-1 text-[11px] text-gray-500">
                   {label}
-                  {fromPdf && <span className="rounded bg-blue-100 px-1 text-blue-700">from PDF</span>}
-                  {missing && <span className="rounded bg-amber-100 px-1 text-amber-700">not found — enter it</span>}
+                  {fromPdf && <span className="rounded-lg bg-blue-100 px-1 text-blue-700">from PDF</span>}
+                  {missing && <span className="rounded-lg bg-amber-100 px-1 text-amber-700">not found — enter it</span>}
                 </div>
               )}
               <input

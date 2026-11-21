@@ -17,7 +17,7 @@ export default async function SettingsPage() {
   return (
     <main className="p-8">
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
+        <h1 className="text-3xl font-semibold text-gray-900">Settings</h1>
         <SettingsForms
           plannerName={ctx.planner.name}
           email={ctx.email}

@@ -71,7 +71,7 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
     onChanged()
   }
 
-  const input = 'rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
+  const input = 'rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
 
   return (
     <div className="space-y-4">

@@ -55,7 +55,7 @@ export default async function TeamPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         <div className="flex items-baseline justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">{ctx.team.name}</h1>
+            <h1 className="text-3xl font-semibold text-gray-900">{ctx.team.name}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {roster.length} member{roster.length === 1 ? '' : 's'} · currency {ctx.team.currency}
             </p>

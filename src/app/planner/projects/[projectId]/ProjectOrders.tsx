@@ -7,7 +7,7 @@ import { addStockOrder, getProjectStockOrders } from '@/lib/supabase/stockQuerie
 
 type Item = { id: string; name: string }
 
-const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
 
 /**
  * My Stock orders tagged to this project. Shows the list and lets any planner on the team add an
@@ -65,14 +65,14 @@ export default function ProjectOrders({
           {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
         <input type="number" min={1} step={1} value={qty} onChange={(e) => setQty(e.target.value)} className={input + ' w-20'} aria-label="Quantity" />
-        <button type="submit" disabled={busy || !itemId} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50">
+        <button type="submit" disabled={busy || !itemId} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50">
           {busy ? 'Adding…' : 'Add order'}
         </button>
       </form>
-      {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
       {orders.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">No stock orders tagged to this project yet.</p>
+        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">No stock orders tagged to this project yet.</p>
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           {orders.map((o) => (

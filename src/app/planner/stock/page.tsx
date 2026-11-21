@@ -35,7 +35,7 @@ export default async function StockPage() {
     <main className="p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">My Stock</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">My Stock</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {ctx.team.name}&apos;s inventory — shared with everyone on the team, currency {ctx.team.currency}
           </p>

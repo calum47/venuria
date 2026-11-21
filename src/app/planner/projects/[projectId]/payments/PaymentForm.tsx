@@ -138,7 +138,7 @@ export default function PaymentForm({
           </div>
 
           {staged && !reading && (
-            <div className="space-y-1.5 rounded border border-gray-200 bg-white p-2 text-xs text-gray-600">
+            <div className="space-y-1.5 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600">
               {staged.readError && (
                 <p className="text-amber-700">Could not read the PDF: {staged.readError} You can still fill the form by hand; the PDF will be attached when you save.</p>
               )}

@@ -60,12 +60,12 @@ function InviteBox({ origin }: { origin: string }) {
       <form action={submit} className="flex items-end gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">They join as</label>
-          <select name="role" defaultValue="member" className="rounded border bg-white px-2 py-1 text-sm text-gray-900">
+          <select name="role" defaultValue="member" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900">
             <option value="member">Member — sees public projects and their own</option>
             <option value="lead">Lead — sees and assigns every project</option>
           </select>
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Creating…' : 'Create invite link'}
         </button>
       </form>
@@ -90,7 +90,7 @@ function PendingInvites({ invites, origin }: { invites: Invite[]; origin: string
         {invites.map((i) => (
           <li key={i.id} className="py-2 flex items-center gap-3 text-xs">
             <span className="text-gray-600 shrink-0">{ROLE_LABEL[i.role]}</span>
-            <input readOnly value={`${origin}/join/${i.token}`} onFocus={(e) => e.target.select()} className="flex-1 min-w-0 bg-gray-50 rounded px-2 py-1 font-mono text-gray-500 outline-none" />
+            <input readOnly value={`${origin}/join/${i.token}`} onFocus={(e) => e.target.select()} className="flex-1 min-w-0 bg-gray-50 rounded-lg px-2 py-1 font-mono text-gray-500 outline-none" />
             <span className="text-gray-400 shrink-0">expires {new Date(i.expires_at).toLocaleDateString()}</span>
             <form action={revoke}>
               <input type="hidden" name="inviteId" value={i.id} />
@@ -137,7 +137,7 @@ function MemberControls({ meId, members }: { meId: string; members: Member[] }) 
                   defaultValue={m.role}
                   onChange={(e) => e.currentTarget.form?.requestSubmit()}
                   disabled={isPending}
-                  className="rounded border bg-white px-2 py-1 text-xs text-gray-900"
+                  className="rounded-lg border bg-white px-2 py-1 text-xs text-gray-900"
                 >
                   <option value="member">Member</option>
                   <option value="lead">Lead</option>

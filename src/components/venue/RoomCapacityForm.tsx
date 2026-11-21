@@ -40,7 +40,7 @@ export default function RoomCapacityForm({ room, onSaved }: Props) {
     }
   }
 
-  const field = 'w-28 rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
+  const field = 'w-28 rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
   return (
     <div className="rounded-lg border border-gray-100 bg-white p-4 space-y-2">
       <h3 className="text-sm font-medium text-gray-900">Capacity of {room.name}</h3>

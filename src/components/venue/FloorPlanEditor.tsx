@@ -309,7 +309,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
         />
         <label
           htmlFor="floor-plan-upload"
-          className="cursor-pointer rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700"
+          className="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700"
         >
           {uploading ? 'Uploading…' : room.floor_plan_image_url ? 'Replace floor plan PNG' : 'Upload floor plan PNG'}
         </label>
@@ -363,19 +363,19 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       )}
 
       {tool === 'calibrate' && (
-        <div className="flex items-center gap-2 rounded bg-blue-50 p-2 text-sm">
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-2 text-sm">
           <span className="text-gray-700">Click two points on a wall of known length, then:</span>
           <input
             type="number"
             placeholder="length in cm"
             value={calibrationInputCm}
             onChange={(e) => setCalibrationInputCm(e.target.value)}
-            className="w-28 rounded border bg-white px-2 py-1 text-gray-900"
+            className="w-28 rounded-lg border bg-white px-2 py-1 text-gray-900"
           />
           <button
             onClick={confirmCalibration}
             disabled={calibrationLine.length !== 2 || saving}
-            className="rounded bg-blue-600 px-2 py-1 text-white disabled:opacity-40"
+            className="rounded-lg bg-blue-600 px-2 py-1 text-white disabled:opacity-40"
           >
             Set scale
           </button>
@@ -393,7 +393,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
           <div className="flex items-center gap-2">
             <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 100) / 100))}
-              className="rounded bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
+              className="rounded-lg bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
               aria-label="Zoom out"
             >
               −
@@ -401,19 +401,19 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             <span className="w-12 text-center text-sm text-gray-500">{Math.round(zoom * 100)}%</span>
             <button
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 100) / 100))}
-              className="rounded bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
+              className="rounded-lg bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
               aria-label="Zoom in"
             >
               +
             </button>
             <button
               onClick={() => setZoom(1)}
-              className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
+              className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
             >
               Reset
             </button>
           </div>
-          <div className="overflow-auto rounded border" style={{ maxHeight: 600 }}>
+          <div className="overflow-auto rounded-lg border" style={{ maxHeight: 600 }}>
             <Stage
               width={(imageWidthPx + STAGE_PADDING * 2) * zoom}
               height={(imageHeightPx + STAGE_PADDING * 2) * zoom}
@@ -573,14 +573,14 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
           <button
             onClick={saveBoundary}
             disabled={saving || boundaryDraft.length < 3}
-            className="rounded bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
             Save wall boundary
           </button>
           <button
             onClick={saveObstacles}
             disabled={saving}
-            className="rounded bg-amber-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
             Save obstacles ({obstaclesDraft.length})
           </button>
@@ -606,7 +606,7 @@ function ToolButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`rounded px-3 py-1.5 text-sm disabled:opacity-40 ${
+      className={`rounded-lg px-3 py-1.5 text-sm disabled:opacity-40 ${
         active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
       }`}
     >

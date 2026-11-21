@@ -36,7 +36,7 @@ export default async function VenuePage() {
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">Venue Manager{venueName ? ` — ${venueName}` : ''}</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">Venue Manager{venueName ? ` — ${venueName}` : ''}</h1>
           <SignOutButton />
         </div>
         <p className="text-sm text-gray-500 mb-6">

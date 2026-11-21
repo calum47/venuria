@@ -103,7 +103,7 @@ export default async function GuestsPage({
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
           <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {title}</Link>
-          <h1 className="mt-2 text-xl font-semibold text-gray-900">Guest list details</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-gray-900">Guest list details</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {venueName}
             {project.event_date ? ` · ${formatDate(project.event_date)}` : ''} · visible to your team only
@@ -111,7 +111,7 @@ export default async function GuestsPage({
         </div>
 
         {loadError && (
-          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             Could not load everything: {loadError.message}
           </p>
         )}

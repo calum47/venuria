@@ -8,9 +8,9 @@ import { regenerateRsvpToken, saveRsvpSettings } from '@/lib/supabase/rsvpQuerie
 import { madridToday, rsvpPath, rsvpSummary } from '@/lib/rsvp'
 import RsvpContentEditor from './RsvpContentEditor'
 
-const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
@@ -108,7 +108,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
       {open && (
         <div className="space-y-4 border-t border-gray-100 px-4 py-4">
-          {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+          {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
           <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
             {([
@@ -118,7 +118,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
               ['Pending', sum.pending],
               ['Dietary (coming)', sum.dietaryAmongComing],
             ] as const).map(([label, n]) => (
-              <div key={label} className="rounded border border-gray-100 bg-gray-50 px-2 py-2">
+              <div key={label} className="rounded-lg border border-gray-100 bg-gray-50 px-2 py-2">
                 <p className="text-lg font-semibold text-gray-900">{n}</p>
                 <p className="text-[11px] uppercase tracking-wide text-gray-500">{label}</p>
               </div>
@@ -187,7 +187,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
               {!confirmNew ? (
                 <button type="button" onClick={() => setConfirmNew(true)} className="text-xs text-gray-500 underline hover:text-gray-900">Create a new link…</button>
               ) : (
-                <div className="flex flex-wrap items-center gap-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
                   <span>The current link stops working at once. Answers already given are kept.</span>
                   <button type="button" onClick={newLink} disabled={busy !== null} className={btn}>{busy === 'token' ? 'Creating…' : 'Create new link'}</button>
                   <button type="button" onClick={() => setConfirmNew(false)} className={btn}>Cancel</button>

@@ -88,7 +88,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
                 >
                   <div className="flex items-center gap-2.5">
                     {/* Category colour chip */}
-                    <div className={`w-8 h-8 rounded flex items-center justify-center text-sm flex-shrink-0 ${
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm flex-shrink-0 ${
                       category === 'tables'      ? 'bg-blue-50'   :
                       category === 'chairs'      ? 'bg-green-50'  :
                       category === 'decorations' ? 'bg-amber-50'  : 'bg-gray-100'

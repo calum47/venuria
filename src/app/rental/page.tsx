@@ -30,7 +30,7 @@ export default async function RentalPage() {
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-xl font-semibold text-gray-900">
+          <h1 className="text-3xl font-semibold text-gray-900">
             Rental Manager{rentalCompanyName ? ` — ${rentalCompanyName}` : ''}
           </h1>
           <SignOutButton />

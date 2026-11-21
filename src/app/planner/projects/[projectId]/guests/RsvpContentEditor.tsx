@@ -21,9 +21,9 @@ import { prepareGuestPhoto } from '@/lib/guestPhoto'
 import { MAX_AREA_PHOTOS, MAX_HOTELS, RSVP_COVER_EDGE, RSVP_PHOTO_EDGE, normalizeWebUrl } from '@/lib/rsvpContent'
 import { rsvpPath } from '@/lib/rsvp'
 
-const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 const section = 'space-y-2 border-t border-gray-100 pt-4'
 
 function errMsg(e: unknown): string {
@@ -214,7 +214,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         Guests see these sections on the RSVP page, in this order: cover photo with the names, details, your RSVP questions, the area, hotels. A section with nothing in it is not shown. Write each text once: it is shown as typed to guests in every language.
       </p>
 
-      {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
       <p className="text-xs text-gray-500">The names at the top of the page are the project&apos;s couple&apos;s names. Change them on the project page.</p>
 
@@ -222,7 +222,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       <div className="space-y-2">
         <p className="text-sm font-medium text-gray-900">Cover photo</p>
         <div className="flex flex-wrap items-center gap-3">
-          {cfg?.cover_path && <Thumb url={urls[cfg.cover_path]} alt="Cover photo" className="h-20 w-36 rounded" />}
+          {cfg?.cover_path && <Thumb url={urls[cfg.cover_path]} alt="Cover photo" className="h-20 w-36 rounded-lg" />}
           <FilePick label={cfg?.cover_path ? 'Replace photo' : 'Add a photo'} disabled={busy !== null} onFile={pickCover} />
           {cfg?.cover_path && <button type="button" className={btn} disabled={busy !== null} onClick={dropCover}>Remove</button>}
           {busy === 'cover' && <span className="text-xs text-gray-500">Working…</span>}
@@ -274,8 +274,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           {photos.length > 0 && (
             <ul className="grid gap-3 sm:grid-cols-2">
               {photos.map((p) => (
-                <li key={p.id} className="space-y-1 rounded border border-gray-200 p-2">
-                  <Thumb url={urls[p.path]} alt={p.caption ?? 'Area photo'} className="aspect-[4/3] w-full rounded" />
+                <li key={p.id} className="space-y-1 rounded-lg border border-gray-200 p-2">
+                  <Thumb url={urls[p.path]} alt={p.caption ?? 'Area photo'} className="aspect-[4/3] w-full rounded-lg" />
                   <input
                     defaultValue={p.caption ?? ''}
                     maxLength={120}
@@ -304,8 +304,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           editingHotel === h.id ? (
             <HotelForm key={h.id} initial={h} busy={busy === 'hotel'} onSave={(d) => saveHotel(h.id, d)} onCancel={() => setEditingHotel(null)} />
           ) : (
-            <div key={h.id} className="flex flex-wrap gap-3 rounded border border-gray-200 p-2">
-              {h.image_path && <Thumb url={urls[h.image_path]} alt={h.name} className="h-20 w-28 rounded" />}
+            <div key={h.id} className="flex flex-wrap gap-3 rounded-lg border border-gray-200 p-2">
+              {h.image_path && <Thumb url={urls[h.image_path]} alt={h.name} className="h-20 w-28 rounded-lg" />}
               <div className="min-w-0 flex-1 space-y-0.5">
                 <p className="text-sm font-medium text-gray-900">{h.name}</p>
                 {h.address && <p className="text-xs text-gray-500">{h.address}</p>}
@@ -351,7 +351,7 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
   }
 
   return (
-    <form onSubmit={submit} className="space-y-2 rounded border border-gray-300 bg-gray-50 p-3">
+    <form onSubmit={submit} className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 p-3">
       {err && <p className="text-xs text-red-700" role="alert">{err}</p>}
       <div className="grid gap-2 sm:grid-cols-2">
         <label className="block text-xs text-gray-600">Name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>

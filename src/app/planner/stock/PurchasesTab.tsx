@@ -56,7 +56,7 @@ export default function PurchasesTab({ items, purchases, projects, canManage, on
     onChanged()
   }
 
-  const input = 'rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
+  const input = 'rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
 
   return (
     <div className="space-y-4">

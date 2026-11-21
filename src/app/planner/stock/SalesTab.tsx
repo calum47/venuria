@@ -89,7 +89,7 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
     onChanged()
   }
 
-  const input = 'rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
+  const input = 'rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
 
   return (
     <div className="space-y-4">
@@ -146,7 +146,7 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
                       <>
                         <input type="number" min="0" max={s.qty} value={returnedQty} onChange={(e) => setReturnedQty(e.target.value)} className={`${input} w-20 py-0.5`} />
                         <span className="text-gray-400">of {s.qty} came back</span>
-                        <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded bg-brand-600 text-white px-2 py-0.5">Save</button>
+                        <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded-lg bg-brand-600 text-white px-2 py-0.5">Save</button>
                         <button onClick={() => setConfirmingId(null)} className="text-gray-400">Cancel</button>
                       </>
                     )}

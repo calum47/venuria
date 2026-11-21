@@ -289,7 +289,7 @@ function SummaryShell({
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-semibold text-gray-900">Project Summary — {title}</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">Project Summary — {title}</h1>
           <Link href={`/editor/${projectId}`} className="text-sm text-blue-600 hover:underline">
             ← Back to editor
           </Link>

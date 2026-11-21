@@ -53,7 +53,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
           <select
             value={selectedRoomId ?? ''}
             onChange={(e) => setSelectedRoomId(e.target.value)}
-            className="rounded border px-2 py-1 text-sm text-gray-900"
+            className="rounded-lg border px-2 py-1 text-sm text-gray-900"
           >
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
@@ -63,7 +63,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
           </select>
           <button
             onClick={() => setShowNewRoomForm((v) => !v)}
-            className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+            className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
           >
             + New room
           </button>
@@ -75,14 +75,14 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
       )}
 
       {showNewRoomForm && (
-        <form onSubmit={handleCreateRoom} className="flex items-end gap-2 rounded border bg-gray-50 p-3">
+        <form onSubmit={handleCreateRoom} className="flex items-end gap-2 rounded-lg border bg-gray-50 p-3">
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-500">Room name</label>
             <input
               value={newRoomName}
               onChange={(e) => setNewRoomName(e.target.value)}
               placeholder="e.g. Main Hall"
-              className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+              className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900"
               autoFocus
             />
           </div>
@@ -91,7 +91,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
             <select
               value={newRoomType}
               onChange={(e) => setNewRoomType(e.target.value as 'indoor' | 'outdoor')}
-              className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+              className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900"
             >
               <option value="indoor">Indoor</option>
               <option value="outdoor">Outdoor</option>
@@ -100,7 +100,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
           <button
             type="submit"
             disabled={creating || !newRoomName.trim()}
-            className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
             {creating ? 'Creating…' : 'Create room'}
           </button>
@@ -108,7 +108,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
             <button
               type="button"
               onClick={() => setShowNewRoomForm(false)}
-              className="rounded bg-gray-100 px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-200"
+              className="rounded-lg bg-gray-100 px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-200"
             >
               Cancel
             </button>

@@ -41,9 +41,9 @@ const PX_PER_MIN = 1 // 60 px per hour
 const MIN_BLOCK_PX = 22
 const NO_VENDOR_COLOUR = '#e5e7eb'
 
-const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
@@ -168,7 +168,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
 
   return (
     <div className="space-y-4">
-      {error && <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       {/* Day switcher */}
       <div className="flex flex-wrap items-center gap-2">
@@ -245,7 +245,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                       onPointerMove={onPointerMove}
                       onPointerUp={() => onPointerUp(b)}
                       onPointerCancel={onPointerCancel}
-                      className={`absolute touch-none select-none overflow-hidden rounded border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-brand-600' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-brand-600' : ''}`}
+                      className={`absolute touch-none select-none overflow-hidden rounded-lg border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-brand-600' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-brand-600' : ''}`}
                       style={{
                         top: (t.start - range.from) * PX_PER_MIN,
                         height,
@@ -533,7 +533,7 @@ function VendorManager(p: {
         <p className="text-xs text-gray-500">Shared with your whole team. A vendor&rsquo;s colour tints its blocks on the timetable; contact details and Instagram appear in the run-down.</p>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
-        <ul className="divide-y divide-gray-100 rounded border border-gray-200">
+        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
           {p.vendors.map((v) => (
             <li key={v.id} className="p-2">
               {editingId === v.id ? (
@@ -635,7 +635,7 @@ function VendorForm(p: {
     <div className="space-y-2 text-sm">
       <div className="flex gap-2">
         <input value={f.name} onChange={set('name')} maxLength={80} placeholder="Vendor name" aria-label="Vendor name" className={input + ' min-w-0 flex-1'} />
-        <input type="color" value={f.colour} onChange={set('colour')} aria-label="Vendor colour" className="h-8 w-10 cursor-pointer rounded border border-gray-300 bg-white p-0.5" />
+        <input type="color" value={f.colour} onChange={set('colour')} aria-label="Vendor colour" className="h-8 w-10 cursor-pointer rounded-lg border border-gray-300 bg-white p-0.5" />
       </div>
       <div className="grid grid-cols-2 gap-2">
         <input value={f.contact_name} onChange={set('contact_name')} maxLength={120} placeholder="Contact name" aria-label="Contact name" className={input} />

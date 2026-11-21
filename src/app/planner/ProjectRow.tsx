@@ -105,9 +105,9 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">
               <label className="text-[11px] text-gray-500">Couple&apos;s names</label>
-              <input name="coupleNames" defaultValue={project.coupleNames ?? ''} required maxLength={80} className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+              <input name="coupleNames" defaultValue={project.coupleNames ?? ''} required maxLength={80} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
-            <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
+            <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
               {isPending ? 'Saving…' : 'Save names'}
             </button>
           </form>
@@ -115,18 +115,18 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">
               <label className="text-[11px] text-gray-500">Event date</label>
-              <input type="date" name="eventDate" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+              <input type="date" name="eventDate" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-[11px] text-gray-500">Due by</label>
-              <input type="date" name="dueBy" value={dueBy} onChange={(e) => setDueBy(e.target.value)} className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+              <input type="date" name="dueBy" value={dueBy} onChange={(e) => setDueBy(e.target.value)} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
             {eventDate && (
               <button type="button" onClick={() => setDueBy(suggestDueBy(eventDate))} className="text-[11px] text-gray-500 hover:text-gray-800 pb-1.5" title="Two weeks before the event">
                 Reset due-by
               </button>
             )}
-            <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
+            <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
               {isPending ? 'Saving…' : 'Save dates'}
             </button>
           </form>
@@ -146,7 +146,7 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                     defaultValue={project.assigneeId ?? ''}
                     onChange={(e) => e.currentTarget.form?.requestSubmit()}
                     disabled={isPending}
-                    className="rounded border bg-white px-2 py-1 text-xs text-gray-900"
+                    className="rounded-lg border bg-white px-2 py-1 text-xs text-gray-900"
                   >
                     <option value="">Nobody</option>
                     {teammates.map((t) => (
@@ -160,7 +160,7 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                   <label className="text-[11px] text-gray-500">Visibility</label>
                   <input type="hidden" name="projectId" value={project.id} />
                   <input type="hidden" name="visibility" value={project.visibility === 'public' ? 'private' : 'public'} />
-                  <button type="submit" disabled={isPending} className="rounded border bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">
+                  <button type="submit" disabled={isPending} className="rounded-lg border bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">
                     {project.visibility === 'public' ? 'Public — make private' : 'Private — make public'}
                   </button>
                 </form>

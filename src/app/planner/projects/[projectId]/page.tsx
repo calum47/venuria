@@ -138,7 +138,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
         <section className="space-y-2" aria-labelledby="areas-h">
           <h2 id="areas-h" className="text-xl font-medium text-gray-900">Areas of the venue</h2>
           {areas.length === 0 ? (
-            <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
+            <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {areas.map((a) => (

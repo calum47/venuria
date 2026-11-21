@@ -16,7 +16,7 @@ type Props = {
   vendors: DbTeamVendor[]
 }
 
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
 const chipBase = 'rounded-full border px-3 py-1 text-xs'
 
 function errMsg(e: unknown): string {
@@ -61,7 +61,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center print:hidden">
         <p className="text-sm text-gray-600">Nothing to list yet. Add blocks to the timetable and they appear here.</p>
-        <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Go to the timetable</Link>
+        <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Go to the timetable</Link>
       </div>
     )
   }
@@ -69,10 +69,10 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
   return (
     <div className="space-y-5">
       <div className="space-y-3 print:hidden">
-        {error && <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div className="flex flex-wrap items-center gap-2">
           {sortedDays.length > 1 && (
-            <select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)} aria-label="Day" className="rounded border border-gray-300 bg-white px-2 py-1 text-sm">
+            <select value={dayFilter} onChange={(e) => setDayFilter(e.target.value)} aria-label="Day" className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm">
               <option value="all">All days</option>
               {sortedDays.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
             </select>
@@ -95,7 +95,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
             )
           })}
           <span className="flex-1" />
-          <button type="button" onClick={() => window.print()} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Print / save as PDF</button>
+          <button type="button" onClick={() => window.print()} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Print / save as PDF</button>
         </div>
         <p className="text-xs text-gray-500">
           {filtered ? 'Only the selected vendors’ entries are listed and printed. ' : ''}
@@ -190,7 +190,7 @@ function RundownEntry({
               autoFocus
               aria-label="Materials, one per line"
               placeholder="One item per line"
-              className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm"
             />
             <div className="flex gap-2">
               <button type="button" onClick={saveMaterials} className={btn}>Save materials</button>

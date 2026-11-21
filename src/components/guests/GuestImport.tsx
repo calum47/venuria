@@ -14,9 +14,9 @@ import {
   type ImportGuest,
 } from '@/lib/guestImport'
 
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
-const cell = 'w-full rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-900'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+const cell = 'w-full rounded-lg border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-900'
 
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
@@ -136,10 +136,10 @@ export default function GuestImport({
           <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={pick} />
         </div>
 
-        {error && <p className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{error}</p>}
+        {error && <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">{error}</p>}
 
         {rows.length > 0 && (
-          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded border border-gray-200">
+          <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-gray-200">
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-gray-50 text-gray-600">
                 <tr>
@@ -198,7 +198,7 @@ export default function GuestImport({
             disabled={reading}
             placeholder="Or paste names here, one per line…"
             aria-label="Paste guest names, one per line"
-            className="min-w-0 flex-1 rounded border border-gray-300 p-2 text-sm text-gray-900"
+            className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2 text-sm text-gray-900"
           />
           <button type="button" onClick={addPasted} disabled={!paste.trim() || reading} className={btn}>Add names</button>
         </div>

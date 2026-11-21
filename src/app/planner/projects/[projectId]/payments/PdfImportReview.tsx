@@ -113,7 +113,7 @@ export default function PdfImportReview({
 
       <ul className="space-y-3">
         {rows.map((r, i) => (
-          <li key={r.key} className={`rounded border bg-white p-3 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
+          <li key={r.key} className={`rounded-lg border bg-white p-3 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
             <label className="mb-2 flex items-center gap-2 text-xs font-medium text-gray-700">
               <input type="checkbox" checked={r.include} onChange={(e) => update(r.key, (x) => ({ ...x, include: e.target.checked }))} />
               Payment {i + 1}{r.include ? '' : ' (will not be saved)'}
@@ -124,7 +124,7 @@ export default function PdfImportReview({
       </ul>
       <button type="button" onClick={addRow} className="text-xs text-gray-500 hover:text-gray-900">+ Add another payment</button>
 
-      <div className="space-y-1.5 rounded border border-gray-200 bg-white p-2 text-xs text-gray-600">
+      <div className="space-y-1.5 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600">
         <div className="flex flex-wrap items-center gap-2">
           <span>Keep the PDF as</span>
           <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="PDF type" className={input}>

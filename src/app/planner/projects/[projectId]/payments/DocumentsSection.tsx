@@ -147,7 +147,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
             {d.label}
           </button>
           {hasHistory && (
-            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700" title="Latest version">
+            <span className="rounded-lg bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700" title="Latest version">
               v{d.version}
             </span>
           )}
@@ -187,7 +187,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
         </div>
 
         {removingId === g.id && hasHistory && (
-          <div className="mt-2 flex flex-wrap items-center gap-2 rounded border border-red-100 bg-red-50 px-3 py-2 text-xs text-gray-700">
+          <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-gray-700">
             <span>Remove what?</span>
             <button onClick={() => removeVersion(d)} disabled={isBusy} className={btn}>
               Only v{d.version} (v{g.previous[0].version} becomes current)
@@ -209,7 +209,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
         )}
 
         {updatingId === g.id && (
-          <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
+          <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <p className="mb-2 text-xs text-gray-600">
               New version of <strong>{d.label}</strong>. It becomes v{nextVersion(g)}; v{d.version} stays in the history.
             </p>
@@ -308,7 +308,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
               <summary className={btn + ' cursor-pointer list-none !py-1.5 !text-sm'}>
                 Vendors{vendors.size > 0 ? ` (${vendors.size})` : ''} ▾
               </summary>
-              <div className="absolute left-0 z-10 mt-1 max-h-60 min-w-48 overflow-auto rounded border border-gray-200 bg-white p-2 shadow">
+              <div className="absolute left-0 z-10 mt-1 max-h-60 min-w-48 overflow-auto rounded-lg border border-gray-200 bg-white p-2 shadow">
                 {vendorOpts.vendors.map((v) => (
                   <label key={v.key} className="flex items-center gap-2 py-0.5 text-sm text-gray-700">
                     <input type="checkbox" checked={vendors.has(v.key)} onChange={() => toggleVendor(v.key)} />
@@ -384,7 +384,7 @@ function EditForm({
   }
 
   return (
-    <form onSubmit={submit} className="mt-2 space-y-2 rounded border border-gray-200 bg-gray-50 p-3">
+    <form onSubmit={submit} className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div className="grid gap-2 sm:grid-cols-3">
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
         <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="Document type" className={input}>

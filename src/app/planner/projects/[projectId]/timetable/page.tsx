@@ -47,19 +47,19 @@ export default async function TimetablePage({ params }: { params: Promise<Params
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {title}</Link>
-            <h1 className="mt-2 text-xl font-semibold text-gray-900">Timetable</h1>
+            <h1 className="mt-2 text-3xl font-semibold text-gray-900">Timetable</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {venueName}
               {project.event_date ? ` · ${formatDate(project.event_date)}` : ''} · visible to your team only
             </p>
           </div>
-          <Link href={`/planner/projects/${projectId}/rundown`} className="rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+          <Link href={`/planner/projects/${projectId}/rundown`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
             Open the run-down list →
           </Link>
         </div>
 
         {loadError && (
-          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             Could not load everything: {loadError.message}
           </p>
         )}

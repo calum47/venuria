@@ -64,9 +64,9 @@ type Props = {
   initialSelectedId?: string | null
 }
 
-const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
-const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 const chipBase = 'rounded-full border px-3 py-1 text-xs'
 
 function errMsg(e: unknown): string {
@@ -134,7 +134,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
 
   return (
     <div className="space-y-4">
-      {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+      {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
       <RsvpPanel
         projectId={projectId}
@@ -215,11 +215,11 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       </p>
 
       {guests.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
           No guests yet. Add one above, or import a list from a file.
         </p>
       ) : visible.length === 0 ? (
-        <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">No guests match these filters.</p>
+        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">No guests match these filters.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
           <table className="w-full text-left text-sm">
@@ -327,7 +327,7 @@ function Pill({ tone, children }: { tone: 'amber' | 'blue' | 'gray' | 'green'; c
     : tone === 'blue' ? 'bg-blue-100 text-blue-800'
     : tone === 'green' ? 'bg-green-100 text-green-800'
     : 'bg-gray-100 text-gray-700'
-  return <span className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${c}`}>{children}</span>
+  return <span className={`rounded-lg px-1.5 py-0.5 text-[11px] font-medium ${c}`}>{children}</span>
 }
 
 function Avatar({ name, url, size }: { name: string; url?: string; size: number }) {
@@ -573,7 +573,7 @@ function GuestPanel(p: PanelProps) {
           <button type="button" onClick={p.onClose} className={btn} aria-label="Close details">Close</button>
         </div>
         {dirty && <p className="mt-1 text-xs text-amber-700">Unsaved changes — save, or revert by reopening this guest.</p>}
-        {error && <p className="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+        {error && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
         <div className="mt-4 space-y-4">
           {/* Photo */}
@@ -689,7 +689,7 @@ function GuestPanel(p: PanelProps) {
           <div className={section}>
             <p className="text-sm font-medium text-gray-900">RSVP</p>
             {guest.rsvp_needs_review && (
-              <div className="flex flex-wrap items-center gap-2 rounded border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
                 <span>
                   {guest.plus_one_of ? 'Added as a plus-one through the RSVP link.' : 'Not on your list: added through the RSVP link.'}{' '}
                   Check the details. If it duplicates someone already on the list, set that guest&rsquo;s answer and delete this one.
@@ -726,12 +726,12 @@ function GuestPanel(p: PanelProps) {
             ) : guest.age_group === 'baby' ? (
               <p className="text-sm text-gray-500">Babies don&rsquo;t need a seat.</p>
             ) : guest.seat_dismissed_at ? (
-              <div className="rounded border border-gray-200 bg-gray-50 p-2 text-sm text-gray-700">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm text-gray-700">
                 <p>No seat needed: {guest.seat_dismissed_note}</p>
                 <button type="button" disabled={busy !== null} onClick={restoreFlag} className={btn + ' mt-1.5'}>Flag as needing a seat again</button>
               </div>
             ) : (
-              <div className="space-y-1.5 rounded border border-amber-200 bg-amber-50 p-2">
+              <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2">
                 <p className="text-sm font-medium text-amber-800">Needs a seat</p>
                 <p className="text-xs text-amber-800">Seat them in the editor, or dismiss this if they will not sit (say why).</p>
                 <div className="flex gap-1.5">

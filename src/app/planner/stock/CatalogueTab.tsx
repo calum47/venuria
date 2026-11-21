@@ -145,9 +145,9 @@ function ItemCard({
       <div className="flex items-center justify-between">
         <Icon item={item} />
         {item.on_demand ? (
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">On Demand</span>
+          <span className="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-lg px-1.5 py-0.5">On Demand</span>
         ) : (
-          <span className={`text-[10px] uppercase tracking-wide rounded px-1.5 py-0.5 ${low ? 'bg-amber-100 text-amber-700' : 'bg-gray-50 text-gray-400'}`}>
+          <span className={`text-[10px] uppercase tracking-wide rounded-lg px-1.5 py-0.5 ${low ? 'bg-amber-100 text-amber-700' : 'bg-gray-50 text-gray-400'}`}>
             {item.current_stock} in stock
           </span>
         )}
@@ -269,7 +269,7 @@ function EditProductModal({
     }
   }
 
-  const input = 'w-full rounded border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
+  const input = 'w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
   const label = 'text-xs text-gray-500'
 
   return (
@@ -288,8 +288,8 @@ function EditProductModal({
           </div>
           <div className="flex-1 space-y-1">
             <div className="flex gap-1 text-xs">
-              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded ${iconType === 'emoji' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Emoji</button>
-              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
+              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded-lg ${iconType === 'emoji' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Emoji</button>
+              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded-lg ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
             </div>
             {iconType === 'emoji' ? (
               <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="📦" maxLength={4} className={input} />
@@ -326,13 +326,13 @@ function EditProductModal({
         </div>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input type="checkbox" checked={onDemand} onChange={(e) => { setOnDemand(e.target.checked); if (e.target.checked) setReusable(false) }} className="rounded border-gray-300" />
+          <input type="checkbox" checked={onDemand} onChange={(e) => { setOnDemand(e.target.checked); if (e.target.checked) setReusable(false) }} className="rounded-lg border-gray-300" />
           On Demand (made to order — no stock count, routed through Orders instead of Purchases/Sales)
         </label>
 
         {!onDemand && (
           <label className="flex items-start gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={reusable} onChange={(e) => setReusable(e.target.checked)} className="mt-0.5 rounded border-gray-300" />
+            <input type="checkbox" checked={reusable} onChange={(e) => setReusable(e.target.checked)} className="mt-0.5 rounded-lg border-gray-300" />
             <span>
               Reusable (sold every wedding but comes back afterwards). A sale takes items out; after the wedding you confirm how many came back, so loss or breakage is recorded.
             </span>

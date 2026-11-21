@@ -143,14 +143,14 @@ export default function AutoArrangeModal({
                     <button
                       onClick={() => setQty(item.id, qty - 1)}
                       disabled={qty === 0}
-                      className="w-6 h-6 rounded bg-gray-100 text-gray-600 disabled:opacity-30"
+                      className="w-6 h-6 rounded-lg bg-gray-100 text-gray-600 disabled:opacity-30"
                     >
                       −
                     </button>
                     <span className="w-5 text-center text-gray-900">{qty}</span>
                     <button
                       onClick={() => setQty(item.id, qty + 1)}
-                      className="w-6 h-6 rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
+                      className="w-6 h-6 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200"
                     >
                       +
                     </button>
@@ -169,7 +169,7 @@ export default function AutoArrangeModal({
               setError(null)
               setBalanceAroundSweetheart(e.target.checked)
             }}
-            className="rounded border-gray-300"
+            className="rounded-lg border-gray-300"
           />
           Balance around Sweetheart Table (mirrored pairs; an odd table sits centred on the aisle)
         </label>

@@ -91,12 +91,12 @@ export default function StockManager({ ownerType, ownerId }: Props) {
                       onChange={(e) =>
                         setQuantities((prev) => ({ ...prev, [item.id]: Math.max(0, Number(e.target.value) || 0) }))
                       }
-                      className="w-16 rounded border bg-white px-2 py-1 text-sm text-gray-900"
+                      className="w-16 rounded-lg border bg-white px-2 py-1 text-sm text-gray-900"
                     />
                     <button
                       onClick={() => handleSave(item.id)}
                       disabled={!dirty || saving === item.id}
-                      className="rounded bg-brand-600 px-2 py-1 text-xs text-white disabled:opacity-30"
+                      className="rounded-lg bg-brand-600 px-2 py-1 text-xs text-white disabled:opacity-30"
                     >
                       {saving === item.id ? 'Saving…' : 'Save'}
                     </button>

@@ -206,7 +206,7 @@ export function RoomCapacityBody({
             {mode === 'seated' ? 'Counted from the chairs placed in this room.' : 'Counted from the project’s guest total.'} This is a warning, not a block.
           </p>
           {canEdit && !asking && (
-            <button onClick={() => setAsking(true)} className="mt-2 rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50">
+            <button onClick={() => setAsking(true)} className="mt-2 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50">
               Continue anyway…
             </button>
           )}
@@ -219,10 +219,10 @@ export function RoomCapacityBody({
                 rows={2}
                 autoFocus
                 placeholder="Note: what was agreed with the venue, or why this is fine"
-                className="w-full rounded border border-gray-200 px-2 py-1 text-sm text-gray-900"
+                className="w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-900"
               />
               <div className="flex items-center gap-2">
-                <button onClick={submitNote} disabled={busy} className="rounded bg-brand-600 px-2.5 py-1 text-xs text-white disabled:opacity-40">Save note and continue</button>
+                <button onClick={submitNote} disabled={busy} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs text-white disabled:opacity-40">Save note and continue</button>
                 <button onClick={() => { setAsking(false); setError(null) }} className="text-xs text-gray-500">Cancel</button>
               </div>
             </div>

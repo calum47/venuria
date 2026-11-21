@@ -8,9 +8,9 @@ import { DOC_KIND_LABEL, PROJECT_DOC_KINDS, checkPdf, formatBytes } from '@/lib/
 // Shared by the payments page and the documents section: class strings, the error
 // formatter and the PDF upload form (also used for "Update" = upload a new version).
 
-export const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
-export const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-export const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
+export const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
+export const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
+export const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
 export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'

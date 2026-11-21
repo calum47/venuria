@@ -295,7 +295,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
               {confirmDeleteId === p.id ? (
                 <span className="flex items-center gap-2 text-xs text-gray-600">
                   Delete this payment?
-                  <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
+                  <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded-lg bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
                   <button onClick={() => setConfirmDeleteId(null)} className={btn}>Keep</button>
                 </span>
               ) : (
@@ -309,7 +309,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
               </ul>
             )}
             {attachingFor === p.id && (
-              <div className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
+              <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
                 <UploadForm
                   teamId={teamId}
                   projectId={projectId}
@@ -338,7 +338,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         ))}
       </datalist>
       {error && (
-        <p role="alert" className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
       {/* ── Totals ── */}
@@ -358,7 +358,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-3">
             <h2 className="text-sm font-semibold text-gray-900">Payments</h2>
-            <div role="group" aria-label="Payments view" className="flex overflow-hidden rounded border border-gray-300 text-xs">
+            <div role="group" aria-label="Payments view" className="flex overflow-hidden rounded-lg border border-gray-300 text-xs">
               {(['list', 'calendar'] as const).map((v) => (
                 <button
                   key={v}
@@ -510,11 +510,11 @@ function CalendarView({
                 <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
                   {cell.day}
                 </span>
-                {cell.iso === eventDate && <span className="rounded bg-purple-100 px-1 text-[10px] text-purple-700">Event</span>}
+                {cell.iso === eventDate && <span className="rounded-lg bg-purple-100 px-1 text-[10px] text-purple-700">Event</span>}
               </span>
               <span className="mt-0.5 block space-y-0.5">
                 {ps.slice(0, 2).map((p) => (
-                  <span key={p.id} title={`${vendorOf(p)} — ${p.label}: ${money(p.amount)}`} className={`block truncate rounded px-1 text-[10px] ${chipTone(paymentStatus(p))}`}>
+                  <span key={p.id} title={`${vendorOf(p)} — ${p.label}: ${money(p.amount)}`} className={`block truncate rounded-lg px-1 text-[10px] ${chipTone(paymentStatus(p))}`}>
                     {vendorOf(p)} {money(p.amount)}
                   </span>
                 ))}

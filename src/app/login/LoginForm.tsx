@@ -98,7 +98,7 @@ export function LoginForm() {
             type="checkbox"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded-lg border-gray-300"
           />
           Remember me
           <span className="text-xs text-gray-400 ml-auto">{rememberMe ? 'Stays signed in' : 'Signs out when the browser closes'}</span>

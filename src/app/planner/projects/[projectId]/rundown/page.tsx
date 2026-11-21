@@ -46,14 +46,14 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="print:hidden">
           <Link href={`/planner/projects/${projectId}/timetable`} className="text-sm text-gray-500 hover:text-gray-900">← Timetable</Link>
-          <h1 className="mt-2 text-xl font-semibold text-gray-900">Run-down list</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-gray-900">Run-down list</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {venueName}{project.event_date ? ` · ${formatDate(project.event_date)}` : ''} · times come from the timetable
           </p>
         </div>
 
         {loadError && (
-          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 print:hidden">
+          <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 print:hidden">
             Could not load everything: {loadError.message}
           </p>
         )}

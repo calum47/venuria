@@ -210,7 +210,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
                   type="number"
                   value={Math.round(object.positionCm[axis])}
                   onChange={(e) => handlePositionChange(axis, e)}
-                  className="flex-1 text-sm border border-gray-200 rounded px-2 py-1
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1
                              focus:outline-none focus:border-blue-400"
                 />
                 <span className="text-xs text-gray-400">cm</span>
@@ -230,7 +230,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
               <div key={label} className="flex items-center gap-2">
                 <span className="text-xs text-gray-500 w-4">{label}</span>
                 <div className="flex-1 text-sm bg-gray-50 border border-gray-200
-                                rounded px-2 py-1 text-gray-600">
+                                rounded-lg px-2 py-1 text-gray-600">
                   {value ?? '—'}
                 </div>
                 <span className="text-xs text-gray-400">cm</span>
@@ -247,7 +247,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
               type="number"
               value={Math.round(object.rotationDeg)}
               onChange={handleRotationChange}
-              className="flex-1 text-sm border border-gray-200 rounded px-2 py-1
+              className="flex-1 text-sm border border-gray-200 rounded-lg px-2 py-1
                          focus:outline-none focus:border-blue-400"
             />
             <span className="text-xs text-gray-400">°</span>
@@ -257,7 +257,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
               <button
                 key={deg}
                 onClick={() => rotateObjectWithChairs(object.id, deg)}
-                className="text-xs py-1 rounded border border-gray-200
+                className="text-xs py-1 rounded-lg border border-gray-200
                            text-gray-600 hover:bg-blue-50 hover:border-blue-400
                            hover:text-blue-700 transition-colors"
               >
@@ -276,7 +276,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
               placeholder="e.g. Table 1, Bride & Groom…"
               value={object.tableLabel ?? ''}
               onChange={(e) => updateObject(object.id, { tableLabel: e.target.value || undefined })}
-              className="w-full text-sm border border-gray-200 rounded px-2 py-1
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1
                          focus:outline-none focus:border-blue-400"
             />
           </div>
@@ -291,7 +291,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
               value={object.tableNote ?? ''}
               onChange={(e) => updateObject(object.id, { tableNote: e.target.value || undefined })}
               rows={2}
-              className="w-full text-sm border border-gray-200 rounded px-2 py-1
+              className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1
                          focus:outline-none focus:border-blue-400 resize-none"
             />
           </div>
@@ -306,7 +306,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
                 <button
                   key={side}
                   onClick={() => handleSideToggle(side)}
-                  className={`text-xs py-1.5 rounded border capitalize transition-colors ${
+                  className={`text-xs py-1.5 rounded-lg border capitalize transition-colors ${
                     currentSides[side]
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'border-gray-200 text-gray-500 hover:bg-gray-50'
@@ -352,7 +352,7 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
                   <button
                     key={n}
                     onClick={() => handleAddChairs(n)}
-                    className="text-xs py-1.5 rounded border border-gray-200
+                    className="text-xs py-1.5 rounded-lg border border-gray-200
                                text-gray-600 hover:bg-green-50 hover:border-green-400
                                hover:text-green-700 transition-colors"
                   >

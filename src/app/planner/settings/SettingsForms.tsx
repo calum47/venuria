@@ -60,9 +60,9 @@ function NameForm({ initial, email, plannerCode }: { initial: string; email: str
       <form action={run} className="flex items-end gap-2">
         <div className="flex flex-col gap-1 flex-1">
           <label className="text-xs text-gray-500">Name</label>
-          <input name="name" defaultValue={initial} required className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+          <input name="name" defaultValue={initial} required className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Saving…' : 'Save'}
         </button>
       </form>
@@ -100,13 +100,13 @@ function PasswordForm() {
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">New password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">Confirm</label>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Updating…' : 'Update password'}
         </button>
       </form>
@@ -127,14 +127,14 @@ function TeamForm({ team, canEdit }: { team: { id: string; name: string; currenc
         <input type="hidden" name="teamId" value={team.id} />
         <div className="flex flex-col gap-1 flex-1 min-w-[12rem]">
           <label className="text-xs text-gray-500">Team name</label>
-          <input name="name" defaultValue={team.name} required disabled={!canEdit} className="rounded border bg-white px-2 py-1 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500" />
+          <input name="name" defaultValue={team.name} required disabled={!canEdit} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500" />
         </div>
         <div className="flex flex-col gap-1 w-24">
           <label className="text-xs text-gray-500">Currency</label>
-          <input name="currency" defaultValue={team.currency} required maxLength={3} disabled={!canEdit} className="rounded border bg-white px-2 py-1 text-sm text-gray-900 uppercase font-mono disabled:bg-gray-50 disabled:text-gray-500" />
+          <input name="currency" defaultValue={team.currency} required maxLength={3} disabled={!canEdit} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900 uppercase font-mono disabled:bg-gray-50 disabled:text-gray-500" />
         </div>
         {canEdit && (
-          <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+          <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
             {isPending ? 'Saving…' : 'Save'}
           </button>
         )}
