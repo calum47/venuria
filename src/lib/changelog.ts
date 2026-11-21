@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-rsvp-data-controller',
+    date: '2026-11-21',
+    title: 'Your company name and contact on the RSVP page',
+    roles: ['planner', 'admin'],
+    items: [
+      'In Settings → Team the manager can now add the company name and a contact email. Guests see them next to the consent box on the RSVP page, as the party responsible for their data and the address for requests to see or delete it.',
+      'Without a company name, the team name is shown. The RSVP settings remind you while no contact email is set.',
+    ],
+  },
+  {
     id: '2026-11-21-project-names-and-delete',
     date: '2026-11-21',
     title: 'Couple names, deleting projects, and RSVP settings',

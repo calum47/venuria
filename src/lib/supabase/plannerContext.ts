@@ -6,7 +6,7 @@ export type PlannerContext = {
   userId: string
   email: string | null
   planner: { id: string; name: string; plannerCode: string | null; role: PlannerRole; teamId: string }
-  team: { id: string; name: string; currency: string }
+  team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }
   lastProjectId: string | null
 }
 
@@ -28,13 +28,14 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
 
   const { data: planner } = await supabase
     .from('planners')
-    .select('id, name, planner_code, role, team_id, teams(id, name, currency)')
+    .select('id, name, planner_code, role, team_id, teams(id, name, currency, company_name, contact_email)')
     .eq('user_id', user.id)
     .maybeSingle()
   if (!planner) return null
 
-  const team = planner.teams as unknown as { id: string; name: string; currency: string } | null
-  if (!team) return null
+  const t = planner.teams as unknown as { id: string; name: string; currency: string; company_name: string | null; contact_email: string | null } | null
+  if (!t) return null
+  const team = { id: t.id, name: t.name, currency: t.currency, companyName: t.company_name, contactEmail: t.contact_email }
 
   const { data: lastVisit } = await supabase
     .from('project_visits')

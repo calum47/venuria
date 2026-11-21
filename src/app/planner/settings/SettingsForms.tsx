@@ -10,7 +10,7 @@ type Props = {
   email: string | null
   plannerCode: string | null
   role: PlannerRole
-  team: { id: string; name: string; currency: string }
+  team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }
 }
 
 export default function SettingsForms({ plannerName, email, plannerCode, role, team }: Props) {
@@ -116,7 +116,7 @@ function PasswordForm() {
   )
 }
 
-function TeamForm({ team, canEdit }: { team: { id: string; name: string; currency: string }; canEdit: boolean }) {
+function TeamForm({ team, canEdit }: { team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }; canEdit: boolean }) {
   const { run, isPending, error, saved } = useAction(updateMyTeam)
   return (
     <Card title="Team">
@@ -132,6 +132,19 @@ function TeamForm({ team, canEdit }: { team: { id: string; name: string; currenc
         <div className="flex flex-col gap-1 w-24">
           <label className="text-xs text-gray-500">Currency</label>
           <input name="currency" defaultValue={team.currency} required maxLength={3} disabled={!canEdit} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900 uppercase font-mono disabled:bg-gray-50 disabled:text-gray-500" />
+        </div>
+        <div className="w-full border-t border-gray-100 pt-3">
+          <p className="text-xs text-gray-500">
+            Shown to guests on the RSVP page as the party responsible for their data. Leave the company name empty to use the team name.
+          </p>
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+          <label className="text-xs text-gray-500">Company name</label>
+          <input name="companyName" defaultValue={team.companyName ?? ''} maxLength={120} placeholder={team.name} disabled={!canEdit} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500" />
+        </div>
+        <div className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+          <label className="text-xs text-gray-500">Contact email for guests&apos; data requests</label>
+          <input name="contactEmail" type="email" defaultValue={team.contactEmail ?? ''} maxLength={200} placeholder="hello@yourcompany.com" disabled={!canEdit} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900 disabled:bg-gray-50 disabled:text-gray-500" />
         </div>
         {canEdit && (
           <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">

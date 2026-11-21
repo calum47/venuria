@@ -56,7 +56,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   }
 
   const [{ data: project }, { data: photoRows }, { data: hotelRows }] = await Promise.all([
-    admin.from('projects').select('event_date, couple_names, venues(name)').eq('id', cfg.project_id).maybeSingle(),
+    admin.from('projects').select('event_date, couple_names, team_id, venues(name)').eq('id', cfg.project_id).maybeSingle(),
     admin.from('project_rsvp_photos').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
     admin.from('project_rsvp_hotels').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
   ])
@@ -71,6 +71,13 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   }
 
   const venueName = (project?.venues as unknown as { name: string } | null)?.name ?? null
+
+  // Who is responsible for the guests' data: the planner's company (falls back to the team name).
+  const { data: team } = project?.team_id
+    ? await admin.from('teams').select('name, company_name, contact_email').eq('id', project.team_id).maybeSingle()
+    : { data: null }
+  const controllerName = team?.company_name?.trim() || team?.name || null
+  const controllerEmail = team?.contact_email?.trim() || null
 
   return (
     <main className="flex min-h-screen w-full items-start justify-center bg-gradient-to-b from-brand-50 via-gray-50 to-gray-50 px-3 py-4 sm:px-4 sm:py-10">
@@ -87,6 +94,8 @@ export default async function RsvpPage({ params, searchParams }: Props) {
           content={buildPublicContent(cfg, photos, hotels, urls)}
           preview={previewOk ? (live ? 'live' : 'off') : null}
           sectionOrder={normalizeSectionOrder(cfg.section_order)}
+          controllerName={controllerName}
+          controllerEmail={controllerEmail}
         />
       </div>
     </main>

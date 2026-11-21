@@ -21,8 +21,9 @@ export async function updateMyName(formData: FormData): Promise<{ error?: string
 }
 
 const CURRENCY_RE = /^[A-Z]{3}$/
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
-/** Update team name / currency. RLS (manager_update_team) rejects non-managers server-side regardless of the UI. */
+/** Update team name / currency / the company details shown to RSVP guests. RLS (manager_update_team) rejects non-managers server-side regardless of the UI. */
 export async function updateMyTeam(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const {
@@ -33,13 +34,17 @@ export async function updateMyTeam(formData: FormData): Promise<{ error?: string
   const teamId = formData.get('teamId') as string
   const name = ((formData.get('name') as string | null) ?? '').trim()
   const currency = ((formData.get('currency') as string | null) ?? '').trim().toUpperCase()
+  const companyName = ((formData.get('companyName') as string | null) ?? '').trim().replace(/\s+/g, ' ')
+  const contactEmail = ((formData.get('contactEmail') as string | null) ?? '').trim()
   if (!teamId) return { error: 'Missing team.' }
+  if (companyName && (companyName.length < 2 || companyName.length > 120)) return { error: 'Company name must be 2 to 120 characters.' }
+  if (contactEmail && (contactEmail.length > 200 || !EMAIL_RE.test(contactEmail))) return { error: 'Enter a valid contact email.' }
   if (name.length < 2) return { error: 'Team name must be at least 2 characters.' }
   if (!CURRENCY_RE.test(currency)) return { error: 'Currency must be a 3-letter code, e.g. EUR.' }
 
   const { data, error } = await supabase
     .from('teams')
-    .update({ name, currency })
+    .update({ name, currency, company_name: companyName || null, contact_email: contactEmail || null })
     .eq('id', teamId)
     .select('id')
   if (error) return { error: error.message }

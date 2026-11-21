@@ -56,6 +56,7 @@ type Props = {
   initialRsvp: DbProjectRsvp | null
   /** Site origin for building the public RSVP link. */
   origin: string
+  hasContactEmail: boolean
   /** RSVP page content (migration 026): area photos, hotels, and signed URLs for their images. */
   initialRsvpPhotos: DbRsvpPhoto[]
   initialRsvpHotels: DbRsvpHotel[]
@@ -73,7 +74,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   // The nav bell lists guests waiting for review: tell it when that number changes.
   const reviewCount = guests.filter((g) => g.rsvp_needs_review).length
@@ -145,6 +146,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         initialPhotos={initialRsvpPhotos}
         initialHotels={initialRsvpHotels}
         initialUrls={initialRsvpUrls}
+        hasContactEmail={hasContactEmail}
       />
 
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">

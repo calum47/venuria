@@ -27,6 +27,8 @@ type Props = {
   initialHotels: DbRsvpHotel[]
   /** Signed URLs (path → URL) for the page's saved images. */
   initialUrls: Record<string, string>
+  /** Whether the team has a contact email for guests' data requests (Settings). */
+  hasContactEmail: boolean
 }
 
 /**
@@ -34,7 +36,7 @@ type Props = {
  * running counts. One link per project; anyone holding it can answer, so a
  * guest's FIRST answer is the only one the link accepts (changes are made here).
  */
-export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialUrls }: Props) {
+export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialUrls, hasContactEmail }: Props) {
   const [cfg, setCfg] = useState<DbProjectRsvp | null>(initial)
   const [open, setOpen] = useState(!!initial?.enabled)
   const [enabled, setEnabled] = useState(initial?.enabled ?? false)
@@ -124,6 +126,12 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
               </div>
             ))}
           </div>
+
+          {!hasContactEmail && (
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Guests see your company name as responsible for their data, but there is no contact email for their data requests yet. Add one in Settings → Team.
+            </p>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-gray-900">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />

@@ -21,6 +21,8 @@ type Props = {
   /** Planner preview: 'live' = guests see the same page, 'off' = guests currently see "closed". */
   preview: 'live' | 'off' | null
   sectionOrder: RsvpSectionKey[]
+  controllerName: string | null
+  controllerEmail: string | null
 }
 
 type Step = 'name' | 'confirm' | 'answers' | 'done'
@@ -35,7 +37,7 @@ function longDate(iso: string, lang: Lang): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview, sectionOrder }: Props) {
+export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview, sectionOrder, controllerName, controllerEmail }: Props) {
   const [lang, setLang] = useState<Lang>(initialLang)
   const t = TEXT[lang]
 
@@ -341,6 +343,11 @@ export default function RsvpForm({ token, initialLang, welcome, coupleNames, dea
               <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5" required />
               <span>{t.consent}</span>
             </label>
+            {controllerName && (
+              <p className="pl-6 text-xs text-gray-500">
+                {controllerEmail ? fill(t.controller, { company: controllerName, email: controllerEmail }) : fill(t.controllerNoEmail, { company: controllerName })}
+              </p>
+            )}
             {coming && <p className="pl-6 text-xs text-gray-500">{t.privacy}</p>}
           </div>
 

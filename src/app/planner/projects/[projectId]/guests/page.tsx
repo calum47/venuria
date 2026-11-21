@@ -131,6 +131,7 @@ export default async function GuestsPage({
           initialRsvpHotels={rsvpHotels}
           initialRsvpUrls={rsvpUrls}
           origin={origin}
+          hasContactEmail={!!ctx.team.contactEmail}
         />
       </div>
     </main>
