@@ -1047,7 +1047,7 @@ export default function FloorPlanCanvas({
       {/* Guest mode banner */}
       {isGuestMode && (
         <div className="absolute top-3 left-3 z-10 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-          <p className="text-xs text-amber-700 font-medium">👥 Guest Mode — click a chair to assign, or drag from the guest list</p>
+          <p className="text-xs text-amber-700 font-medium">👥 Seating plan — click a chair to assign, or drag from the guest list</p>
         </div>
       )}
 

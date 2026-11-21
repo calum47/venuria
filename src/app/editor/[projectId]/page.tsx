@@ -23,8 +23,6 @@ import { LayoutObject } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromSides } from '@/lib/utils/seating'
 import { generateId } from '@/lib/utils/coordinates'
-import { supabase } from '@/lib/supabase/client'
-import { resolveUserRole } from '@/lib/supabase/role'
 import RoomCapacity from '@/components/canvas/RoomCapacity'
 import {
   getCatalogItems,
@@ -391,25 +389,7 @@ export default function EditorPage() {
 
         {/* Toolbar */}
         <div className="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4">
-          <button
-            onClick={async () => {
-              // Was hardcoded to '/', which is a straight /login redirect
-              // (removed 5 Aug along with the old anonymous-project flow) —
-              // resolve wherever this logged-in user actually belongs instead.
-              const {
-                data: { user },
-              } = await supabase.auth.getUser()
-              if (!user) {
-                router.push('/login')
-                return
-              }
-              const { redirectPath } = await resolveUserRole(supabase, user.id)
-              router.push(redirectPath)
-            }}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            ← Home
-          </button>
+          <EditorNavMenu />
           <span className="text-gray-300">|</span>
           <Link
             href={`/editor/${projectId}/summary`}
@@ -435,9 +415,6 @@ export default function EditorPage() {
             🖼 Export PNG
           </button>
           <span className="text-gray-300">|</span>
-          <EditorNavMenu />
-          <span className="text-gray-300">|</span>
-
           {/* Room tabs */}
           <div className="flex items-center gap-1">
             {rooms.map((room) => (
@@ -458,7 +435,7 @@ export default function EditorPage() {
 
           <span className="text-gray-300">|</span>
 
-          {/* Guest mode toggle */}
+          {/* Seating plan toggle (seat guests at tables) */}
           <button
             onClick={() => { if (!isGuestMode) setZoneMode(false); setGuestMode(!isGuestMode) }}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
@@ -467,7 +444,7 @@ export default function EditorPage() {
                 : 'text-gray-500 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            👥 {isGuestMode ? 'Guest Mode ON' : 'Guest Mode'}
+            👥 Seating plan
           </button>
 
           {/* Zone mode toggle */}
