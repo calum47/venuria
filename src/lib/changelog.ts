@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-rsvp-wedding-look',
+    date: '2026-11-21',
+    title: 'A more wedding-like RSVP page',
+    roles: ['planner', 'admin'],
+    items: [
+      'The guest RSVP page is now photo-led: your cover photo fills the top with the names over it, followed by a welcome note, the schedule, your questions, the area and hotels.',
+      'New in the RSVP settings: "Names at the top" (for example "Anna & Tom"). If you leave it empty, the venue name is shown instead.',
+      'The welcome note now sits under the names, so you no longer need to type the names into it.',
+    ],
+  },
+  {
     id: '2026-11-21-fresh-look',
     date: '2026-11-21',
     title: 'A fresh, softer look',

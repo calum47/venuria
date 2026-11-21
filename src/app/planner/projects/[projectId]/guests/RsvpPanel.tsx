@@ -136,7 +136,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
           </div>
 
           <label className="block text-xs text-gray-600">
-            Welcome text shown on the page (names of the couple, a short note…)
+            Welcome note shown under the names (a few warm words for your guests)
             <textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} maxLength={500} rows={3} className={input + ' mt-1 block w-full'} />
           </label>
 

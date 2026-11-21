@@ -78,6 +78,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const [urls, setUrls] = useState<Record<string, string>>(initialUrls)
   const [photos, setPhotos] = useState<DbRsvpPhoto[]>(initialPhotos)
   const [hotels, setHotels] = useState<DbRsvpHotel[]>(initialHotels)
+  const [names, setNames] = useState(cfg?.couple_names ?? '')
   const [schedule, setSchedule] = useState(cfg?.schedule ?? '')
   const [dress, setDress] = useState(cfg?.dress_code ?? '')
   const [mapUrl, setMapUrl] = useState(cfg?.map_url ?? '')
@@ -94,6 +95,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const detailsDirty =
     (schedule.trim() || null) !== (cfg?.schedule ?? null) || (dress.trim() || null) !== (cfg?.dress_code ?? null) || (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
   const areaDirty = (areaText.trim() || null) !== (cfg?.area_text ?? null)
+  const namesDirty = (names.trim() || null) !== (cfg?.couple_names ?? null)
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setError(null)
@@ -117,6 +119,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url })
       setMapUrl(link.url ?? '')
     })
+
+  const saveNames = () => run('names', () => save({ couple_names: names.trim() || null }))
 
   const saveArea = () => run('area', () => save({ area_text: areaText.trim() || null }))
 
@@ -211,10 +215,22 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         )}
       </div>
       <p className="text-xs text-gray-500">
-        Guests see these sections on the RSVP page, in this order: cover photo, details, your RSVP questions, the area, hotels. A section with nothing in it is not shown. Write each text once: it is shown as typed to guests in every language.
+        Guests see these sections on the RSVP page, in this order: cover photo with the names, details, your RSVP questions, the area, hotels. A section with nothing in it is not shown. Write each text once: it is shown as typed to guests in every language.
       </p>
 
       {error && <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+
+      {/* Names */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-gray-900">Names at the top</p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="block grow text-xs text-gray-600">
+            Shown as the large title (for example “Anna &amp; Tom”). Left empty, the venue name is used.
+            <input value={names} onChange={(e) => setNames(e.target.value)} maxLength={80} className={input + ' mt-1 block w-full'} />
+          </label>
+          <button type="button" onClick={saveNames} disabled={!namesDirty || busy !== null} className={btnPrimary}>{busy === 'names' ? 'Saving…' : 'Save names'}</button>
+        </div>
+      </div>
 
       {/* Cover */}
       <div className="space-y-2">

@@ -93,6 +93,8 @@ export type DbProjectRsvp = {
   allow_plus_one: boolean
   created_at: string
   updated_at: string
+  // Migration 028: names shown as the page title
+  couple_names: string | null
   // Migration 026: page content
   /** Path in the private `rsvp-media` bucket. */
   cover_path: string | null

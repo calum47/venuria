@@ -72,6 +72,7 @@ import { RSVP_MEDIA_BUCKET } from '@/lib/rsvpContent'
 import type { DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 
 export type RsvpContentPatch = Partial<{
+  couple_names: string | null
   schedule: string | null
   dress_code: string | null
   map_url: string | null
