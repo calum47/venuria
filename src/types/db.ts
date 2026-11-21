@@ -18,6 +18,24 @@ export type DbCatalogItem = {
   price_per_unit: number | null
   image_url: string | null
   model_url: string | null
+  /** Migration 033: how a table-setting quantity multiplies (per seat or per table). null = not a table-setting item. */
+  scope: 'per_seat' | 'per_table' | null
+}
+
+/** Migration 033: a team-wide, named table setting. */
+export type DbTableSettingTemplate = {
+  id: string
+  team_id: string
+  name: string
+  created_at: string
+  table_setting_template_items: DbTableSettingTemplateItem[]
+}
+
+export type DbTableSettingTemplateItem = {
+  id: string
+  template_id: string
+  catalog_item_id: string
+  quantity: number
 }
 
 export type DbRoom = {

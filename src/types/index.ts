@@ -130,6 +130,20 @@ export type LayoutObject = {
   // Labels & notes
   tableLabel?: string
   tableNote?: string
+  // Table setting (plates, glasses, candles…) — a snapshot, so editing one table never changes another
+  tableSetting?: TableSetting
+}
+
+/** One line of a table's setting: a catalog item and how many (per seat or per table, per the item's scope). */
+export type TableSettingItem = {
+  catalogItemId: string
+  quantity: number
+}
+
+export type TableSetting = {
+  /** Template it was applied from. Cleared once the table's own items are edited ("Custom"). */
+  templateId?: string
+  items: TableSettingItem[]
 }
 
 // ─── Project ──────────────────────────────────────────────────────────────────

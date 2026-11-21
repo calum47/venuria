@@ -224,6 +224,7 @@ export function mapDbObject(obj: DbLayoutObject): LayoutObject {
     tableLabel:         (extra.tableLabel as string | undefined)         ?? undefined,
     tableNote:          (extra.tableNote as string | undefined)          ?? undefined,
     mirrorEnabled:      (extra.mirrorEnabled as boolean | undefined)     ?? undefined,
+    tableSetting:       (extra.tableSetting as LayoutObject['tableSetting']) ?? undefined,
   }
 }
 
@@ -255,6 +256,7 @@ export function buildSavePayload(
       tableLabel:         obj.tableLabel,
       tableNote:          obj.tableNote,
       mirrorEnabled:      obj.mirrorEnabled,
+      tableSetting:       obj.tableSetting,
     },
   })) as any
 }

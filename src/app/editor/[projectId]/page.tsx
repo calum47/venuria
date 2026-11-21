@@ -12,6 +12,7 @@ import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
 import AutoArrangeModal from '@/components/canvas/AutoArrangeModal'
+import TableSettingModal from '@/components/canvas/TableSettingModal'
 import ProjectActivityModal from '@/components/changelog/ProjectActivityModal'
 import ZonePanel from '@/components/zones/ZonePanel'
 import EditorNavMenu from '@/components/nav/EditorNavMenu'
@@ -20,7 +21,7 @@ import { useZoneStore } from '@/stores/zoneStore'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
 import { LayoutObject } from '@/types'
-import { DbCatalogItem, DbRoom } from '@/types/db'
+import { DbCatalogItem, DbRoom, DbTableSettingTemplate } from '@/types/db'
 import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromSides } from '@/lib/utils/seating'
 import { generateId } from '@/lib/utils/coordinates'
 import RoomCapacity from '@/components/canvas/RoomCapacity'
@@ -34,6 +35,7 @@ import {
   getSeatAssignments,
   assignSeat,
 } from '@/lib/supabase/queries'
+import { getTableSettingCatalogItems, listTemplates } from '@/lib/supabase/tableSettingQueries'
 
 // ─── Editor page ──────────────────────────────────────────────────────────────
 
@@ -88,6 +90,10 @@ export default function EditorPage() {
   const [isSwitchingRoom, setIsSwitchingRoom] = useState(false)
   const [show3D, setShow3D] = useState(false)
   const [showAutoArrange, setShowAutoArrange] = useState(false)
+  // Table settings (plates, glasses, candles…): scoped catalog items + team-wide templates
+  const [settingItems, setSettingItems] = useState<DbCatalogItem[]>([])
+  const [templates, setTemplates] = useState<DbTableSettingTemplate[]>([])
+  const [showTemplates, setShowTemplates] = useState(false)
 
   // Table dropped — waiting for the user to choose chair count
   const [pendingTableDrop, setPendingTableDrop] = useState<{
@@ -135,6 +141,10 @@ export default function EditorPage() {
         ])
 
         setCatalogItems(items)
+        // Non-critical: a failure here must not stop the editor from opening
+        Promise.all([getTableSettingCatalogItems(), listTemplates()])
+          .then(([scoped, tpls]) => { setSettingItems(scoped); setTemplates(tpls) })
+          .catch((err) => console.error('Failed to load table settings:', err))
         setRooms(venueRooms)
         setGuests(guestList)
         // getSeatAssignments already returns the correct shape including roomId — no remapping needed
@@ -522,7 +532,13 @@ export default function EditorPage() {
           {/* Properties panel — only when an object is selected outside guest mode */}
           {!isGuestMode && !zoneMode && liveObject && (
             <div className="flex-shrink-0">
-              <PropertiesPanel object={liveObject} catalogItems={catalogItems} />
+              <PropertiesPanel
+                object={liveObject}
+                catalogItems={catalogItems}
+                settingItems={settingItems}
+                templates={templates}
+                onManageTemplates={() => setShowTemplates(true)}
+              />
             </div>
           )}
 
@@ -566,6 +582,16 @@ export default function EditorPage() {
           Mounted only after load so it never blocks the editor; renders
           nothing when there's nothing to show. */}
       {!isLoading && <ProjectActivityModal projectId={projectId} rooms={rooms} />}
+
+      {/* Table setting templates */}
+      {showTemplates && (
+        <TableSettingModal
+          items={settingItems}
+          templates={templates}
+          onClose={() => setShowTemplates(false)}
+          onChanged={async () => setTemplates(await listTemplates())}
+        />
+      )}
 
       {/* Auto-Arrange modal */}
       {showAutoArrange && currentRoom && (

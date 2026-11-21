@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-table-settings',
+    date: '2026-11-21',
+    title: 'Table settings: plates, glasses, candles and flowers',
+    roles: ['planner', 'admin'],
+    items: [
+      'Select a table and use the new Table setting section to choose what goes on it: plates, cutlery, glasses, candles, flowers.',
+      'Save your usual combinations as templates, shared with your whole team, and apply one to a single table or to every table in the room. Sweetheart, cocktail and tall tables are set one by one.',
+      'After applying, you can change any table on its own without affecting the others. Items for each seat are counted by the chairs at that table.',
+    ],
+  },
+  {
     id: '2026-11-21-rsvp-data-controller',
     date: '2026-11-21',
     title: 'Your company name and contact on the RSVP page',

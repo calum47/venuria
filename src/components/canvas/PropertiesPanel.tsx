@@ -2,7 +2,8 @@
 
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject, ChairSides } from '@/types'
-import { DbCatalogItem } from '@/types/db'
+import { DbCatalogItem, DbTableSettingTemplate } from '@/types/db'
+import TableSettingSection from './TableSettingSection'
 import { generateId } from '@/lib/utils/coordinates'
 import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromSides } from '@/lib/utils/seating'
 
@@ -11,6 +12,10 @@ import { generateChairObjects, getTableChairConfig, calculateChairPositionsFromS
 type Props = {
   object: LayoutObject | null
   catalogItems: DbCatalogItem[]
+  /** Scoped items a table setting can use (plates, cutlery, glassware, candles, flowers…). */
+  settingItems: DbCatalogItem[]
+  templates: DbTableSettingTemplate[]
+  onManageTemplates: () => void
 }
 
 const DEFAULT_SIDES: ChairSides = { top: true, bottom: true, left: true, right: true }
@@ -24,7 +29,7 @@ const ROTATION_TO_EDGE: Record<number, 'top' | 'bottom' | 'left' | 'right'> = {
   270: 'right',
 }
 
-export default function PropertiesPanel({ object, catalogItems }: Props) {
+export default function PropertiesPanel({ object, catalogItems, settingItems, templates, onManageTemplates }: Props) {
   const {
     updateObject,
     removeObjectWithChairs,
@@ -295,6 +300,17 @@ export default function PropertiesPanel({ object, catalogItems }: Props) {
                          focus:outline-none focus:border-blue-400 resize-none"
             />
           </div>
+        )}
+
+        {/* Table setting — real tables only (not chairs, not placed decorations) */}
+        {!object.isChairFor && catalogItem?.category === 'tables' && (
+          <TableSettingSection
+            object={object}
+            catalogItems={catalogItems}
+            settingItems={settingItems}
+            templates={templates}
+            onManageTemplates={onManageTemplates}
+          />
         )}
 
         {/* Per-side chair arrangement (rectangular tables only) */}

@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { DbCatalogItem } from '@/types/db'
 import { getMasterCatalogItems, getStock, upsertStockQuantity } from '@/lib/supabase/queries'
 
-const STOCK_CATEGORIES = ['tables', 'chairs']
+// Table-setting categories (plates…flowers) added 21 Nov 2026 so suppliers can enter quantities for them.
+const STOCK_CATEGORIES = ['tables', 'chairs', 'plates', 'cutlery', 'glassware', 'candles', 'flowers']
 
 type Props = {
   ownerType: 'venue' | 'rental_company'
