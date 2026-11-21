@@ -6,6 +6,7 @@ import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { countdownLabel, formatDate } from '@/lib/projectDates'
 import { projectTitle } from '@/lib/projectTitle'
 import ProjectNameEditor from './ProjectNameEditor'
+import DeleteProjectSection from './DeleteProjectSection'
 import { paymentStatus } from '@/lib/payments'
 import { areaHint, summariseAreas } from '@/lib/hubAreas'
 import { capacityLine } from '@/lib/capacity'
@@ -41,7 +42,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, status, event_date, venue_id, couple_names, venues(name)')
+    .select('id, status, event_date, venue_id, planner_id, couple_names, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
@@ -167,6 +168,10 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
           items={(itemRows ?? []) as { id: string; name: string }[]}
           initialOrders={(orderRows ?? []) as DbStockOrder[]}
         />
+
+        {(project.planner_id === ctx.planner.id || ctx.planner.role === 'manager' || ctx.planner.role === 'lead') && (
+          <DeleteProjectSection projectId={projectId} title={projectTitle(project.couple_names, venueName)} />
+        )}
       </div>
     </main>
   )
