@@ -39,6 +39,8 @@ export type PdfGuest = {
 
 export type PdfExportData = {
   venueName: string
+  /** Couple's names, or the venue name when the project has none: the heading of the PDF. */
+  projectTitle: string
   teamName: string
   /** ISO yyyy-mm-dd or null */
   eventDate: string | null

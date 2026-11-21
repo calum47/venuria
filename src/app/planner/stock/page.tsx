@@ -1,3 +1,4 @@
+import { projectTitle } from '@/lib/projectTitle'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import StockApp from './StockApp'
@@ -27,7 +28,7 @@ export default async function StockPage() {
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('id, event_date, venues(name)')
+    .select('id, event_date, couple_names, venues(name)')
     .order('event_date', { ascending: false, nullsFirst: false })
 
   return (
@@ -45,7 +46,7 @@ export default async function StockPage() {
           canManage={ctx.planner.role !== 'member'}
           projects={(projects ?? []).map((p) => ({
             id: p.id,
-            label: `${(p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'}${p.event_date ? ` — ${p.event_date}` : ''}`,
+            label: `${projectTitle(p.couple_names, (p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue')}${p.event_date ? ` — ${p.event_date}` : ''}`,
           }))}
         />
       </div>

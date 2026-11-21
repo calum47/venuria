@@ -1,5 +1,6 @@
 'use server'
 
+import { projectTitle } from '@/lib/projectTitle'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { madridToday } from '@/lib/rsvp'
@@ -42,11 +43,11 @@ export async function getBell(): Promise<BellData> {
     if (projectIds.length > 0) {
       const { data: projects } = await supabase
         .from('projects')
-        .select('id, event_date, venues(name)')
+        .select('id, event_date, couple_names, venues(name)')
         .in('id', projectIds)
       for (const p of projects ?? []) {
-        const venue = (p.venues as unknown as { name: string } | null)?.name ?? 'Project'
-        labels.set(p.id, p.event_date ? `${venue} · ${formatDate(p.event_date)}` : venue)
+        const title = projectTitle(p.couple_names, (p.venues as unknown as { name: string } | null)?.name ?? 'Project')
+        labels.set(p.id, p.event_date ? `${title} · ${formatDate(p.event_date)}` : title)
       }
     }
 

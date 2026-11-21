@@ -28,7 +28,7 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
       // Loaded on demand so the PDF libraries never weigh on the editor pages.
       const { buildProjectPdf } = await import('@/lib/pdfExport/build')
       const doc = buildProjectPdf(data, { sections, roomIds })
-      doc.save(`venuria-${safeFilePart(data.venueName)}-${data.eventDate ?? 'plan'}.pdf`)
+      doc.save(`venuria-${safeFilePart(data.projectTitle)}-${data.eventDate ?? 'plan'}.pdf`)
     } catch (e) {
       console.error('PDF export failed', e)
       setError('Could not create the PDF. Try again, or tick fewer sections.')

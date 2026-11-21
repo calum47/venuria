@@ -32,7 +32,7 @@ export default async function PlannerPage() {
     supabase.from('venues').select('id, name').order('name'),
     supabase
       .from('projects')
-      .select('id, status, event_date, due_by, created_at, planner_id, assigned_to_planner_id, visibility, venues(name)'),
+      .select('id, status, event_date, due_by, created_at, planner_id, assigned_to_planner_id, visibility, couple_names, venues(name)'),
     supabase.from('planners').select('id, name').eq('team_id', ctx.team.id).order('name'),
   ])
 
@@ -44,6 +44,7 @@ export default async function PlannerPage() {
     event_date: p.event_date,
     due_by: p.due_by,
     venueName: (p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue',
+    coupleNames: p.couple_names,
     creatorId: p.planner_id,
     creatorName: nameById.get(p.planner_id) ?? 'Former teammate',
     assigneeId: p.assigned_to_planner_id,

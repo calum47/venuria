@@ -336,7 +336,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.setTextColor(30, 30, 30)
-    doc.text(pdfText(data.venueName), M, 26)
+    doc.text(pdfText(data.projectTitle), M, 26)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(100, 100, 100)
     doc.text(`${pdfText(data.teamName)} · ${formatDateEn(data.eventDate)}`, w - M, 26, { align: 'right' })

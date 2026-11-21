@@ -55,7 +55,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   }
 
   const [{ data: project }, { data: photoRows }, { data: hotelRows }] = await Promise.all([
-    admin.from('projects').select('event_date, venues(name)').eq('id', cfg.project_id).maybeSingle(),
+    admin.from('projects').select('event_date, couple_names, venues(name)').eq('id', cfg.project_id).maybeSingle(),
     admin.from('project_rsvp_photos').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
     admin.from('project_rsvp_hotels').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
   ])
@@ -78,7 +78,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
           token={token}
           initialLang={lang}
           welcome={cfg.welcome_message}
-          coupleNames={cfg.couple_names}
+          coupleNames={project?.couple_names ?? null}
           deadline={cfg.deadline}
           allowPlusOne={cfg.allow_plus_one}
           venueName={venueName}

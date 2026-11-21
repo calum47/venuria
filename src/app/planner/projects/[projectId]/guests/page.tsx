@@ -1,3 +1,4 @@
+import { projectTitle } from '@/lib/projectTitle'
 import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
@@ -41,7 +42,7 @@ export default async function GuestsPage({
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, event_date, venue_id, venues(name)')
+    .select('id, event_date, venue_id, couple_names, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
@@ -95,12 +96,13 @@ export default async function GuestsPage({
   const proto = h.get('x-forwarded-proto') ?? (host.startsWith('localhost') ? 'http' : 'https')
   const origin = `${proto}://${host}`
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const title = projectTitle(project.couple_names, venueName)
 
   return (
     <main className="p-8">
       <div className="max-w-6xl mx-auto space-y-6">
         <div>
-          <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {venueName}</Link>
+          <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {title}</Link>
           <h1 className="mt-2 text-xl font-semibold text-gray-900">Guest list details</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {venueName}

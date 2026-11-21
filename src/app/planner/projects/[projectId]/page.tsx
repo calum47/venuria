@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { countdownLabel, formatDate } from '@/lib/projectDates'
+import { projectTitle } from '@/lib/projectTitle'
+import ProjectNameEditor from './ProjectNameEditor'
 import { paymentStatus } from '@/lib/payments'
 import { areaHint, summariseAreas } from '@/lib/hubAreas'
 import { capacityLine } from '@/lib/capacity'
@@ -39,7 +41,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, status, event_date, venue_id, venues(name)')
+    .select('id, status, event_date, venue_id, couple_names, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
@@ -115,11 +117,12 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
       <div className="max-w-5xl mx-auto space-y-8">
         <div>
           <Link href="/planner" className="text-sm text-gray-500 hover:text-gray-900">← My projects</Link>
-          <h1 className="mt-3 text-4xl font-semibold text-gray-900">{venueName}</h1>
+          <h1 className="mt-3 text-4xl font-semibold text-gray-900">{projectTitle(project.couple_names, venueName)}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {project.event_date ? `${formatDate(project.event_date)} · ${countdownLabel(project.event_date)}` : 'No event date set'}
+            {project.couple_names?.trim() ? `${venueName} · ` : ''}{project.event_date ? `${formatDate(project.event_date)} · ${countdownLabel(project.event_date)}` : 'No event date set'}
             {project.status ? ` · ${project.status}` : ''}
           </p>
+          <ProjectNameEditor projectId={projectId} coupleNames={project.couple_names} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

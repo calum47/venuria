@@ -40,6 +40,16 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
   return (
     <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-1">
+        <label className="text-xs text-gray-500">Couple&apos;s names</label>
+        <input
+          name="coupleNames"
+          required
+          maxLength={80}
+          placeholder="Anna & Tom"
+          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900"
+        />
+      </div>
+      <div className="flex flex-col gap-1">
         <label className="text-xs text-gray-500">Venue</label>
         <select name="venueId" required className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900">
           {venues.map((v) => (

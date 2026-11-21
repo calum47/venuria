@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { isIsoDate, suggestDueBy } from '@/lib/projectDates'
+import { parseCoupleNames } from '@/lib/projectTitle'
 
 /**
  * Creates a project for the currently signed-in planner and redirects into
@@ -41,6 +42,9 @@ export async function createProject(formData: FormData) {
     return { error: 'Pick a venue.' }
   }
 
+  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true)
+  if (!names.ok) return { error: names.error }
+
   const eventDate = (formData.get('eventDate') as string | null)?.trim() ?? ''
   if (!isIsoDate(eventDate)) {
     return { error: 'Enter the event date.' }
@@ -50,7 +54,7 @@ export async function createProject(formData: FormData) {
 
   const { data: project, error } = await supabase
     .from('projects')
-    .insert({ planner_id: planner.id, venue_id: venueId, event_date: eventDate, due_by: dueBy })
+    .insert({ planner_id: planner.id, venue_id: venueId, event_date: eventDate, due_by: dueBy, couple_names: names.value })
     .select('id')
     .single()
 
@@ -59,6 +63,27 @@ export async function createProject(formData: FormData) {
   }
 
   redirect(`/editor/${project.id}`)
+}
+
+/** Changes the couple's names that title the project. RLS decides who may update the project. */
+export async function updateProjectCoupleNames(formData: FormData): Promise<{ error?: string }> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated.' }
+
+  const projectId = formData.get('projectId') as string
+  if (!projectId) return { error: 'Missing project.' }
+  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true)
+  if (!names.ok) return { error: names.error }
+
+  const { data, error } = await supabase.from('projects').update({ couple_names: names.value }).eq('id', projectId).select('id')
+  if (error) return { error: error.message }
+  if (!data || data.length === 0) return { error: 'Project not found, or you cannot edit it.' }
+  revalidatePath('/planner')
+  revalidatePath(`/planner/projects/${projectId}`)
+  return {}
 }
 
 /**

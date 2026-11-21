@@ -1,3 +1,4 @@
+import { projectTitle } from '@/lib/projectTitle'
 import { createClient } from '@/lib/supabase/server'
 import { getAllLayoutObjectsForProject, getAllProjectZones } from '@/lib/supabase/queries'
 import { zoneAreaM2 } from '@/lib/zones'
@@ -28,7 +29,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('id, venue_id, team_id, event_date, status, venues(name)')
+    .select('id, venue_id, team_id, event_date, status, couple_names, venues(name)')
     .eq('id', projectId)
     .single()
 
@@ -41,6 +42,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   }
 
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const title = projectTitle(project.couple_names, venueName)
 
   const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }, zones, { data: roomRows }] = await Promise.all([
     getAllLayoutObjectsForProject(projectId, supabase),
@@ -67,6 +69,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     const familyName = new Map(((familyRows ?? []) as DbGuestFamily[]).map((f) => [f.id, f.name]))
     exportData = {
       venueName,
+      projectTitle: title,
       teamName: (team as { name: string } | null)?.name ?? '',
       eventDate: (project as { event_date: string | null }).event_date ?? null,
       rooms: ((fullRooms ?? []) as DbRoom[]).map((r) => ({
@@ -108,7 +111,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
   if (usedItemIds.length === 0) {
     return (
-      <SummaryShell projectId={projectId} venueName={venueName}>
+      <SummaryShell projectId={projectId} title={title}>
         {exportData && <ExportPanel data={exportData} />}
         <p className="text-sm text-gray-400">Nothing placed in this project yet.</p>
         {zoneLegend}
@@ -187,7 +190,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   }
 
   return (
-    <SummaryShell projectId={projectId} venueName={venueName}>
+    <SummaryShell projectId={projectId} title={title}>
       {exportData && <ExportPanel data={exportData} />}
       {totalShortfallItems > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -275,18 +278,18 @@ function ZoneLegend({ zones, roomNameById }: { zones: ProjectZone[]; roomNameByI
 
 function SummaryShell({
   projectId,
-  venueName,
+  title,
   children,
 }: {
   projectId: string
-  venueName: string
+  title: string
   children: React.ReactNode
 }) {
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl font-semibold text-gray-900">Project Summary — {venueName}</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Project Summary — {title}</h1>
           <Link href={`/editor/${projectId}`} className="text-sm text-blue-600 hover:underline">
             ← Back to editor
           </Link>

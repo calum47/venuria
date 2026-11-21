@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { updateProjectDates, assignProject, setProjectVisibility } from './actions'
+import { updateProjectDates, updateProjectCoupleNames, assignProject, setProjectVisibility } from './actions'
+import { projectTitle } from '@/lib/projectTitle'
 import { countdownLabel, daysUntil, formatDate, suggestDueBy } from '@/lib/projectDates'
 
 export type ProjectRowData = {
@@ -11,6 +12,7 @@ export type ProjectRowData = {
   event_date: string | null
   due_by: string | null
   venueName: string
+  coupleNames: string | null
   creatorId: string
   creatorName: string
   assigneeId: string | null
@@ -57,12 +59,13 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
     <li className={`px-5 py-4 text-sm ${isPast ? 'opacity-50' : ''}`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <span className="font-serif text-xl font-semibold text-gray-900">{project.venueName}</span>
+          <span className="font-serif text-xl font-semibold text-gray-900">{projectTitle(project.coupleNames, project.venueName)}</span>
           <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] capitalize text-gray-500">{project.status}</span>
           {project.visibility === 'private' && (
             <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Private</span>
           )}
           <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+            {project.coupleNames?.trim() && <span className="text-gray-500">{project.venueName}</span>}
             {project.event_date ? (
               <span className="text-gray-600">
                 {formatDate(project.event_date)}
@@ -98,6 +101,16 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
 
       {editing && (
         <div className="mt-3 space-y-2 rounded-xl bg-gray-50 border border-gray-100 p-3">
+          <form key={project.coupleNames ?? ''} action={run(updateProjectCoupleNames)} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="projectId" value={project.id} />
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-gray-500">Couple&apos;s names</label>
+              <input name="coupleNames" defaultValue={project.coupleNames ?? ''} required maxLength={80} className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
+            </div>
+            <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
+              {isPending ? 'Saving…' : 'Save names'}
+            </button>
+          </form>
           <form action={run(updateProjectDates)} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">

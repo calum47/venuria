@@ -1,3 +1,4 @@
+import { projectTitle } from '@/lib/projectTitle'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -26,7 +27,7 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
 
   const { data: project } = await supabase
     .from('projects')
-    .select('id, event_date, venues(name)')
+    .select('id, event_date, couple_names, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
@@ -38,6 +39,7 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
   ])
   const loadError = daysRes.error ?? blocksRes.error ?? vendorsRes.error
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const title = projectTitle(project.couple_names, venueName)
 
   return (
     <main className="p-8 print:p-0">
@@ -58,7 +60,7 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
 
         <RundownApp
           projectId={projectId}
-          venueName={venueName}
+          title={title}
           eventDate={project.event_date}
           days={(daysRes.data ?? []) as DbProjectDay[]}
           initialBlocks={(blocksRes.data ?? []) as DbTimetableBlock[]}

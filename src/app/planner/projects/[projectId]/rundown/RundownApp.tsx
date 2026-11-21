@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/projectDates'
 
 type Props = {
   projectId: string
-  venueName: string
+  title: string
   eventDate: string | null
   days: DbProjectDay[]
   initialBlocks: DbTimetableBlock[]
@@ -23,7 +23,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function RundownApp({ projectId, venueName, eventDate, days, initialBlocks, vendors }: Props) {
+export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors }: Props) {
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
   const [filter, setFilter] = useState<Set<string>>(new Set())
   const [dayFilter, setDayFilter] = useState<string>('all')
@@ -104,7 +104,7 @@ export default function RundownApp({ projectId, venueName, eventDate, days, init
       </div>
 
       <header className="hidden print:block">
-        <h1 className="text-xl font-semibold">Run-down — {venueName}</h1>
+        <h1 className="text-xl font-semibold">Run-down — {title}</h1>
         {eventDate && <p className="text-sm">{formatDate(eventDate)}</p>}
       </header>
 
