@@ -160,12 +160,13 @@ export function fill(s: string, vars: Record<string, string>): string {
   return s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '')
 }
 
-/** First supported language in an Accept-Language header, else Spanish (the launch market). */
-export function pickLang(acceptLanguage: string | null | undefined, explicit?: string | null): Lang {
-  if (explicit && (LANGS as string[]).includes(explicit)) return explicit as Lang
-  for (const part of (acceptLanguage ?? '').split(',')) {
-    const code = part.trim().slice(0, 2).toLowerCase()
-    if ((LANGS as string[]).includes(code)) return code as Lang
-  }
-  return 'es'
+/**
+ * The page opens in English. The browser's language is deliberately NOT used:
+ * the planner wants English first for every guest. A guest switches language
+ * with the selector on the page, or a link can force one with ?lang=es / ?lang=fr.
+ */
+export const DEFAULT_LANG: Lang = 'en'
+
+export function pickLang(explicit?: string | null): Lang {
+  return explicit && (LANGS as string[]).includes(explicit) ? (explicit as Lang) : DEFAULT_LANG
 }

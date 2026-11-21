@@ -1,4 +1,3 @@
-import { headers } from 'next/headers'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isPlausibleToken, rsvpOpen } from '@/lib/rsvp'
@@ -31,8 +30,7 @@ type Props = {
 export default async function RsvpPage({ params, searchParams }: Props) {
   const { token } = await params
   const sp = await searchParams
-  const h = await headers()
-  const lang = pickLang(h.get('accept-language'), typeof sp.lang === 'string' ? sp.lang : null)
+  const lang = pickLang(typeof sp.lang === 'string' ? sp.lang : null)
   const t = TEXT[lang]
 
   const admin = createAdminClient()
