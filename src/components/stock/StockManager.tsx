@@ -96,7 +96,7 @@ export default function StockManager({ ownerType, ownerId }: Props) {
                     <button
                       onClick={() => handleSave(item.id)}
                       disabled={!dirty || saving === item.id}
-                      className="rounded bg-gray-900 px-2 py-1 text-xs text-white disabled:opacity-30"
+                      className="rounded bg-brand-600 px-2 py-1 text-xs text-white disabled:opacity-30"
                     >
                       {saving === item.id ? 'Saving…' : 'Save'}
                     </button>

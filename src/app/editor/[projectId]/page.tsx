@@ -447,7 +447,7 @@ export default function EditorPage() {
                 disabled={isSwitchingRoom}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50 ${
                   room.id === currentRoomId
-                    ? 'bg-gray-900 text-white'
+                    ? 'bg-brand-600 text-white'
                     : 'text-gray-500 hover:bg-gray-100'
                 }`}
               >

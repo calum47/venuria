@@ -365,7 +365,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   type="button"
                   aria-pressed={view === v}
                   onClick={() => changeView(v)}
-                  className={`px-2.5 py-1 ${view === v ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  className={`px-2.5 py-1 ${view === v ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
                   {v === 'list' ? 'List' : 'Calendar'}
                 </button>
@@ -504,10 +504,10 @@ function CalendarView({
               onClick={() => setSelected(isSelected ? null : cell.iso)}
               aria-pressed={isSelected}
               aria-label={`${formatDate(cell.iso)}${ps.length ? `, ${ps.length} payment${ps.length === 1 ? '' : 's'} due` : ''}${cell.iso === eventDate ? ', event day' : ''}`}
-              className={`min-h-20 border-b border-r border-gray-100 p-1 text-left align-top ${cell.inMonth ? 'bg-white' : 'bg-gray-50'} ${isSelected ? 'ring-2 ring-inset ring-gray-900' : 'hover:bg-gray-50'}`}
+              className={`min-h-20 border-b border-r border-gray-100 p-1 text-left align-top ${cell.inMonth ? 'bg-white' : 'bg-gray-50'} ${isSelected ? 'ring-2 ring-inset ring-brand-600' : 'hover:bg-gray-50'}`}
             >
               <span className="flex items-center gap-1">
-                <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
+                <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
                   {cell.day}
                 </span>
                 {cell.iso === eventDate && <span className="rounded bg-purple-100 px-1 text-[10px] text-purple-700">Event</span>}

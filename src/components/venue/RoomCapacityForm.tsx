@@ -57,7 +57,7 @@ export default function RoomCapacityForm({ room, onSaved }: Props) {
           <span className="block text-xs text-gray-500">Standing</span>
           <input type="number" min="0" inputMode="numeric" value={standing} onChange={(e) => setStanding(e.target.value)} className={field} />
         </label>
-        <button onClick={save} disabled={saving} className="rounded-lg bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button onClick={save} disabled={saving} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {saving ? 'Saving…' : 'Save capacity'}
         </button>
         {message && <span className={`text-xs ${message.ok ? 'text-green-600' : 'text-red-600'}`}>{message.text}</span>}

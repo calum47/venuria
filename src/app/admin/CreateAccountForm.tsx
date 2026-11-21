@@ -70,7 +70,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
           onClick={() => setTargetRole('venue_manager')}
           className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
             targetRole === 'venue_manager'
-              ? 'bg-gray-900 text-white border-gray-900'
+              ? 'bg-brand-600 text-white border-brand-600'
               : 'border-gray-200 text-gray-600'
           }`}
         >
@@ -81,7 +81,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
           onClick={() => setTargetRole('rental_manager')}
           className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
             targetRole === 'rental_manager'
-              ? 'bg-gray-900 text-white border-gray-900'
+              ? 'bg-brand-600 text-white border-brand-600'
               : 'border-gray-200 text-gray-600'
           }`}
         >
@@ -92,7 +92,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
           onClick={() => setTargetRole('planner')}
           className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
             targetRole === 'planner'
-              ? 'bg-gray-900 text-white border-gray-900'
+              ? 'bg-brand-600 text-white border-brand-600'
               : 'border-gray-200 text-gray-600'
           }`}
         >
@@ -187,7 +187,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+        className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
       >
         {isLoading ? 'Creating...' : `Create ${roleLabel.toLowerCase()}`}
       </button>

@@ -81,7 +81,7 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
           type="button"
           onClick={run}
           disabled={!canExport}
-          className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
           {busy ? 'Creating PDF…' : 'Download PDF'}
         </button>

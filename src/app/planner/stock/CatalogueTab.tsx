@@ -77,7 +77,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
         />}
         {canManage && <button
           onClick={() => setEditing('new')}
-          className="ml-auto rounded-lg bg-gray-900 text-white text-sm px-3 py-1.5 hover:bg-gray-800"
+          className="ml-auto rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 hover:bg-brand-700"
         >
           + Add product
         </button>}
@@ -113,7 +113,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       onClick={onClick}
       className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-        active ? 'bg-gray-900 text-white border-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+        active ? 'bg-brand-600 text-white border-brand-600' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
       }`}
     >
       {children}
@@ -288,8 +288,8 @@ function EditProductModal({
           </div>
           <div className="flex-1 space-y-1">
             <div className="flex gap-1 text-xs">
-              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded ${iconType === 'emoji' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>Emoji</button>
-              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded ${iconType === 'photo' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
+              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded ${iconType === 'emoji' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Emoji</button>
+              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
             </div>
             {iconType === 'emoji' ? (
               <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="📦" maxLength={4} className={input} />
@@ -362,7 +362,7 @@ function EditProductModal({
           <button onClick={onClose} className="py-2 px-3 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50">
             Cancel
           </button>
-          <button onClick={save} disabled={isSaving || isUploading} className="py-2 px-4 text-sm font-medium text-white bg-gray-900 rounded-lg disabled:opacity-40 hover:bg-gray-800">
+          <button onClick={save} disabled={isSaving || isUploading} className="py-2 px-4 text-sm font-medium text-white bg-brand-600 rounded-lg disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Save'}
           </button>
         </div>

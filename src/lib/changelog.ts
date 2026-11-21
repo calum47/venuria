@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-fresh-look',
+    date: '2026-11-21',
+    title: 'A fresh, softer look',
+    items: [
+      'Venuria has a new look: warm ivory backgrounds, soft rounded corners, a dusty mauve accent and an elegant serif for page titles.',
+      'The top bar now has the Venuria logo and works on phones: the links move to their own row that you can swipe.',
+      'Buttons, selected tabs and highlights all use the new accent colour. Nothing has moved or been renamed.',
+    ],
+  },
+  {
     id: '2026-11-21-notification-bell',
     date: '2026-11-21',
     title: 'Notification bell',

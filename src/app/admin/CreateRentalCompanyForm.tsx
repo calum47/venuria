@@ -60,7 +60,7 @@ export function CreateRentalCompanyForm() {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+        className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
       >
         {isLoading ? 'Creating...' : 'Create rental company'}
       </button>

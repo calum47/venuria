@@ -96,7 +96,7 @@ export default async function TeamPage() {
 function RoleBadge({ role }: { role: PlannerRole }) {
   const style =
     role === 'manager'
-      ? 'bg-gray-900 text-white'
+      ? 'bg-brand-600 text-white'
       : role === 'lead'
         ? 'bg-indigo-100 text-indigo-700'
         : 'bg-gray-100 text-gray-600'

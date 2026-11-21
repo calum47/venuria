@@ -85,7 +85,7 @@ export default function WhatsNewModal() {
           <button
             onClick={dismiss}
             disabled={isSaving}
-            className="w-full py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            className="w-full py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
             Got it
           </button>

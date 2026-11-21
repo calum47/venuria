@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
 import { REMEMBER_COOKIE, REMEMBER_COOKIE_MAX_AGE } from '@/lib/supabase/rememberMe'
+import { Rings } from '@/components/brand/Rings'
 
 export function LoginForm() {
   const router = useRouter()
@@ -50,13 +51,15 @@ export function LoginForm() {
   }
 
   return (
-    <main className="flex h-screen w-screen items-center justify-center bg-gray-50">
+    <main className="flex min-h-screen w-full items-center justify-center bg-gradient-to-b from-brand-50 via-gray-50 to-gray-50 px-4 py-10">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-4 bg-white p-8 rounded-xl shadow-sm border border-gray-100"
+        className="w-full max-w-sm space-y-4 bg-white p-8 rounded-2xl shadow-md border border-brand-100"
       >
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Sign in to Venuria</h1>
+        <div className="text-center pb-2">
+          <Rings className="mx-auto h-6 w-9 text-brand-500" />
+          <h1 className="mt-3 font-serif text-3xl font-semibold text-gray-900">Venuria</h1>
+          <p className="mt-1 text-sm text-gray-500">Sign in to plan your events</p>
           <p className="text-xs text-gray-400 mt-1">Admin, Venue, Rental, and Planner accounts only.</p>
         </div>
 
@@ -75,7 +78,7 @@ export function LoginForm() {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
           />
         </div>
 
@@ -86,7 +89,7 @@ export function LoginForm() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/25"
           />
         </div>
 
@@ -104,7 +107,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
         >
           {isLoading ? 'Signing in...' : 'Sign in'}
         </button>

@@ -110,7 +110,7 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
-          <button onClick={submit} disabled={isSaving} className="rounded-lg bg-gray-900 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-gray-800">
+          <button onClick={submit} disabled={isSaving} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Add sale'}
           </button>
         </div>
@@ -146,7 +146,7 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
                       <>
                         <input type="number" min="0" max={s.qty} value={returnedQty} onChange={(e) => setReturnedQty(e.target.value)} className={`${input} w-20 py-0.5`} />
                         <span className="text-gray-400">of {s.qty} came back</span>
-                        <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded bg-gray-900 text-white px-2 py-0.5">Save</button>
+                        <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded bg-brand-600 text-white px-2 py-0.5">Save</button>
                         <button onClick={() => setConfirmingId(null)} className="text-gray-400">Cancel</button>
                       </>
                     )}

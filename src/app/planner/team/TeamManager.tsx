@@ -65,7 +65,7 @@ function InviteBox({ origin }: { origin: string }) {
             <option value="lead">Lead — sees and assigns every project</option>
           </select>
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Creating…' : 'Create invite link'}
         </button>
       </form>

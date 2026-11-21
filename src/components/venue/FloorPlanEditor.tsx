@@ -309,7 +309,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
         />
         <label
           htmlFor="floor-plan-upload"
-          className="cursor-pointer rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-800"
+          className="cursor-pointer rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700"
         >
           {uploading ? 'Uploading…' : room.floor_plan_image_url ? 'Replace floor plan PNG' : 'Upload floor plan PNG'}
         </label>

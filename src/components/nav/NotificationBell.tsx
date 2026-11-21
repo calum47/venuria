@@ -96,7 +96,7 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg z-50">
           {total === 0 ? (
             <p className="p-4 text-sm text-gray-500">Nothing needs your attention.</p>
           ) : (

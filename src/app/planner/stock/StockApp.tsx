@@ -107,7 +107,7 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
-              tab === t ? 'border-gray-900 text-gray-900 font-medium' : 'border-transparent text-gray-500 hover:text-gray-800'
+              tab === t ? 'border-brand-600 text-gray-900 font-medium' : 'border-transparent text-gray-500 hover:text-gray-800'
             }`}
           >
             {label}

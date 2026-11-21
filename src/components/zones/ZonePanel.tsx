@@ -45,7 +45,7 @@ export default function ZonePanel({ roomName }: Props) {
                 key={tool}
                 onClick={() => setZoneTool(tool)}
                 className={`py-1.5 text-xs rounded-md transition-colors ${
-                  zoneTool === tool ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  zoneTool === tool ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
                 {label}
@@ -68,7 +68,7 @@ export default function ZonePanel({ roomName }: Props) {
                 key={p.name}
                 onClick={() => setPendingPreset(p)}
                 className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors ${
-                  pendingPreset.name === p.name ? 'border-gray-900 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  pendingPreset.name === p.name ? 'border-brand-600 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
@@ -78,7 +78,7 @@ export default function ZonePanel({ roomName }: Props) {
             <button
               onClick={() => setPendingPreset({ name: customName.trim() || 'Custom', color: pendingPreset.color })}
               className={`px-2 py-1 text-xs rounded-md border transition-colors ${
-                isCustom ? 'border-gray-900 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                isCustom ? 'border-brand-600 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               Custom…
@@ -111,7 +111,7 @@ export default function ZonePanel({ roomName }: Props) {
                     key={z.id}
                     onClick={() => { selectZone(z.id); setZoneTool('select') }}
                     className={`rounded-md border px-2 py-1.5 cursor-pointer ${
-                      selected ? 'border-gray-900 bg-gray-50' : 'border-gray-200 hover:bg-gray-50'
+                      selected ? 'border-brand-600 bg-gray-50' : 'border-gray-200 hover:bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center gap-2">

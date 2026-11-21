@@ -62,7 +62,7 @@ function NameForm({ initial, email, plannerCode }: { initial: string; email: str
           <label className="text-xs text-gray-500">Name</label>
           <input name="name" defaultValue={initial} required className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Saving…' : 'Save'}
         </button>
       </form>
@@ -106,7 +106,7 @@ function PasswordForm() {
           <label className="text-xs text-gray-500">Confirm</label>
           <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
-        <button type="submit" disabled={isPending} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+        <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Updating…' : 'Update password'}
         </button>
       </form>
@@ -134,7 +134,7 @@ function TeamForm({ team, canEdit }: { team: { id: string; name: string; currenc
           <input name="currency" defaultValue={team.currency} required maxLength={3} disabled={!canEdit} className="rounded border bg-white px-2 py-1 text-sm text-gray-900 uppercase font-mono disabled:bg-gray-50 disabled:text-gray-500" />
         </div>
         {canEdit && (
-          <button type="submit" disabled={isPending} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white disabled:opacity-40">
+          <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
             {isPending ? 'Saving…' : 'Save'}
           </button>
         )}

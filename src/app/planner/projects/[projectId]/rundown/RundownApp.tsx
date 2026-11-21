@@ -61,7 +61,7 @@ export default function RundownApp({ projectId, venueName, eventDate, days, init
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center print:hidden">
         <p className="text-sm text-gray-600">Nothing to list yet. Add blocks to the timetable and they appear here.</p>
-        <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">Go to the timetable</Link>
+        <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Go to the timetable</Link>
       </div>
     )
   }
@@ -78,7 +78,7 @@ export default function RundownApp({ projectId, venueName, eventDate, days, init
             </select>
           )}
           <span className="text-xs text-gray-500">Export for:</span>
-          <button type="button" aria-pressed={!filtered} onClick={() => setFilter(new Set())} className={`${chipBase} ${!filtered ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>Everyone</button>
+          <button type="button" aria-pressed={!filtered} onClick={() => setFilter(new Set())} className={`${chipBase} ${!filtered ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-700'}`}>Everyone</button>
           {filterVendors.map((v) => {
             const on = filter.has(v.id)
             return (
@@ -95,7 +95,7 @@ export default function RundownApp({ projectId, venueName, eventDate, days, init
             )
           })}
           <span className="flex-1" />
-          <button type="button" onClick={() => window.print()} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700">Print / save as PDF</button>
+          <button type="button" onClick={() => window.print()} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Print / save as PDF</button>
         </div>
         <p className="text-xs text-gray-500">
           {filtered ? 'Only the selected vendors’ entries are listed and printed. ' : ''}

@@ -18,7 +18,7 @@ export default function JoinForm({ token, teamName, roleLabel }: { token: string
     })
   }
 
-  const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10'
+  const input = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500/25'
 
   return (
     <form action={submit} className="w-full max-w-sm space-y-4 bg-white p-8 rounded-xl shadow-sm border border-gray-100">
@@ -44,7 +44,7 @@ export default function JoinForm({ token, teamName, roleLabel }: { token: string
         <label className="text-xs text-gray-500">Confirm password</label>
         <input type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={input} />
       </div>
-      <button type="submit" disabled={isPending} className="w-full bg-gray-900 text-white rounded-lg py-2 text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50">
+      <button type="submit" disabled={isPending} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50">
         {isPending ? 'Creating your account…' : 'Join team'}
       </button>
     </form>

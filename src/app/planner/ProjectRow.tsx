@@ -113,7 +113,7 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                 Reset due-by
               </button>
             )}
-            <button type="submit" disabled={isPending} className="rounded bg-gray-900 px-3 py-1 text-xs text-white disabled:opacity-40">
+            <button type="submit" disabled={isPending} className="rounded bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
               {isPending ? 'Saving…' : 'Save dates'}
             </button>
           </form>

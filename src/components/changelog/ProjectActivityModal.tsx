@@ -96,7 +96,7 @@ export default function ProjectActivityModal({ projectId, rooms }: Props) {
         <div className="px-6 pb-6 pt-2">
           <button
             onClick={() => setOpen(false)}
-            className="w-full py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors"
+            className="w-full py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors"
           >
             Got it
           </button>

@@ -66,7 +66,7 @@ type Props = {
 
 const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
 const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50'
+const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 const chipBase = 'rounded-full border px-3 py-1 text-xs'
 
 function errMsg(e: unknown): string {
@@ -130,7 +130,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   }
 
   const toggle = (k: 'vip' | 'speech' | 'dietary' | 'unseated') => setFilters((f) => ({ ...f, [k]: !f[k] }))
-  const chip = (on: boolean) => `${chipBase} ${on ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`
+  const chip = (on: boolean) => `${chipBase} ${on ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`
 
   return (
     <div className="space-y-4">

@@ -78,7 +78,7 @@ export default function PurchasesTab({ items, purchases, projects, canManage, on
               <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
-          <button onClick={submit} disabled={isSaving} className="rounded-lg bg-gray-900 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-gray-800">
+          <button onClick={submit} disabled={isSaving} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Add purchase'}
           </button>
         </div>

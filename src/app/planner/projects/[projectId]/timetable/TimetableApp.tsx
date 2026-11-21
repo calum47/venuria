@@ -43,7 +43,7 @@ const NO_VENDOR_COLOUR = '#e5e7eb'
 
 const input = 'rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
 const btn = 'rounded border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
-const btnPrimary = 'rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50'
+const btnPrimary = 'rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
 function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
@@ -178,7 +178,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
             type="button"
             onClick={() => { setActiveDayId(d.id); setEditing(null) }}
             aria-pressed={d.id === day?.id}
-            className={`rounded-full border px-3 py-1 text-sm ${d.id === day?.id ? 'border-gray-900 bg-gray-900 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+            className={`rounded-full border px-3 py-1 text-sm ${d.id === day?.id ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
           >
             {d.label}{d.day_date ? ` · ${shortDay(d.day_date)}` : ''}
           </button>
@@ -245,7 +245,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                       onPointerMove={onPointerMove}
                       onPointerUp={() => onPointerUp(b)}
                       onPointerCancel={onPointerCancel}
-                      className={`absolute touch-none select-none overflow-hidden rounded border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-gray-900' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-gray-900' : ''}`}
+                      className={`absolute touch-none select-none overflow-hidden rounded border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-brand-600' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-brand-600' : ''}`}
                       style={{
                         top: (t.start - range.from) * PX_PER_MIN,
                         height,

@@ -173,7 +173,7 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
             <button
               onClick={handleAddAndAssign}
               disabled={isWorking || !newName.trim()}
-              className="text-xs bg-gray-900 text-white px-3 py-2 rounded-lg hover:bg-gray-700 disabled:opacity-40"
+              className="text-xs bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 disabled:opacity-40"
             >
               Add
             </button>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import NotificationBell from '@/components/nav/NotificationBell'
+import { Rings } from '@/components/brand/Rings'
 import { ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
 
 type Props = {
@@ -25,8 +26,8 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
   const item = (href: string, label: string, active: boolean) => (
     <Link
       href={href}
-      className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-        active ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-100'
+      className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-sm transition-colors ${
+        active ? 'bg-brand-50 text-brand-800 font-medium' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
       }`}
     >
       {label}
@@ -34,23 +35,29 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
   )
 
   return (
-    <header className="bg-white border-b border-gray-200">
-      <div className="max-w-5xl mx-auto px-6 h-14 flex items-center gap-2">
-        <Link href="/planner" className="font-semibold text-gray-900 mr-4">Venuria</Link>
+    <header className="bg-white border-b border-brand-100">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 md:py-0 md:h-14 flex flex-wrap md:flex-nowrap items-center gap-x-2 gap-y-1">
+        <Link href="/planner" className="mr-2 md:mr-4 flex items-center gap-2 text-gray-900" aria-label="Venuria home">
+          <Rings className="h-5 w-7 text-brand-500" />
+          <span className="font-serif text-2xl font-semibold leading-none tracking-tight">Venuria</span>
+        </Link>
 
-        {lastProjectId ? (
-          item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
-        ) : (
-          <span className="px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
-        )}
-        {item('/planner', 'My projects', pathname === '/planner')}
-        {item('/planner/stock', 'My stock', pathname.startsWith('/planner/stock'))}
-        {item('/planner/team', 'My team', pathname.startsWith('/planner/team'))}
-        {item('/planner/settings', 'Settings', pathname.startsWith('/planner/settings'))}
+        {/* On phones the links drop to their own scrollable row under the logo. */}
+        <nav aria-label="Main" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
+          {lastProjectId ? (
+            item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
+          ) : (
+            <span className="shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
+          )}
+          {item('/planner', 'My projects', pathname === '/planner')}
+          {item('/planner/stock', 'My stock', pathname.startsWith('/planner/stock'))}
+          {item('/planner/team', 'My team', pathname.startsWith('/planner/team'))}
+          {item('/planner/settings', 'Settings', pathname.startsWith('/planner/settings'))}
+        </nav>
 
         <div className="ml-auto flex items-center gap-3">
           <NotificationBell />
-          <div className="text-right leading-tight">
+          <div className="hidden sm:block text-right leading-tight">
             <p className="text-sm text-gray-900">{plannerName}</p>
             <p className="text-[11px] text-gray-400">{ROLE_LABEL[role]} · {teamName}</p>
           </div>

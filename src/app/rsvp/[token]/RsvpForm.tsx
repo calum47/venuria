@@ -21,8 +21,8 @@ type Props = {
 
 type Step = 'name' | 'confirm' | 'answers' | 'done'
 
-const field = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-gray-900 focus:outline-none'
-const primary = 'w-full rounded-md bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50'
+const field = 'w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-brand-500 focus:outline-none'
+const primary = 'w-full rounded-md bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50'
 const secondary = 'w-full rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50'
 
 function longDate(iso: string, lang: Lang): string {
@@ -277,7 +277,7 @@ export default function RsvpForm({ token, initialLang, welcome, deadline, allowP
           <fieldset className="space-y-2">
             <legend className="text-sm font-medium text-gray-900">{t.attendQ}</legend>
             {(['attending', 'declined', 'maybe'] as const).map((s) => (
-              <label key={s} className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${status === s ? 'border-gray-900 bg-gray-50' : 'border-gray-300'}`}>
+              <label key={s} className={`flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm ${status === s ? 'border-brand-600 bg-gray-50' : 'border-gray-300'}`}>
                 <input type="radio" name="status" value={s} checked={status === s} onChange={() => setStatus(s)} />
                 {t[s]}
               </label>

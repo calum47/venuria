@@ -65,7 +65,7 @@ export default function ProjectOrders({
           {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
         <input type="number" min={1} step={1} value={qty} onChange={(e) => setQty(e.target.value)} className={input + ' w-20'} aria-label="Quantity" />
-        <button type="submit" disabled={busy || !itemId} className="rounded bg-gray-900 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50">
+        <button type="submit" disabled={busy || !itemId} className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50">
           {busy ? 'Adding…' : 'Add order'}
         </button>
       </form>

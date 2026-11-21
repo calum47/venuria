@@ -132,7 +132,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
           <button
             onClick={handleAddGuest}
             disabled={isAdding || !newName.trim()}
-            className="text-xs bg-gray-900 text-white px-3 py-2 rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-40"
+            className="text-xs bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-40"
           >
             Add
           </button>

@@ -119,7 +119,7 @@ export function RoomCapacityBody({
                   key={m}
                   disabled={busy}
                   onClick={() => chooseMode(m)}
-                  className="rounded-lg border border-gray-200 p-3 text-left hover:border-gray-900 disabled:opacity-50"
+                  className="rounded-lg border border-gray-200 p-3 text-left hover:border-brand-400 disabled:opacity-50"
                 >
                   <span className="block text-sm font-medium text-gray-900">{modeLabel(m)}</span>
                   <span className="block text-xs text-gray-500 mt-0.5">
@@ -222,7 +222,7 @@ export function RoomCapacityBody({
                 className="w-full rounded border border-gray-200 px-2 py-1 text-sm text-gray-900"
               />
               <div className="flex items-center gap-2">
-                <button onClick={submitNote} disabled={busy} className="rounded bg-gray-900 px-2.5 py-1 text-xs text-white disabled:opacity-40">Save note and continue</button>
+                <button onClick={submitNote} disabled={busy} className="rounded bg-brand-600 px-2.5 py-1 text-xs text-white disabled:opacity-40">Save note and continue</button>
                 <button onClick={() => { setAsking(false); setError(null) }} className="text-xs text-gray-500">Cancel</button>
               </div>
             </div>

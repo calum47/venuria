@@ -214,7 +214,7 @@ export default function AutoArrangeModal({
           <button
             onClick={handleRun}
             disabled={!canRun}
-            className="flex-1 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg disabled:opacity-30 hover:bg-gray-800 transition-colors"
+            className="flex-1 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg disabled:opacity-30 hover:bg-brand-700 transition-colors"
           >
             {isRunning ? 'Arranging…' : 'Arrange'}
           </button>
