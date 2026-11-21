@@ -55,7 +55,7 @@ export default function ProjectOrders({
   return (
     <section className="space-y-2" aria-labelledby="orders-h">
       <div className="flex items-baseline justify-between">
-        <h2 id="orders-h" className="text-sm font-semibold text-gray-900">Stock orders for this project</h2>
+        <h2 id="orders-h" className="text-xl font-medium text-gray-900">Stock orders for this project</h2>
         <Link href="/planner/stock" className="text-xs text-gray-500 underline hover:text-gray-900">Open My Stock</Link>
       </div>
 
@@ -74,7 +74,7 @@ export default function ProjectOrders({
       {orders.length === 0 ? (
         <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">No stock orders tagged to this project yet.</p>
       ) : (
-        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+        <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           {orders.map((o) => (
             <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
               <span className="min-w-0 truncate text-gray-900">

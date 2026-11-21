@@ -38,10 +38,10 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
   }
 
   return (
-    <form action={handleSubmit} className="flex flex-wrap items-end gap-2 rounded border bg-gray-50 p-3">
+    <form action={handleSubmit} className="flex flex-wrap items-end gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-1">
         <label className="text-xs text-gray-500">Venue</label>
-        <select name="venueId" required className="rounded border bg-white px-2 py-1 text-sm text-gray-900">
+        <select name="venueId" required className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900">
           {venues.map((v) => (
             <option key={v.id} value={v.id}>
               {v.name}
@@ -57,7 +57,7 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
           required
           value={eventDate}
           onChange={(e) => handleEventDateChange(e.target.value)}
-          className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -69,13 +69,13 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
           name="dueBy"
           value={dueBy}
           onChange={(e) => { setDueByTouched(true); setDueBy(e.target.value) }}
-          className="rounded border bg-white px-2 py-1 text-sm text-gray-900"
+          className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900"
         />
       </div>
       <button
         type="submit"
         disabled={isPending}
-        className="rounded bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
+        className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
       >
         {isPending ? 'Creating…' : 'New project'}
       </button>

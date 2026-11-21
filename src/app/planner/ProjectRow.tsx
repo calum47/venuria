@@ -54,15 +54,15 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
     project.assigneeId === null ? null : project.assigneeId === meId ? 'assigned to you' : `assigned to ${project.assigneeName}`
 
   return (
-    <li className={`px-4 py-2.5 text-sm ${isPast ? 'opacity-50' : ''}`}>
-      <div className="flex items-center justify-between gap-3">
+    <li className={`px-5 py-4 text-sm ${isPast ? 'opacity-50' : ''}`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <span className="text-gray-900">{project.venueName}</span>
-          <span className="text-gray-400 ml-2 text-xs">{project.status}</span>
+          <span className="font-serif text-xl font-semibold text-gray-900">{project.venueName}</span>
+          <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] capitalize text-gray-500">{project.status}</span>
           {project.visibility === 'private' && (
-            <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded px-1.5 py-0.5">Private</span>
+            <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Private</span>
           )}
-          <div className="text-xs mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+          <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
             {project.event_date ? (
               <span className="text-gray-600">
                 {formatDate(project.event_date)}
@@ -90,14 +90,14 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
           <button onClick={() => { setEditing((v) => !v); setError(null) }} className="text-xs text-gray-400 hover:text-gray-700">
             {editing ? 'Close' : 'Edit'}
           </button>
-          <Link href={`/planner/projects/${project.id}`} className="text-blue-600 hover:underline text-sm">
+          <Link href={`/planner/projects/${project.id}`} className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-100">
             Open project →
           </Link>
         </div>
       </div>
 
       {editing && (
-        <div className="mt-2 space-y-2 rounded bg-gray-50 border border-gray-100 p-2">
+        <div className="mt-3 space-y-2 rounded-xl bg-gray-50 border border-gray-100 p-3">
           <form action={run(updateProjectDates)} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">

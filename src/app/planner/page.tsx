@@ -78,32 +78,35 @@ export default async function PlannerPage() {
   )
 
   return (
-    <main className="p-8">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <h1 className="text-xl font-semibold text-gray-900">My projects</h1>
+    <main className="px-4 sm:px-6 py-10">
+      <div className="max-w-3xl mx-auto space-y-10">
+        <div>
+          <h1 className="text-4xl font-semibold text-gray-900">My projects</h1>
+          <p className="mt-1 text-sm text-gray-500">The weddings and events you and your team are planning.</p>
+        </div>
 
         <section>
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">New project</h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-3">New project</h2>
           <NewProjectForm venues={venues ?? []} />
         </section>
 
         <section>
-          <h2 className="text-sm font-semibold text-gray-900 mb-2">Mine ({mine.length})</h2>
-          <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+          <h2 className="text-xl font-medium text-gray-900 mb-3">Mine <span className="font-sans text-sm text-gray-400">{mine.length}</span></h2>
+          <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
             {mine.map(renderRow)}
             {mine.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">Nothing created by or assigned to you yet.</li>
+              <li className="px-5 py-4 text-sm text-gray-400">Nothing created by or assigned to you yet.</li>
             )}
           </ul>
         </section>
 
         {(teammates ?? []).length > 1 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-900 mb-2">Team projects ({team.length})</h2>
-            <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+            <h2 className="text-xl font-medium text-gray-900 mb-3">Team projects <span className="font-sans text-sm text-gray-400">{team.length}</span></h2>
+            <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
               {team.map(renderRow)}
               {team.length === 0 && (
-                <li className="px-4 py-2.5 text-sm text-gray-400">No public projects from teammates.</li>
+                <li className="px-5 py-4 text-sm text-gray-400">No public projects from teammates.</li>
               )}
             </ul>
           </section>
@@ -111,9 +114,9 @@ export default async function PlannerPage() {
 
         {canAssign && otherPrivate.length > 0 && (
           <section>
-            <h2 className="text-sm font-semibold text-gray-500 mb-2">Teammates&apos; private projects ({otherPrivate.length})</h2>
+            <h2 className="text-xl font-medium text-gray-500 mb-1">Teammates&apos; private projects <span className="font-sans text-sm text-gray-400">{otherPrivate.length}</span></h2>
             <p className="text-xs text-gray-400 mb-2">Visible to you as {ctx.planner.role}. Not shown to regular members.</p>
-            <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
+            <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
               {otherPrivate.map(renderRow)}
             </ul>
           </section>

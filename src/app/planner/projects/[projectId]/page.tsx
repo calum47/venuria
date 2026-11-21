@@ -9,6 +9,7 @@ import { areaHint, summariseAreas } from '@/lib/hubAreas'
 import { capacityLine } from '@/lib/capacity'
 import type { DbProjectRoomSetting } from '@/types/db'
 import ProjectOrders from './ProjectOrders'
+import { HubCard, hubCardClass as card } from '@/components/brand/HubCard'
 import type { DbStockOrder } from '@/types/db'
 
 type Params = { projectId: string }
@@ -109,58 +110,33 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
           ? `${unpaid} unpaid of ${all.length}`
           : `All ${all.length} paid`
 
-  const card = 'block rounded-lg border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400'
-
   return (
-    <main className="p-8">
-      <div className="max-w-5xl mx-auto space-y-6">
+    <main className="px-4 sm:px-6 py-10">
+      <div className="max-w-5xl mx-auto space-y-8">
         <div>
           <Link href="/planner" className="text-sm text-gray-500 hover:text-gray-900">← My projects</Link>
-          <h1 className="mt-2 text-xl font-semibold text-gray-900">{venueName}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 className="mt-3 text-4xl font-semibold text-gray-900">{venueName}</h1>
+          <p className="text-sm text-gray-500 mt-1">
             {project.event_date ? `${formatDate(project.event_date)} · ${countdownLabel(project.event_date)}` : 'No event date set'}
             {project.status ? ` · ${project.status}` : ''}
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Link href={`/editor/${projectId}`} className={card}>
-            <p className="font-medium text-gray-900">Project editor</p>
-            <p className="text-sm text-gray-500 mt-1">Floor plan, seating and 3D view</p>
-          </Link>
-
-          <Link href={`/editor/${projectId}/summary`} className={card}>
-            <p className="font-medium text-gray-900">Layout summary</p>
-            <p className="text-sm text-gray-500 mt-1">Everything placed, stock shortfalls and zones</p>
-          </Link>
-
-          <Link href={`/planner/projects/${projectId}/payments`} className={card}>
-            <p className="font-medium text-gray-900">Payments &amp; documents</p>
-            <p className={`text-sm mt-1 ${overdue > 0 ? 'text-red-600' : 'text-gray-500'}`}>{paymentsHint}</p>
-          </Link>
-
-          <Link href={`/planner/projects/${projectId}/timetable`} className={card}>
-            <p className="font-medium text-gray-900">Timetable</p>
-            <p className="text-sm text-gray-500 mt-1">{timetableHint}</p>
-          </Link>
-
-          <Link href={`/planner/projects/${projectId}/rundown`} className={card}>
-            <p className="font-medium text-gray-900">Run-down list</p>
-            <p className="text-sm text-gray-500 mt-1">Day-of list for the team and vendors — print or save as PDF</p>
-          </Link>
-
-          <Link href={`/planner/projects/${projectId}/guests`} className={card}>
-            <p className="font-medium text-gray-900">Guest list details</p>
-            <p className={`text-sm mt-1 ${needSeat > 0 ? 'text-amber-700' : 'text-gray-500'}`}>{guestsHint}</p>
-          </Link>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan, seating and 3D view" />
+          <HubCard href={`/editor/${projectId}/summary`} icon="summary" title="Layout summary" hint="Everything placed, stock shortfalls and zones" />
+          <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />
+          <HubCard href={`/planner/projects/${projectId}/timetable`} icon="timetable" title="Timetable" hint={timetableHint} />
+          <HubCard href={`/planner/projects/${projectId}/rundown`} icon="rundown" title="Run-down list" hint="Day-of list for the team and vendors — print or save as PDF" />
+          <HubCard href={`/planner/projects/${projectId}/guests`} icon="guests" title="Guest list details" hint={guestsHint} hintClass={needSeat > 0 ? 'text-amber-700' : 'text-gray-500'} />
         </div>
 
         <section className="space-y-2" aria-labelledby="areas-h">
-          <h2 id="areas-h" className="text-sm font-semibold text-gray-900">Areas of the venue</h2>
+          <h2 id="areas-h" className="text-xl font-medium text-gray-900">Areas of the venue</h2>
           {areas.length === 0 ? (
             <p className="rounded border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {areas.map((a) => (
                 <Link key={a.id} href={`/editor/${projectId}?room=${a.id}`} className={card}>
                   <p className="font-medium text-gray-900">{a.name}</p>
