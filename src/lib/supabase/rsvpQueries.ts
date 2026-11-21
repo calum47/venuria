@@ -11,6 +11,8 @@ export type RsvpSettings = {
   deadline: string | null
   welcome_message: string | null
   allow_plus_one: boolean
+  default_lang: 'es' | 'en' | 'fr'
+  section_order: string[]
 }
 
 /** Creates the project's RSVP row on first use (the database generates the token), or updates it. */
@@ -24,6 +26,8 @@ export async function saveRsvpSettings(projectId: string, s: RsvpSettings): Prom
         deadline: s.deadline || null,
         welcome_message: s.welcome_message?.trim() || null,
         allow_plus_one: s.allow_plus_one,
+        default_lang: s.default_lang,
+        section_order: s.section_order,
       },
       { onConflict: 'project_id' },
     )

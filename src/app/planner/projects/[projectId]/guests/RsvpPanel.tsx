@@ -1,5 +1,7 @@
 'use client'
 
+import { LANGS, LANG_NAME, type Lang } from '@/lib/rsvpText'
+import { RSVP_SECTION_LABEL, moveSection, normalizeSectionOrder, type RsvpSectionKey } from '@/lib/rsvpSections'
 import { useState } from 'react'
 import type { DbGuest, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import { regenerateRsvpToken, saveRsvpSettings } from '@/lib/supabase/rsvpQueries'
@@ -39,6 +41,8 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
   const [deadline, setDeadline] = useState(initial?.deadline ?? '')
   const [welcome, setWelcome] = useState(initial?.welcome_message ?? '')
   const [plusOne, setPlusOne] = useState(initial?.allow_plus_one ?? true)
+  const [defaultLang, setDefaultLang] = useState<Lang>(initial?.default_lang ?? 'en')
+  const [order, setOrder] = useState<RsvpSectionKey[]>(normalizeSectionOrder(initial?.section_order))
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -49,7 +53,9 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
     enabled !== (cfg?.enabled ?? false) ||
     (deadline || null) !== (cfg?.deadline ?? null) ||
     (welcome.trim() || null) !== (cfg?.welcome_message ?? null) ||
-    plusOne !== (cfg?.allow_plus_one ?? true)
+    plusOne !== (cfg?.allow_plus_one ?? true) ||
+    defaultLang !== (cfg?.default_lang ?? 'en') ||
+    order.join() !== normalizeSectionOrder(cfg?.section_order).join()
   const url = cfg ? `${origin}${rsvpPath(cfg.token)}` : ''
   const deadlinePassed = !!cfg?.deadline && madridToday() > cfg.deadline
 
@@ -67,7 +73,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
   const save = () =>
     run('save', async () => {
-      const saved = await saveRsvpSettings(projectId, { enabled, deadline: deadline || null, welcome_message: welcome, allow_plus_one: plusOne })
+      const saved = await saveRsvpSettings(projectId, { enabled, deadline: deadline || null, welcome_message: welcome, allow_plus_one: plusOne, default_lang: defaultLang, section_order: order })
       setCfg(saved)
     })
 
@@ -139,6 +145,31 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
             Welcome note shown under the names (a few warm words for your guests)
             <textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} maxLength={500} rows={3} className={input + ' mt-1 block w-full'} />
           </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs text-gray-600">
+              Language the page opens in
+              <select value={defaultLang} onChange={(e) => setDefaultLang(e.target.value as Lang)} className={input + ' mt-1 block'}>
+                {LANGS.map((l) => (
+                  <option key={l} value={l}>{LANG_NAME[l]}</option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[11px] text-gray-500">Guests can still switch language on the page.</span>
+            </label>
+            <div className="text-xs text-gray-600">
+              Order of the sections
+              <ol className="mt-1 space-y-1">
+                {order.map((k, i) => (
+                  <li key={k} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900">
+                    <span className="flex-1">{RSVP_SECTION_LABEL[k]}</span>
+                    <button type="button" aria-label={`Move ${RSVP_SECTION_LABEL[k]} up`} disabled={i === 0} onClick={() => setOrder(moveSection(order, k, -1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label={`Move ${RSVP_SECTION_LABEL[k]} down`} disabled={i === order.length - 1} onClick={() => setOrder(moveSection(order, k, 1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↓</button>
+                  </li>
+                ))}
+              </ol>
+              <span className="mt-1 block text-[11px] text-gray-500">The cover, names and welcome note always stay on top.</span>
+            </div>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={save} disabled={!dirty || busy !== null} className={btnPrimary}>{busy === 'save' ? 'Saving…' : 'Save'}</button>

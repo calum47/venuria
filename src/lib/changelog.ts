@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-21-project-names-and-delete',
+    date: '2026-11-21',
+    title: 'Couple names, deleting projects, and RSVP settings',
+    roles: ['planner', 'admin'],
+    items: [
+      'Projects are now titled by the couple\'s names. Add or change them from the project list or the project page; projects without names still show the venue.',
+      'You can delete a project from its page (at the bottom). It is permanent, and only the planner who created it, or a manager or lead, can do it.',
+      'In the RSVP settings you can choose the language the page opens in, and move the sections (details, answer form, area, hotels) up or down.',
+      'In the planner, the top bar of the editor now starts with the Venuria menu, and "Guest mode" is called "Seating plan".',
+    ],
+  },
+  {
     id: '2026-11-21-rsvp-wedding-look',
     date: '2026-11-21',
     title: 'A more wedding-like RSVP page',

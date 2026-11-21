@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { LANGS, LANG_NAME, TEXT, fill, type Lang } from '@/lib/rsvpText'
 import type { RsvpStatus } from '@/lib/rsvp'
 import type { PublicContent } from '@/lib/rsvpContent'
+import type { RsvpSectionKey } from '@/lib/rsvpSections'
 import { Rings } from '@/components/brand/Rings'
 import { lookupGuest, submitRsvp, type LookupResult, type SubmitResult } from './actions'
 
@@ -19,6 +20,7 @@ type Props = {
   content: PublicContent
   /** Planner preview: 'live' = guests see the same page, 'off' = guests currently see "closed". */
   preview: 'live' | 'off' | null
+  sectionOrder: RsvpSectionKey[]
 }
 
 type Step = 'name' | 'confirm' | 'answers' | 'done'
@@ -33,7 +35,7 @@ function longDate(iso: string, lang: Lang): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview }: Props) {
+export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview, sectionOrder }: Props) {
   const [lang, setLang] = useState<Lang>(initialLang)
   const t = TEXT[lang]
 
@@ -261,14 +263,7 @@ export default function RsvpForm({ token, initialLang, welcome, coupleNames, dea
     </p>
   )
 
-  return (
-    <article className="overflow-hidden rounded-3xl bg-white shadow-lg">
-      {hero}
-      <div className="space-y-8 px-5 pb-10 pt-8 sm:px-10">
-        {previewBanner}
-        {intro}
-        {details}
-        {closed ? closedBlock : step === 'done' ? doneBlock : (
+  const formBlock = closed ? closedBlock : step === 'done' ? doneBlock : (
           <div className="space-y-5">
       {message && <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">{message}</p>}
 
@@ -356,9 +351,19 @@ export default function RsvpForm({ token, initialLang, welcome, coupleNames, dea
         </form>
       )}
           </div>
-        )}
-        {area}
-        {hotels}
+        )
+
+  const sections: Record<RsvpSectionKey, React.ReactNode> = { details, form: formBlock, area, hotels }
+
+  return (
+    <article className="overflow-hidden rounded-3xl bg-white shadow-lg">
+      {hero}
+      <div className="space-y-8 px-5 pb-10 pt-8 sm:px-10">
+        {previewBanner}
+        {intro}
+        {sectionOrder.map((k) => (
+          <Fragment key={k}>{sections[k]}</Fragment>
+        ))}
       </div>
     </article>
   )

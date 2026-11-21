@@ -104,6 +104,9 @@ export type DbProjectRsvp = {
   show_details: boolean
   show_area: boolean
   show_hotels: boolean
+  // Migration 030
+  default_lang: 'es' | 'en' | 'fr'
+  section_order: string[]
 }
 
 export type DbRsvpPhoto = {

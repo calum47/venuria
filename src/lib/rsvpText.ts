@@ -167,6 +167,8 @@ export function fill(s: string, vars: Record<string, string>): string {
  */
 export const DEFAULT_LANG: Lang = 'en'
 
-export function pickLang(explicit?: string | null): Lang {
-  return explicit && (LANGS as string[]).includes(explicit) ? (explicit as Lang) : DEFAULT_LANG
+/** `explicit` (the guest's own pick) wins, then `preferred` (the planner's default for the page), then English. */
+export function pickLang(explicit?: string | null, preferred?: string | null): Lang {
+  for (const c of [explicit, preferred]) if (c && (LANGS as string[]).includes(c)) return c as Lang
+  return DEFAULT_LANG
 }

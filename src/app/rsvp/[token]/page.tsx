@@ -1,3 +1,4 @@
+import { normalizeSectionOrder } from '@/lib/rsvpSections'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isPlausibleToken, rsvpOpen } from '@/lib/rsvp'
@@ -30,15 +31,15 @@ type Props = {
 export default async function RsvpPage({ params, searchParams }: Props) {
   const { token } = await params
   const sp = await searchParams
-  const lang = pickLang(typeof sp.lang === 'string' ? sp.lang : null)
-  const t = TEXT[lang]
-
   const admin = createAdminClient()
   let cfg: DbProjectRsvp | null = null
   if (isPlausibleToken(token)) {
     const { data } = await admin.from('project_rsvp').select('*').eq('token', token).maybeSingle()
     cfg = (data as DbProjectRsvp | null) ?? null
   }
+  // A guest's own choice (?lang=) wins; otherwise the language the planner picked.
+  const lang = pickLang(typeof sp.lang === 'string' ? sp.lang : null, cfg?.default_lang)
+  const t = TEXT[lang]
 
   const live = !!cfg && cfg.enabled && rsvpOpen(cfg.deadline)
   const previewOk = !!cfg && sp.preview === '1' ? await plannerCanPreview(cfg.project_id) : false
@@ -85,6 +86,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
           eventDate={project?.event_date ?? null}
           content={buildPublicContent(cfg, photos, hotels, urls)}
           preview={previewOk ? (live ? 'live' : 'off') : null}
+          sectionOrder={normalizeSectionOrder(cfg.section_order)}
         />
       </div>
     </main>
