@@ -35,7 +35,9 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
   )
 
   return (
-    <header className="bg-white border-b border-brand-100">
+    // Sticky only on touch devices (phones/tablets, any orientation), so the
+    // nav stays reachable there; mouse/trackpad devices keep the normal header.
+    <header className="bg-white border-b border-brand-100 [@media(pointer:coarse)]:sticky [@media(pointer:coarse)]:top-0 [@media(pointer:coarse)]:z-30 print:static">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 md:py-0 md:h-14 flex flex-wrap md:flex-nowrap items-center gap-x-2 gap-y-1">
         <Link href="/planner" className="mr-2 md:mr-4 flex items-center gap-2 text-gray-900" aria-label="Venuria home">
           <Rings className="h-5 w-7 text-brand-500" />
