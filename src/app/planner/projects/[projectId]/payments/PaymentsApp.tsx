@@ -100,6 +100,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sorted, vendorNameById])
   const [openVendors, setOpenVendors] = useState<Set<string>>(() => new Set())
+  const allVendorsOpen = vendorGroups.length > 0 && vendorGroups.every((g) => openVendors.has(g.key))
   const toggleVendor = (key: string) =>
     setOpenVendors((prev) => {
       const next = new Set(prev)
@@ -463,9 +464,14 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         {view === 'list' ? (
           <div>
             {vendorGroups.length > 1 && (
-              <div className="flex justify-end gap-3 border-b border-gray-100 px-4 py-2 text-xs text-gray-500">
-                <button type="button" className="hover:text-gray-900 underline-offset-2 hover:underline" onClick={() => setOpenVendors(new Set(vendorGroups.map((g) => g.key)))}>Expand all</button>
-                <button type="button" className="hover:text-gray-900 underline-offset-2 hover:underline" onClick={() => setOpenVendors(new Set())}>Collapse all</button>
+              <div className="flex justify-end border-b border-gray-100 px-4 py-2 text-xs">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-200 px-2.5 py-1 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  onClick={() => setOpenVendors(allVendorsOpen ? new Set() : new Set(vendorGroups.map((g) => g.key)))}
+                >
+                  {allVendorsOpen ? 'Close all' : 'Open all'}
+                </button>
               </div>
             )}
             {vendorGroups.map((g) => {
