@@ -12,6 +12,16 @@ export const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-
 export const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
 export const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
+/** A form control with its name written above it. */
+export function Labelled({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
+  return (
+    <label className={`block min-w-0 ${className}`}>
+      <span className="mb-0.5 block text-[11px] text-gray-500">{label}</span>
+      {children}
+    </label>
+  )
+}
+
 export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
@@ -113,16 +123,22 @@ export function UploadForm({
       </div>
       {!version && (
       <div className="grid gap-2 sm:grid-cols-3">
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
+        <Labelled label="Name">
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Contract, Quote, Floor plan…" className={`${input} w-full`} maxLength={150} />
+        </Labelled>
         {!fixedKind && (
-          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="Document type" className={input}>
-            {PROJECT_DOC_KINDS.map((k) => (
-              <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
-            ))}
-          </select>
+          <Labelled label="Type">
+            <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
+              {PROJECT_DOC_KINDS.map((k) => (
+                <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+              ))}
+            </select>
+          </Labelled>
         )}
         {!fixedKind && (
-          <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor (optional)" aria-label="Vendor" className={input} maxLength={120} />
+          <Labelled label="Vendor / supplier (optional)">
+            <input value={vendor} onChange={(e) => setVendor(e.target.value)} className={`${input} w-full`} maxLength={120} />
+          </Labelled>
         )}
       </div>
       )}

@@ -184,7 +184,7 @@ export default function PaymentForm({
         </div>
       )}
 
-      <PaymentFields value={draft} onChange={change} from={from} showLabels={staged !== null} dueText={dueText} dueCalc={dueCalc} />
+      <PaymentFields value={draft} onChange={change} from={from} dueText={dueText} dueCalc={dueCalc} />
 
       {formError && <p className="text-xs text-red-600">{formError}</p>}
       <div className="flex gap-2">

@@ -21,7 +21,7 @@ import {
   type DocSort,
 } from '@/lib/documents'
 import { formatDate } from '@/lib/projectDates'
-import { UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
+import { Labelled, UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
 
 type Props = {
   teamId: string
@@ -453,13 +453,19 @@ function EditForm({
   return (
     <form onSubmit={submit} className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
-        <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="Document type" className={input}>
-          {kinds.map((k) => (
-            <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
-          ))}
-        </select>
-        <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor (optional)" aria-label="Vendor" className={input} maxLength={120} />
+        <Labelled label="Name">
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Contract, Quote, Floor plan…" className={`${input} w-full`} maxLength={150} />
+        </Labelled>
+        <Labelled label="Type">
+          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
+            {kinds.map((k) => (
+              <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+            ))}
+          </select>
+        </Labelled>
+        <Labelled label="Vendor / supplier (optional)">
+          <input value={vendor} onChange={(e) => setVendor(e.target.value)} className={`${input} w-full`} maxLength={120} />
+        </Labelled>
       </div>
       {group.previous.length > 0 && (
         <p className="text-xs text-gray-500">Applies to all {group.previous.length + 1} versions of this document.</p>

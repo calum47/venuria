@@ -122,7 +122,7 @@ export default function PdfImportReview({
               <input type="checkbox" checked={r.include} onChange={(e) => update(r.key, (x) => ({ ...x, include: e.target.checked }))} />
               Payment {i + 1}{r.include ? '' : ' (will not be saved)'}
             </label>
-            <PaymentFields value={r.draft} onChange={(f, v) => edit(r.key, f, v)} from={r.from} notFound={r.notFound} showLabels dueText={r.dueText} dueCalc={r.dueCalc} />
+            <PaymentFields value={r.draft} onChange={(f, v) => edit(r.key, f, v)} from={r.from} notFound={r.notFound} dueText={r.dueText} dueCalc={r.dueCalc} />
           </li>
         ))}
       </ul>

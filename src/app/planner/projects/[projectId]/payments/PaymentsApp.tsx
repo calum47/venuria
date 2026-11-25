@@ -29,6 +29,7 @@ import {
   sumAmounts,
 } from '@/lib/payments'
 import { formatDate, isIsoDate, todayIso } from '@/lib/projectDates'
+import { DateField } from '@/components/DateField'
 import DocumentsSection from './DocumentsSection'
 import PaymentForm, { type PendingPdf } from './PaymentForm'
 import PdfImportReview from './PdfImportReview'
@@ -331,8 +332,8 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                 <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>Mark unpaid</button>
               ) : payingId === p.id ? (
                 <span className="flex items-center gap-2">
-                  <label className="text-xs text-gray-500">Paid on</label>
-                  <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className={input} />
+                  <label htmlFor={`paid-on-${p.id}`} className="text-xs text-gray-500">Paid on</label>
+                  <span className="w-36"><DateField id={`paid-on-${p.id}`} value={payDate} onChange={setPayDate} className={input} /></span>
                   <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>Confirm</button>
                   <button onClick={() => setPayingId(null)} className={btn}>Cancel</button>
                 </span>
