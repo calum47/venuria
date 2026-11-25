@@ -4,7 +4,7 @@
  * everything that comes back is validated here before it can reach a form.
  */
 import { MAX_AMOUNT, parseAmount } from '@/lib/payments'
-import { isIsoDate } from '@/lib/projectDates'
+import { applyDueRule, describeDueRule, formatDate, isIsoDate, type DueRule, type DueUnit } from '@/lib/projectDates'
 import type { PaymentInput } from '@/lib/supabase/paymentQueries'
 
 export const MAX_EXTRACTED_PAYMENTS = 12
@@ -19,6 +19,11 @@ export type ExtractedPayment = {
   dueDate: string | null
   /** The due date as written when it could not be turned into a date ("30 days before the event"). */
   dueText: string | null
+  /**
+   * The due date when the PDF states it relative to the event/wedding date ("1 month before the event").
+   * Turned into a real date from the project's event date by draftFromExtracted — never by the model.
+   */
+  dueRule: DueRule | null
   /** A short quote from the PDF supporting the amount/date, shown next to the field. */
   evidence: string | null
 }
@@ -52,6 +57,21 @@ function cleanAmount(v: unknown): string | null {
   return t
 }
 
+const UNITS: Record<string, DueUnit> = { day: 'days', days: 'days', week: 'weeks', weeks: 'weeks', month: 'months', months: 'months' }
+const MAX_RULE_AMOUNT: Record<DueUnit, number> = { days: 1100, weeks: 156, months: 36 }
+
+/** Accepts only a whole, sane "N days/weeks/months before/after the event"; anything else is null. */
+function cleanRule(v: unknown): DueRule | null {
+  if (!v || typeof v !== 'object') return null
+  const r = v as Record<string, unknown>
+  const unit = typeof r.unit === 'string' ? UNITS[r.unit.trim().toLowerCase()] : undefined
+  const dir = typeof r.direction === 'string' ? r.direction.trim().toLowerCase() : ''
+  const n = typeof r.amount === 'number' ? r.amount : typeof r.amount === 'string' && /^\d{1,4}$/.test(r.amount.trim()) ? Number(r.amount) : NaN
+  if (!unit || (dir !== 'before' && dir !== 'after')) return null
+  if (!Number.isInteger(n) || n < 0 || n > MAX_RULE_AMOUNT[unit]) return null
+  return { amount: n, unit, direction: dir }
+}
+
 function cleanDate(v: unknown): string | null {
   return typeof v === 'string' && isIsoDate(v.trim()) ? v.trim() : null
 }
@@ -73,12 +93,16 @@ export function sanitizeExtraction(raw: unknown): ExtractionResult {
       amount: cleanAmount(r.amount),
       dueDate: cleanDate(r.due_date ?? r.dueDate),
       dueText: str(r.due_text ?? r.dueText, 120),
+      dueRule: cleanRule(r.due_rule ?? r.dueRule),
       evidence: str(r.evidence, 300),
     }
     // A row with nothing usable is noise.
     if (!p.vendor && !p.label && !p.amount && !p.dueDate) continue
     // The wording only matters when there is no real date.
-    if (p.dueDate) p.dueText = null
+    if (p.dueDate) {
+      p.dueText = null
+      p.dueRule = null
+    }
     payments.push(p)
     if (payments.length >= MAX_EXTRACTED_PAYMENTS) break
   }
@@ -101,16 +125,35 @@ export const EMPTY_DRAFT: PaymentDraft = { vendor: '', label: '', amount: '', du
 /** Fields the PDF actually provided, with the text to show next to each ("found in the PDF"). */
 export type FromPdf = Partial<Record<DraftField, string>>
 
-export function draftFromExtracted(p: ExtractedPayment): { draft: PaymentDraft; from: FromPdf } {
+export function draftFromExtracted(
+  p: ExtractedPayment,
+  eventDate: string | null = null,
+): { draft: PaymentDraft; from: FromPdf; dueCalc: string | null } {
   const from: FromPdf = {}
   const hint = p.evidence ?? 'read from the PDF'
   if (p.vendor) from.vendor = hint
   if (p.label) from.label = hint
   if (p.amount) from.amount = hint
-  if (p.dueDate) from.dueDate = hint
+  let dueDate = p.dueDate ?? ''
+  let dueCalc: string | null = null
+  if (p.dueDate) {
+    from.dueDate = hint
+  } else if (p.dueRule) {
+    // "1 month before the event" + the project's event date = a real date. Done here, in code, so the
+    // calendar arithmetic is exact; the person still checks it like every other field read from a PDF.
+    const rule = describeDueRule(p.dueRule)
+    if (eventDate && isIsoDate(eventDate)) {
+      dueDate = applyDueRule(eventDate, p.dueRule)
+      from.dueDate = hint
+      dueCalc = `Due date calculated from the PDF (“${p.dueText ?? rule}”) and the event date ${formatDate(eventDate)}: ${rule} = ${formatDate(dueDate)}. Check it.`
+    } else {
+      dueCalc = `The PDF says ${rule}, but this project has no event date yet, so the due date can't be calculated. Set the event date on the project, or enter the date by hand.`
+    }
+  }
   return {
-    draft: { vendor: p.vendor ?? '', label: p.label ?? '', amount: p.amount ?? '', dueDate: p.dueDate ?? '', notes: '' },
+    draft: { vendor: p.vendor ?? '', label: p.label ?? '', amount: p.amount ?? '', dueDate, notes: '' },
     from,
+    dueCalc,
   }
 }
 
