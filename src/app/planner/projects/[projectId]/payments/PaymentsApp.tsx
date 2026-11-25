@@ -86,6 +86,28 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
   const generalDocs = useMemo(() => documents.filter((d) => !d.payment_id), [documents])
   const money = (n: number) => formatMoney(n, currency)
 
+  /** List view: one group per vendor, vendors A–Z; inside a group unpaid first by due date (sortPayments). */
+  const vendorGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; name: string; payments: DbProjectPayment[] }>()
+    for (const p of sorted) {
+      const name = vendorOf(p).trim()
+      const key = p.vendor_id ?? `name:${name.toLowerCase()}`
+      const g = groups.get(key)
+      if (g) g.payments.push(p)
+      else groups.set(key, { key, name, payments: [p] })
+    }
+    return [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sorted, vendorNameById])
+  const [openVendors, setOpenVendors] = useState<Set<string>>(() => new Set())
+  const toggleVendor = (key: string) =>
+    setOpenVendors((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
   const run = async (key: string, fn: () => Promise<void>) => {
     setError(null)
     setBusy(key)
@@ -439,9 +461,53 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         )}
 
         {view === 'list' ? (
-          <ul className="divide-y divide-gray-100">
-            {sorted.map(renderPayment)}
-          </ul>
+          <div>
+            {vendorGroups.length > 1 && (
+              <div className="flex justify-end gap-3 border-b border-gray-100 px-4 py-2 text-xs text-gray-500">
+                <button type="button" className="hover:text-gray-900 underline-offset-2 hover:underline" onClick={() => setOpenVendors(new Set(vendorGroups.map((g) => g.key)))}>Expand all</button>
+                <button type="button" className="hover:text-gray-900 underline-offset-2 hover:underline" onClick={() => setOpenVendors(new Set())}>Collapse all</button>
+              </div>
+            )}
+            {vendorGroups.map((g) => {
+              // A group with a payment being edited / marked paid / deleted stays open so its form can't be hidden.
+              const busyHere = g.payments.some((p) => p.id === editingId || p.id === payingId || p.id === confirmDeleteId || p.id === attachingFor)
+              const open = openVendors.has(g.key) || busyHere
+              const unpaid = g.payments.filter((p) => !p.paid_at)
+              const overdue = unpaid.filter((p) => paymentStatus(p).kind === 'overdue').length
+              const outstanding = paymentTotals(g.payments).outstanding
+              const nextDue = unpaid[0]?.due_date
+              const receiptCount = g.payments.reduce((n, p) => n + (docsByPayment.get(p.id)?.length ?? 0), 0)
+              const panelId = `vendor-${g.key.replace(/[^a-z0-9]/gi, '')}`
+              return (
+                <section key={g.key} className="border-b border-gray-100 last:border-b-0">
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={panelId}
+                    disabled={busyHere}
+                    onClick={() => toggleVendor(g.key)}
+                    className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-left hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-transparent"
+                  >
+                    <span aria-hidden className={`text-gray-400 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+                    <span className="min-w-0 flex-1 text-sm font-medium text-gray-900 truncate">{g.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {g.payments.length} payment{g.payments.length === 1 ? '' : 's'}
+                      {receiptCount > 0 && ` · ${receiptCount} file${receiptCount === 1 ? '' : 's'}`}
+                    </span>
+                    {overdue > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">{overdue} overdue</span>}
+                    <span className="text-xs text-gray-500">
+                      {unpaid.length === 0 ? 'All paid' : `${money(outstanding)} left${nextDue ? ` · next ${formatDate(nextDue)}` : ''}`}
+                    </span>
+                  </button>
+                  {open && (
+                    <ul id={panelId} className="divide-y divide-gray-100 border-t border-gray-100 bg-white">
+                      {g.payments.map(renderPayment)}
+                    </ul>
+                  )}
+                </section>
+              )
+            })}
+          </div>
         ) : (
           <CalendarView payments={payments} eventDate={eventDate} money={money} renderPayment={renderPayment} vendorOf={vendorOf} />
         )}
