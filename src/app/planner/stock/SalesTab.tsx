@@ -6,6 +6,7 @@ import { addStockSale, confirmSaleReturn, deleteStockSale } from '@/lib/supabase
 import { isAwaitingReturn, saleProfit } from '@/lib/stockReusable'
 import type { ProjectOption } from './StockApp'
 import { money } from './StockApp'
+import { Labelled } from '@/components/Labelled'
 
 type Props = {
   items: DbStockItem[]
@@ -96,20 +97,28 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
       <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
         <p className="text-xs text-gray-500">{canManage ? 'Log stock sold to a client — decreases the item\'s stock count.' : 'Record items used on a wedding — decreases the item\'s stock count.'}</p>
         <div className="flex flex-wrap items-end gap-2">
-          <select value={itemId} onChange={(e) => onPickItem(e.target.value)} className={input}>
-            <option value="">Product…</option>
-            {sellable.map((i) => (
-              <option key={i.id} value={i.id}>{i.name} ({i.current_stock} in stock)</option>
-            ))}
-          </select>
-          <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" className={`${input} w-20`} />
-          <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder="Sale price" className={`${input} w-28`} />
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-            <option value="">{canManage ? 'Which wedding?' : 'Which wedding? (required)'}</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
+          <Labelled label="Product">
+            <select value={itemId} onChange={(e) => onPickItem(e.target.value)} className={input}>
+              <option value="">Choose a product…</option>
+              {sellable.map((i) => (
+                <option key={i.id} value={i.id}>{i.name} ({i.current_stock} in stock)</option>
+              ))}
+            </select>
+          </Labelled>
+          <Labelled label="Quantity">
+            <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
+          </Labelled>
+          <Labelled label="Sale price">
+            <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={`${input} w-28`} />
+          </Labelled>
+          <Labelled label={canManage ? 'Wedding' : 'Wedding (required)'}>
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
+              <option value="">{canManage ? 'No wedding' : 'Choose a wedding…'}</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </Labelled>
           <button onClick={submit} disabled={isSaving} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Add sale'}
           </button>
@@ -144,7 +153,7 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
                     )}
                     {canManage && confirmingId === s.id && (
                       <>
-                        <input type="number" min="0" max={s.qty} value={returnedQty} onChange={(e) => setReturnedQty(e.target.value)} className={`${input} w-20 py-0.5`} />
+                        <Labelled label="Came back"><input type="number" min="0" max={s.qty} value={returnedQty} onChange={(e) => setReturnedQty(e.target.value)} className={`${input} w-20 py-0.5`} /></Labelled>
                         <span className="text-gray-400">of {s.qty} came back</span>
                         <button onClick={() => confirmReturn(s.id, s.qty)} className="rounded-lg bg-brand-600 text-white px-2 py-0.5">Save</button>
                         <button onClick={() => setConfirmingId(null)} className="text-gray-400">Cancel</button>

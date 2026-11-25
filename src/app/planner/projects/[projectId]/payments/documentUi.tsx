@@ -12,15 +12,8 @@ export const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-
 export const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
 export const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
-/** A form control with its name written above it. */
-export function Labelled({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
-  return (
-    <label className={`block min-w-0 ${className}`}>
-      <span className="mb-0.5 block text-[11px] text-gray-500">{label}</span>
-      {children}
-    </label>
-  )
-}
+import { Labelled } from '@/components/Labelled'
+export { Labelled }
 
 export function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'

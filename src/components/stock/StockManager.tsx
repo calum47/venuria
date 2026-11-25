@@ -85,7 +85,9 @@ export default function StockManager({ ownerType, ownerId }: Props) {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <label htmlFor={`qty-${item.id}`} className="text-[11px] text-gray-500">Quantity</label>
                     <input
+                      id={`qty-${item.id}`}
                       type="number"
                       min={0}
                       value={quantities[item.id] ?? 0}

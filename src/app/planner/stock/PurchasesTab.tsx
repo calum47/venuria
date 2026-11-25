@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import type { DbStockItem, DbStockPurchase } from '@/types/db'
 import { addStockPurchase, deleteStockPurchase } from '@/lib/supabase/stockQueries'
 import type { ProjectOption } from './StockApp'
+import { Labelled } from '@/components/Labelled'
 
 type Props = {
   items: DbStockItem[]
@@ -63,21 +64,31 @@ export default function PurchasesTab({ items, purchases, projects, canManage, on
       {canManage ? <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
         <p className="text-xs text-gray-500">Log stock bought for inventory — increases the item&apos;s stock count.</p>
         <div className="flex flex-wrap items-end gap-2">
-          <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={input}>
-            <option value="">Product…</option>
-            {purchasable.map((i) => (
-              <option key={i.id} value={i.id}>{i.name}</option>
-            ))}
-          </select>
-          <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" className={`${input} w-20`} />
-          <input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} placeholder="Unit cost" className={`${input} w-28`} />
-          <input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Supplier (optional)" className={`${input} w-40`} />
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-            <option value="">No wedding tag</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
+          <Labelled label="Product">
+            <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={input}>
+              <option value="">Choose a product…</option>
+              {purchasable.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+          </Labelled>
+          <Labelled label="Quantity">
+            <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
+          </Labelled>
+          <Labelled label="Unit cost">
+            <input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} className={`${input} w-28`} />
+          </Labelled>
+          <Labelled label="Vendor / supplier (optional)">
+            <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={`${input} w-48`} />
+          </Labelled>
+          <Labelled label="Wedding">
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
+              <option value="">No wedding tag</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </Labelled>
           <button onClick={submit} disabled={isSaving} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Add purchase'}
           </button>
