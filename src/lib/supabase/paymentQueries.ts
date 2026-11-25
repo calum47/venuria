@@ -142,6 +142,18 @@ export async function uploadPdfObject(teamId: string, projectId: string, file: F
   return path
 }
 
+/**
+ * Server-side copy of an already uploaded PDF, into the same {team_id}/{project_id}/ folder under a new
+ * name. Each document row needs its own file (storage_path is unique, and deleting one document deletes
+ * its file), so attaching one PDF to several payments means one copy per payment.
+ */
+export async function copyPdfObject(fromPath: string): Promise<string> {
+  const to = `${fromPath.slice(0, fromPath.lastIndexOf('/'))}/${crypto.randomUUID()}.pdf`
+  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).copy(fromPath, to)
+  if (error) throw error
+  return to
+}
+
 /** Best-effort removal of an uploaded file that never got a database row (cancelled review, failed save). */
 export async function removeStagedPdf(path: string): Promise<void> {
   const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).remove([path])

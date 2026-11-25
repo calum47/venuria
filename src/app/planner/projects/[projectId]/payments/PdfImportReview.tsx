@@ -136,7 +136,7 @@ export default function PdfImportReview({
         </div>
         <p className="text-gray-500">
           {included.length > 1
-            ? 'With several payments the PDF is kept under “Contracts & other documents”.'
+            ? `The PDF is attached to each of the ${included.length} payments, as a separate copy on each — removing it from one does not affect the others.`
             : 'The PDF is attached to the payment.'}
         </p>
       </div>

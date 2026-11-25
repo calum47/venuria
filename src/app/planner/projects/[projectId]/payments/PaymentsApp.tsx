@@ -8,6 +8,7 @@ import {
   deletePayment,
   deleteProjectDocument,
   getDocumentUrl,
+  copyPdfObject,
   registerDocument,
   removeStagedPdf,
   setPaymentPaid,
@@ -32,7 +33,6 @@ import DocumentsSection from './DocumentsSection'
 import PaymentForm, { type PendingPdf } from './PaymentForm'
 import PdfImportReview from './PdfImportReview'
 import { stagePdf, type StagedPdf } from './pdfStaging'
-import { commonVendor } from '@/lib/pdfPayments'
 import { UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
 import { requestBellRefresh } from '@/lib/notifications'
 
@@ -174,13 +174,39 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       const created = await createPayments(projectId, inputs)
       setPayments((cur) => [...cur, ...created.map((p) => ({ ...p, amount: Number(p.amount) }))])
       setImporting(null)
-      // One payment: the PDF belongs to it. Several: it is a project-level document.
-      const single = created.length === 1
-      await attachPdf(
-        { path: staged.path, size: staged.size, label: pdf.label, kind: pdf.kind },
-        single ? created[0].id : null,
-        single ? inputs[0].vendorName : commonVendor(inputs.map((i) => i.vendorName)),
-      )
+      // The PDF is attached to every payment it created. The first uses the uploaded file itself; each
+      // further payment gets its own copy (one file per document row), so removing the PDF from one
+      // payment never touches the others. A failure on one payment does not stop the rest.
+      const attached: DbProjectDocument[] = []
+      const failed: string[] = []
+      let usedOriginal = false
+      for (const [i, p] of created.entries()) {
+        let path = staged.path
+        try {
+          if (i > 0) path = await copyPdfObject(staged.path)
+          const doc = await registerDocument({
+            projectId,
+            paymentId: p.id,
+            vendorName: p.vendor_name,
+            kind: pdf.kind,
+            label: pdf.label,
+            storagePath: path,
+            sizeBytes: staged.size,
+          })
+          attached.push(doc)
+          if (i === 0) usedOriginal = true
+        } catch (e) {
+          console.error('[payments/import] could not attach the PDF to', p.id, e)
+          if (i > 0) await removeStagedPdf(path) // the copy exists but has no row
+          failed.push(`${p.vendor_name} — ${p.label}`)
+        }
+      }
+      // The uploaded file is only needed as the source for the copies; if it was not used, drop it.
+      if (!usedOriginal) await removeStagedPdf(staged.path)
+      if (attached.length > 0) setDocuments((cur) => [...attached.slice().reverse(), ...cur])
+      if (failed.length > 0) {
+        setError(`The payments were saved, but the PDF could not be attached to: ${failed.join('; ')}. Use “Attach receipt (PDF)” on ${failed.length === 1 ? 'that payment' : 'those payments'} to add it again.`)
+      }
     })
   }
 
