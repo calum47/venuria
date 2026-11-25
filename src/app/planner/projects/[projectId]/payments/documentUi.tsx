@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react'
 import type { DbDocumentKind, DbProjectDocument } from '@/types/db'
 import { uploadProjectDocument } from '@/lib/supabase/paymentQueries'
-import { DOC_KIND_LABEL, PROJECT_DOC_KINDS, checkPdf, formatBytes } from '@/lib/payments'
+import { ATTACHMENT_ACCEPT, DOC_KIND_LABEL, PROJECT_DOC_KINDS, checkAttachment, formatBytes } from '@/lib/payments'
 
 // Shared by the payments page and the documents section: class strings, the error
 // formatter and the PDF upload form (also used for "Update" = upload a new version).
@@ -34,7 +34,7 @@ export function UploadForm({
   paymentId: string | null
   vendorName?: string
   defaultLabel?: string
-  /** Upload the next version of an existing document: name, type and vendor are inherited, only the PDF is chosen. */
+  /** Upload the next version of an existing document: name, type and vendor are inherited, only the file is chosen. */
   version?: { groupId: string; version: number; label: string; kind: DbDocumentKind; vendorName: string | null }
   onUploaded: (d: DbProjectDocument) => void
   onCancel: () => void
@@ -52,15 +52,15 @@ export function UploadForm({
     setFile(null)
     setFormError(null)
     if (!f) return
-    const problem = await checkPdf(f)
+    const problem = await checkAttachment(f)
     if (problem) return setFormError(problem)
     setFile(f)
-    if (!label && !version) setLabel(f.name.replace(/\.pdf$/i, ''))
+    if (!label && !version) setLabel(f.name.replace(/\.(pdf|jpe?g|png|webp)$/i, ''))
   }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!file) return setFormError('Choose a PDF first.')
+    if (!file) return setFormError('Choose a file first.')
     if (!version && !label.trim()) return setFormError('Give the document a name.')
     setUploading(true)
     setFormError(null)
@@ -92,7 +92,7 @@ export function UploadForm({
       <input
         ref={fileInput}
         type="file"
-        accept="application/pdf,.pdf"
+        accept={ATTACHMENT_ACCEPT}
         hidden
         tabIndex={-1}
         aria-hidden="true"
@@ -105,7 +105,7 @@ export function UploadForm({
       />
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} className={btn + ' !py-1.5 !text-sm'}>
-          {file ? 'Change PDF' : 'Choose PDF…'}
+          {file ? 'Change file' : 'Choose file…'}
         </button>
         <span className="text-sm text-gray-600" aria-live="polite">
           {file ? `${file.name} · ${formatBytes(file.size)}` : 'No file chosen'}

@@ -1,6 +1,6 @@
 import { checkPdf } from '@/lib/payments'
 import type { ExtractionResult } from '@/lib/pdfPayments'
-import { extractPaymentsFromPdf, uploadPdfObject } from '@/lib/supabase/paymentQueries'
+import { extractPaymentsFromPdf, uploadDocumentObject } from '@/lib/supabase/paymentQueries'
 import { errMsg } from './documentUi'
 
 /**
@@ -21,7 +21,7 @@ export type StagedPdf = {
 export async function stagePdf(file: File, teamId: string, projectId: string): Promise<StagedPdf> {
   const problem = await checkPdf(file)
   if (problem) throw new Error(problem)
-  const path = await uploadPdfObject(teamId, projectId, file)
+  const path = await uploadDocumentObject(teamId, projectId, file)
   try {
     const result = await extractPaymentsFromPdf(path)
     return { path, size: file.size, fileName: file.name, result, readError: null }

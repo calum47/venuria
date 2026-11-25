@@ -275,7 +275,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Contracts &amp; other documents</h2>
-          <p className="text-xs text-gray-500">Draft contracts, quotes, anything you want to keep with this project. PDF only, up to 10 MB.</p>
+          <p className="text-xs text-gray-500">Draft contracts, quotes, anything you want to keep with this project. PDF, JPG, PNG or WebP, up to 10 MB.</p>
         </div>
         {!adding && <button onClick={() => setAdding(true)} className={btnPrimary}>Add document</button>}
       </div>

@@ -142,7 +142,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       setDocuments((cur) => [doc, ...cur])
     } catch (e) {
       await removeStagedPdf(pdf.path)
-      setError(`The payment was saved, but the PDF could not be attached: ${errMsg(e)} Use “Attach receipt (PDF)” to add it again.`)
+      setError(`The payment was saved, but the PDF could not be attached: ${errMsg(e)} Use “Attach receipt” to add it again.`)
     }
   }
 
@@ -205,7 +205,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       if (!usedOriginal) await removeStagedPdf(staged.path)
       if (attached.length > 0) setDocuments((cur) => [...attached.slice().reverse(), ...cur])
       if (failed.length > 0) {
-        setError(`The payments were saved, but the PDF could not be attached to: ${failed.join('; ')}. Use “Attach receipt (PDF)” on ${failed.length === 1 ? 'that payment' : 'those payments'} to add it again.`)
+        setError(`The payments were saved, but the PDF could not be attached to: ${failed.join('; ')}. Use “Attach receipt” on ${failed.length === 1 ? 'that payment' : 'those payments'} to add it again.`)
       }
     })
   }
@@ -317,7 +317,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                 <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>Mark paid</button>
               )}
               <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>Edit</button>
-              <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt (PDF)</button>
+              <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt</button>
               {confirmDeleteId === p.id ? (
                 <span className="flex items-center gap-2 text-xs text-gray-600">
                   Delete this payment?
