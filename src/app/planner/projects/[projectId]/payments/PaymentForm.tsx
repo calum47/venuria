@@ -36,7 +36,7 @@ export default function PaymentForm({
   onSubmit: (v: PaymentInput, pdf?: PendingPdf) => void
   onCancel: () => void
   /** Set (edit mode) to offer "Fill from PDF". */
-  fill?: { teamId: string; projectId: string; currency: string }
+  fill?: { teamId: string; projectId: string; currency: string; eventDate: string | null }
 }) {
   const [draft, setDraft] = useState<PaymentDraft>(
     initial
@@ -50,6 +50,7 @@ export default function PaymentForm({
   const [reading, setReading] = useState(false)
   const [pick, setPick] = useState(0)
   const [dueText, setDueText] = useState<string | null>(null)
+  const [dueCalc, setDueCalc] = useState<string | null>(null)
   const [pdfKind, setPdfKind] = useState<DbDocumentKind>('invoice')
   const [pdfLabel, setPdfLabel] = useState('')
   const fileInput = useRef<HTMLInputElement>(null)
@@ -66,7 +67,7 @@ export default function PaymentForm({
 
   /** Copies what the PDF provided into the form; fields the PDF did not provide keep their current value. */
   const apply = (p: ExtractedPayment) => {
-    const { draft: d, from: f } = draftFromExtracted(p)
+    const { draft: d, from: f, dueCalc: calc } = draftFromExtracted(p, fill?.eventDate ?? null)
     setDraft((cur) => ({
       ...cur,
       vendor: d.vendor || cur.vendor,
@@ -76,6 +77,7 @@ export default function PaymentForm({
     }))
     setFrom(f)
     setDueText(p.dueText)
+    setDueCalc(calc)
   }
 
   const choosePdf = async (file: File | null) => {
@@ -182,7 +184,7 @@ export default function PaymentForm({
         </div>
       )}
 
-      <PaymentFields value={draft} onChange={change} from={from} showLabels={staged !== null} dueText={dueText} />
+      <PaymentFields value={draft} onChange={change} from={from} showLabels={staged !== null} dueText={dueText} dueCalc={dueCalc} />
 
       {formError && <p className="text-xs text-red-600">{formError}</p>}
       <div className="flex gap-2">

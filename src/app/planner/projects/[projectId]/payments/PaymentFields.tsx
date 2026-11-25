@@ -22,6 +22,7 @@ export function PaymentFields({
   notFound,
   showLabels,
   dueText,
+  dueCalc,
 }: {
   value: PaymentDraft
   onChange: (field: DraftField, v: string) => void
@@ -30,6 +31,8 @@ export function PaymentFields({
   showLabels?: boolean
   /** The due date as written in the PDF when it was relative ("30 days before the event"). */
   dueText?: string | null
+  /** How the due date was worked out from a relative wording + the event date (or why it could not be). */
+  dueCalc?: string | null
 }) {
   const hints = [...new Set(Object.values(from ?? {}))]
   return (
@@ -70,7 +73,8 @@ export function PaymentFields({
         className={`${input} w-full`}
         maxLength={500}
       />
-      {dueText && !value.dueDate && (
+      {dueCalc && <p className="text-xs text-blue-700">{dueCalc}</p>}
+      {dueText && !dueCalc && !value.dueDate && (
         <p className="text-xs text-amber-700">The PDF gives the due date as “{dueText}” — enter the actual date.</p>
       )}
       {hints.length > 0 && (

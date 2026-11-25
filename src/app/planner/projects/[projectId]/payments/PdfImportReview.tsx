@@ -23,6 +23,7 @@ type Row = {
   draft: PaymentDraft
   from: FromPdf
   dueText: string | null
+  dueCalc: string | null
   notFound: ReadonlySet<DraftField>
 }
 
@@ -35,24 +36,27 @@ const REQUIRED: DraftField[] = ['vendor', 'label', 'amount', 'dueDate']
 export default function PdfImportReview({
   staged,
   currency,
+  eventDate,
   busy,
   onSave,
   onCancel,
 }: {
   staged: StagedPdf
   currency: string
+  /** The project's event date; relative due dates in the PDF ("1 month before the event") are worked out from it. */
+  eventDate: string | null
   busy: boolean
   onSave: (payments: PaymentInput[], pdf: { kind: DbDocumentKind; label: string }) => void
   onCancel: () => void
 }) {
   const initial = useMemo<Row[]>(() => {
     const found = staged.result?.payments ?? []
-    if (found.length === 0) return [{ key: 0, include: true, draft: EMPTY_DRAFT, from: {}, dueText: null, notFound: new Set(REQUIRED) }]
+    if (found.length === 0) return [{ key: 0, include: true, draft: EMPTY_DRAFT, from: {}, dueText: null, dueCalc: null, notFound: new Set(REQUIRED) }]
     return found.map((p, i) => {
-      const { draft, from } = draftFromExtracted(p)
-      return { key: i, include: true, draft, from, dueText: p.dueText, notFound: new Set(REQUIRED.filter((f) => draft[f] === '')) }
+      const { draft, from, dueCalc } = draftFromExtracted(p, eventDate)
+      return { key: i, include: true, draft, from, dueText: p.dueText, dueCalc, notFound: new Set(REQUIRED.filter((f) => draft[f] === '')) }
     })
-  }, [staged])
+  }, [staged, eventDate])
 
   const [rows, setRows] = useState<Row[]>(initial)
   const [kind, setKind] = useState<DbDocumentKind>('invoice')
@@ -74,7 +78,7 @@ export default function PdfImportReview({
   const addRow = () =>
     setRows((cur) => [
       ...cur,
-      { key: Math.max(-1, ...cur.map((r) => r.key)) + 1, include: true, draft: EMPTY_DRAFT, from: {}, dueText: null, notFound: new Set<DraftField>() },
+      { key: Math.max(-1, ...cur.map((r) => r.key)) + 1, include: true, draft: EMPTY_DRAFT, from: {}, dueText: null, dueCalc: null, notFound: new Set<DraftField>() },
     ])
 
   const submit = (e: React.FormEvent) => {
@@ -118,7 +122,7 @@ export default function PdfImportReview({
               <input type="checkbox" checked={r.include} onChange={(e) => update(r.key, (x) => ({ ...x, include: e.target.checked }))} />
               Payment {i + 1}{r.include ? '' : ' (will not be saved)'}
             </label>
-            <PaymentFields value={r.draft} onChange={(f, v) => edit(r.key, f, v)} from={r.from} notFound={r.notFound} showLabels dueText={r.dueText} />
+            <PaymentFields value={r.draft} onChange={(f, v) => edit(r.key, f, v)} from={r.from} notFound={r.notFound} showLabels dueText={r.dueText} dueCalc={r.dueCalc} />
           </li>
         ))}
       </ul>

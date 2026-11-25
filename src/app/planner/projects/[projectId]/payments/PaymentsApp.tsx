@@ -286,7 +286,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
             busy={busy === p.id}
             onSubmit={(v, pdf) => savePayment(p.id, v, pdf)}
             onCancel={() => setEditingId(null)}
-            fill={{ teamId, projectId, currency }}
+            fill={{ teamId, projectId, currency, eventDate }}
           />
         ) : (
           <>
@@ -425,7 +425,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
           </p>
         )}
         {importing?.stage === 'review' && (
-          <PdfImportReview staged={importing.staged} currency={currency} busy={busy === 'import'} onSave={saveImport} onCancel={cancelImport} />
+          <PdfImportReview staged={importing.staged} currency={currency} eventDate={eventDate} busy={busy === 'import'} onSave={saveImport} onCancel={cancelImport} />
         )}
 
         {showAdd && (
