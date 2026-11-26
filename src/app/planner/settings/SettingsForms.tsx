@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react'
 import { supabase } from '@/lib/supabase/client'
 import { updateMyName, updateMyTeam } from './actions'
 import type { PlannerRole } from '@/lib/supabase/plannerContext'
+import type { PdfStyle } from '@/lib/pdfExport/style'
+import ExportStyleCard from './ExportStyleCard'
 
 type Props = {
   plannerName: string
@@ -11,15 +13,32 @@ type Props = {
   plannerCode: string | null
   role: PlannerRole
   team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }
+  /** Only loaded for the manager, who is the only one who can change the export look. */
+  exports: { style: PdfStyle; logoPath: string | null; projects: { id: string; title: string }[] } | null
 }
 
-export default function SettingsForms({ plannerName, email, plannerCode, role, team }: Props) {
+export default function SettingsForms({ plannerName, email, plannerCode, role, team, exports }: Props) {
   return (
     <div className="space-y-6">
-      <NameForm initial={plannerName} email={email} plannerCode={plannerCode} />
-      <PasswordForm />
-      <TeamForm team={team} canEdit={role === 'manager'} />
-      <ComingLater />
+      <div className="max-w-2xl space-y-6">
+        <NameForm initial={plannerName} email={email} plannerCode={plannerCode} />
+        <PasswordForm />
+        <TeamForm team={team} canEdit={role === 'manager'} />
+      </div>
+      {exports ? (
+        <ExportStyleCard teamId={team.id} initialStyle={exports.style} initialLogoPath={exports.logoPath} projects={exports.projects} />
+      ) : (
+        <div className="max-w-2xl">
+          <Card title="Exports: look and logo">
+            <p className="text-xs text-gray-500">
+              The look of exported PDFs and the logo printed on them are set by your team manager. Your exports already use them.
+            </p>
+          </Card>
+        </div>
+      )}
+      <div className="max-w-2xl">
+        <ComingLater />
+      </div>
     </div>
   )
 }

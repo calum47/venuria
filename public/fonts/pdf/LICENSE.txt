@@ -1,0 +1,4 @@
+Fonts in this folder (Inter, DM Sans, Montserrat, Lora, Playfair Display, Cormorant Garamond)
+are distributed under the SIL Open Font License 1.1 (https://openfontlicense.org).
+They are bundled so exported PDFs can embed them. Source: Google Fonts, via the
+@expo-google-fonts npm packages.

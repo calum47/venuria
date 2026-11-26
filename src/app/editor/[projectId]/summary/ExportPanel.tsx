@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { PdfExportData, PdfSections } from '@/lib/pdfExport/types'
 import { safeFilePart } from '@/lib/pdfExport/text'
+import { supabase } from '@/lib/supabase/client'
 
 const SECTION_LABELS: { key: keyof PdfSections; label: string; hint: string }[] = [
   { key: 'plans', label: 'Floor plans', hint: 'One page per ticked room, with zones, table numbers and notes' },
@@ -26,8 +27,17 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
     setError(null)
     try {
       // Loaded on demand so the PDF libraries never weigh on the editor pages.
-      const { buildProjectPdf } = await import('@/lib/pdfExport/build')
-      const doc = buildProjectPdf(data, { sections, roomIds })
+      const [{ buildProjectPdf }, { loadFontData, loadLogo }] = await Promise.all([
+        import('@/lib/pdfExport/build'),
+        import('@/lib/pdfExport/assets'),
+      ])
+      // The team's look (Settings → Exports). A font or logo that cannot be loaded never blocks the export.
+      const style = data.teamStyle
+      const [fonts, logo] = await Promise.all([
+        loadFontData(style.font),
+        style.showLogo && data.logoPath ? loadLogo(supabase, data.logoPath) : Promise.resolve(null),
+      ])
+      const doc = buildProjectPdf(data, { sections, roomIds, style, fonts, logo })
       doc.save(`venuria-${safeFilePart(data.projectTitle)}-${data.eventDate ?? 'plan'}.pdf`)
     } catch (e) {
       console.error('PDF export failed', e)
@@ -87,7 +97,10 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
         </button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
-      <p className="mt-2 text-xs text-gray-400">English only. Characters outside Western European alphabets print as “?”.</p>
+      <p className="mt-2 text-xs text-gray-400">
+        English only. Characters outside Western European alphabets print as “?”. Fonts, colours and the logo follow your
+        team&apos;s setting (Settings → Exports).
+      </p>
     </section>
   )
 }

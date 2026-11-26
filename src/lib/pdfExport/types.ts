@@ -1,4 +1,5 @@
 import type { LayoutObject, ObstacleShape, Point2D, ProjectZone } from '@/types'
+import type { PdfStyle } from './style'
 
 export type PdfRoom = {
   id: string
@@ -52,6 +53,10 @@ export type PdfExportData = {
   guests: PdfGuest[]
   /** guestId → layout object id (the chair) */
   assignments: { guestId: string; layoutObjectId: string }[]
+  /** The team's saved look (validated; defaults when the team never set one). */
+  teamStyle: PdfStyle
+  /** Path of the team logo in the private team-logos bucket, if one is uploaded. */
+  logoPath: string | null
 }
 
 export type PdfSections = {
@@ -61,8 +66,20 @@ export type PdfSections = {
   guests: boolean
 }
 
+/** The team logo, ready to draw: an image data URL plus its pixel size (for the aspect ratio). */
+export type PdfLogo = { dataUrl: string; format: 'PNG' | 'JPEG'; widthPx: number; heightPx: number }
+
+/** Base64 of the regular and bold TTF files of the chosen font. */
+export type PdfFontData = { normal: string; bold: string }
+
 export type PdfOptions = {
   sections: PdfSections
   /** Rooms to include in plans and the seating chart. */
   roomIds: string[]
+  /** The team's look. Omitted → the built-in default (same as before this setting existed). */
+  style?: PdfStyle
+  /** Required for any font other than Helvetica; without it the PDF falls back to Helvetica. */
+  fonts?: PdfFontData | null
+  /** Drawn on every page when the style has showLogo on. */
+  logo?: PdfLogo | null
 }

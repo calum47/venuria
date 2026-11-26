@@ -4,9 +4,11 @@ import { zoneAreaM2 } from '@/lib/zones'
 import { drawPlan, tableHeading, tablesOfRoom } from './plan'
 import { formatDateEn, pdfText } from './text'
 import type { PdfExportData, PdfGuest, PdfOptions } from './types'
+import { DEFAULT_PDF_STYLE, LOGO_HEIGHT_PT, LOGO_MAX_ASPECT, SPACING_FACTOR, fontOption, hexToRgb } from './style'
 
 const M = 36 // page margin, pt
 const TOP = 52 // first content line under the running header
+const BOTTOM = 790 // last text line on a portrait page; the footer band (logo) sits below it
 const AGE_LABEL = { adult: 'Adult', child: 'Child', baby: 'Baby' } as const
 
 type Doc = jsPDF & { lastAutoTable?: { finalY: number } }
@@ -23,6 +25,27 @@ function hexRgb(hex: string): [number, number, number] {
 /** Builds the PDF in memory. Works in the browser and in Node (used by the tests). */
 export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' }) as Doc
+  const style = opts.style ?? DEFAULT_PDF_STYLE
+  const fontInfo = fontOption(style.font)
+  let F = 'helvetica'
+  if (fontInfo.files && opts.fonts) {
+    doc.addFileToVFS(`${fontInfo.key}-normal.ttf`, opts.fonts.normal)
+    doc.addFont(`${fontInfo.key}-normal.ttf`, fontInfo.key, 'normal')
+    doc.addFileToVFS(`${fontInfo.key}-bold.ttf`, opts.fonts.bold)
+    doc.addFont(`${fontInfo.key}-bold.ttf`, fontInfo.key, 'bold')
+    F = fontInfo.key
+  }
+  const accent = hexToRgb(style.accent)
+  const k = style.baseSize / 9 // body text scale (the original layout was drawn at 9 pt)
+  const sp = SPACING_FACTOR[style.spacing]
+  const T = (n: number) => (style.titleSize * n) / 15 // heading sizes keep their ratio to the 15 pt title
+  const B = (n: number) => Math.round(n * k * 2) / 2
+  const lineSp = style.spacing === 'compact' ? 0.95 : style.spacing === 'roomy' ? 1.3 : 1 // gentler than cell padding: lines must never touch
+  const LH = (n: number) => n * k * lineSp // line pitch / gap
+  const W = (n: number) => n * k // fixed column widths grow with the text
+  const PAD = (n: number) => n * sp
+  const SUB = Math.max(0, k - 1) * 20 // a bigger body text can wrap the subtitle onto a second line
+  const TG = Math.max(0, style.titleSize - 15) // extra room under a title bigger than the default
   let usedFirst = false
   const newPage = (orientation: 'l' | 'p') => {
     if (!usedFirst) {
@@ -65,31 +88,31 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       newPage('l')
       const objs = data.objects.filter((o) => o.roomId === room.id)
       const zones = data.zones.filter((z) => z.roomId === room.id)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(15)
-      doc.setTextColor(20, 20, 20)
+      doc.setFont(F, 'bold')
+      doc.setFontSize(T(15))
+      doc.setTextColor(...accent)
       doc.text(pdfText(room.name), M, TOP + 8)
 
       const sideX = 640
       const sideW = 842 - M - sideX
-      drawPlan(doc, room, objs, catalog, zones, { x: M, y: TOP + 22, w: sideX - M - 16, h: 595 - TOP - 22 - 50 })
+      drawPlan(doc, room, objs, catalog, zones, { x: M, y: TOP + 22 + TG, w: sideX - M - 16, h: 595 - TOP - 22 - 50 - TG }, F)
 
-      let y = TOP + 22
+      let y = TOP + 22 + TG
       const tables = tablesOfRoom(room.id, data.objects, catalog)
       const chairs = objs.filter((o) => o.isChairFor || catalog[o.catalogItemId]?.category === 'chairs').length
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
+      doc.setFont(F, 'normal')
+      doc.setFontSize(B(9))
       doc.setTextColor(60, 60, 60)
       doc.text(`${tables.length} table${tables.length === 1 ? '' : 's'} · ${chairs} chairs`, sideX, y)
-      y += 18
+      y += LH(18)
 
       if (zones.length > 0) {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(9)
+        doc.setFont(F, 'bold')
+        doc.setFontSize(B(9))
         doc.setTextColor(20, 20, 20)
         doc.text('Zones', sideX, y)
-        y += 12
-        doc.setFont('helvetica', 'normal')
+        y += LH(12)
+        doc.setFont(F, 'normal')
         for (const z of zones) {
           const [r, g, b] = hexRgb(z.color)
           doc.setFillColor(r, g, b)
@@ -99,33 +122,33 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
           doc.text(doc.splitTextToSize(pdfText(z.name), sideW - 60)[0] ?? '', sideX + 14, y)
           doc.setTextColor(110, 110, 110)
           doc.text(area, sideX + sideW, y, { align: 'right' })
-          y += 13
+          y += LH(13)
         }
-        y += 8
+        y += LH(8)
       }
 
       const notes = tables
         .map((t, i) => ({ h: tableHeading(t, i), note: t.tableNote?.trim() ?? '' }))
         .filter((n) => n.note)
       if (notes.length > 0) {
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(9)
+        doc.setFont(F, 'bold')
+        doc.setFontSize(B(9))
         doc.setTextColor(20, 20, 20)
         doc.text('Table notes', sideX, y)
-        y += 12
+        y += LH(12)
         let continued = false
         let cx = sideX
         let cw = sideW
         let limit = 595 - 40
         for (const n of notes) {
           const lines = doc.splitTextToSize(`${n.h}: ${pdfText(n.note)}`, cw) as string[]
-          if (y + lines.length * 11 > limit) {
+          if (y + lines.length * LH(11) > limit) {
             if (!continued) {
               continued = true
               newPage('l')
-              doc.setFont('helvetica', 'bold')
-              doc.setFontSize(12)
-              doc.setTextColor(20, 20, 20)
+              doc.setFont(F, 'bold')
+              doc.setFontSize(T(12))
+              doc.setTextColor(...accent)
               doc.text(`${pdfText(room.name)} — table notes (continued)`, M, TOP + 8)
               cx = M
               cw = 842 - 2 * M
@@ -133,13 +156,13 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
             } else {
               newPage('l')
             }
-            y = TOP + 28
+            y = TOP + 28 + TG
           }
-          doc.setFont('helvetica', 'normal')
-          doc.setFontSize(8.5)
+          doc.setFont(F, 'normal')
+          doc.setFontSize(B(8.5))
           doc.setTextColor(50, 50, 50)
           doc.text(lines, cx, y)
-          y += lines.length * 11 + 3
+          y += lines.length * LH(11) + 3
         }
       }
     }
@@ -148,12 +171,12 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   // ── 2. Itemised list ───────────────────────────────────────────────────────
   if (opts.sections.items) {
     newPage('p')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.setTextColor(20, 20, 20)
+    doc.setFont(F, 'bold')
+    doc.setFontSize(T(15))
+    doc.setTextColor(...accent)
     doc.text('Items and stock', M, TOP + 8)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8.5)
+    doc.setFont(F, 'normal')
+    doc.setFontSize(B(8.5))
     doc.setTextColor(100, 100, 100)
     doc.text(
       doc.splitTextToSize(
@@ -161,15 +184,15 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
         595 - 2 * M,
       ),
       M,
-      TOP + 22,
+      TOP + 22 + TG,
     )
     const rows = data.itemRows
     if (rows.length === 0) {
-      doc.setFontSize(10)
-      doc.text('Nothing placed in this project yet.', M, TOP + 52)
+      doc.setFontSize(B(10))
+      doc.text('Nothing placed in this project yet.', M, TOP + 52 + TG)
     } else {
       autoTable(doc, {
-        startY: TOP + 40,
+        startY: TOP + 40 + TG + SUB,
         margin: { left: M, right: M, top: TOP, bottom: 40 },
         head: [['Item', 'Placed', 'Venue has', 'To rent']],
         body: rows.map((r) => [
@@ -183,9 +206,9 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
                 : 'no rental company has stock yet')
             : '—',
         ]),
-        styles: { font: 'helvetica', fontSize: 9, cellPadding: 4 },
-        headStyles: { fillColor: [40, 40, 40] },
-        columnStyles: { 1: { halign: 'right', cellWidth: 48 }, 2: { halign: 'right', cellWidth: 62 } },
+        styles: { font: F, fontSize: B(9), cellPadding: PAD(4) },
+        headStyles: { fillColor: accent, font: F, fontStyle: 'bold' },
+        columnStyles: { 1: { halign: 'right', cellWidth: W(48) }, 2: { halign: 'right', cellWidth: W(62) } },
         didParseCell: (h) => {
           if (h.section === 'body' && rows[h.row.index]?.shortfall > 0) h.cell.styles.fillColor = [255, 243, 214]
         },
@@ -196,11 +219,11 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   // ── 3. Seating chart ───────────────────────────────────────────────────────
   if (opts.sections.seating) {
     newPage('p')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.setTextColor(20, 20, 20)
+    doc.setFont(F, 'bold')
+    doc.setFontSize(T(15))
+    doc.setTextColor(...accent)
     doc.text('Seating chart', M, TOP + 8)
-    let y = TOP + 24
+    let y = TOP + 24 + TG
     let any = false
     for (const room of rooms) {
       const tables = tablesOfRoom(room.id, data.objects, catalog)
@@ -222,9 +245,9 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
         doc.addPage('a4', 'p')
         y = TOP
       }
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.setTextColor(20, 20, 20)
+      doc.setFont(F, 'bold')
+      doc.setFontSize(T(11))
+      doc.setTextColor(...accent)
       doc.text(pdfText(room.name), M, y + 8)
       autoTable(doc, {
         startY: y + 14,
@@ -240,16 +263,16 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
             pdfText(t.tableNote),
           ]
         }),
-        styles: { font: 'helvetica', fontSize: 9, cellPadding: 4, valign: 'top' },
-        headStyles: { fillColor: [40, 40, 40] },
-        columnStyles: { 0: { cellWidth: 80, fontStyle: 'bold' }, 1: { cellWidth: 40, halign: 'right' }, 3: { cellWidth: 110 } },
+        styles: { font: F, fontSize: B(9), cellPadding: PAD(4), valign: 'top' },
+        headStyles: { fillColor: accent, font: F, fontStyle: 'bold' },
+        columnStyles: { 0: { cellWidth: W(80), fontStyle: 'bold' }, 1: { cellWidth: W(40), halign: 'right' }, 3: { cellWidth: W(110) } },
       })
       y = finalY(doc) + 22
     }
     if (!any) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(10)
-      doc.text('No tables in the selected rooms.', M, TOP + 32)
+      doc.setFont(F, 'normal')
+      doc.setFontSize(B(10))
+      doc.text('No tables in the selected rooms.', M, TOP + 32 + TG)
     }
     const seated = new Set(data.assignments.map((a) => a.guestId))
     const unseated = data.guests.filter((g) => !seated.has(g.id) && !g.seatDismissed)
@@ -258,12 +281,12 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
         doc.addPage('a4', 'p')
         y = TOP
       }
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(11)
-      doc.setTextColor(20, 20, 20)
+      doc.setFont(F, 'bold')
+      doc.setFontSize(T(11))
+      doc.setTextColor(...accent)
       doc.text(`Not seated yet (${unseated.length}, whole project)`, M, y + 8)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
+      doc.setFont(F, 'normal')
+      doc.setFontSize(B(9))
       doc.setTextColor(60, 60, 60)
       const lines = doc.splitTextToSize(
         unseated
@@ -274,12 +297,12 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       ) as string[]
       let ly = y + 24
       for (const line of lines) {
-        if (ly > 800) {
+        if (ly > BOTTOM) {
           doc.addPage('a4', 'p')
           ly = TOP
         }
         doc.text(line, M, ly)
-        ly += 11
+        ly += LH(11)
       }
     }
   }
@@ -287,24 +310,24 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   // ── 4. Guest list ──────────────────────────────────────────────────────────
   if (opts.sections.guests) {
     newPage('p')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(15)
-    doc.setTextColor(20, 20, 20)
+    doc.setFont(F, 'bold')
+    doc.setFontSize(T(15))
+    doc.setTextColor(...accent)
     doc.text('Guest list', M, TOP + 8)
     const g = data.guests
     const count = (f: (x: PdfGuest) => boolean) => g.filter(f).length
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
+    doc.setFont(F, 'normal')
+    doc.setFontSize(B(9))
     doc.setTextColor(80, 80, 80)
     doc.text(
       `${g.length} guests · ${count((x) => x.vip)} VIP · ${count((x) => x.speech)} speeches · ` +
         `${count((x) => x.ageGroup === 'child')} children · ${count((x) => x.ageGroup === 'baby')} babies · ` +
         `${count((x) => !!x.dietary?.trim())} with dietary needs`,
       M,
-      TOP + 22,
+      TOP + 22 + TG,
     )
     autoTable(doc, {
-      startY: TOP + 34,
+      startY: TOP + 34 + TG,
       margin: { left: M, right: M, top: TOP, bottom: 40 },
       head: [['Name', 'Family', 'Group', 'VIP', 'Dietary', 'Notes', 'Table']],
       body: [...g]
@@ -318,9 +341,9 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
           pdfText(x.notes),
           tableNameForGuest(x),
         ]),
-      styles: { font: 'helvetica', fontSize: 8, cellPadding: 3, valign: 'top' },
-      headStyles: { fillColor: [40, 40, 40] },
-      columnStyles: { 3: { cellWidth: 52 }, 2: { cellWidth: 38 }, 6: { cellWidth: 52 } },
+      styles: { font: F, fontSize: B(8), cellPadding: PAD(3), valign: 'top' },
+      headStyles: { fillColor: accent, font: F, fontStyle: 'bold' },
+      columnStyles: { 3: { cellWidth: W(52) }, 2: { cellWidth: W(38) }, 6: { cellWidth: W(52) } },
       didParseCell: (h) => {
         if (h.section === 'body' && h.column.index === 3 && h.cell.raw) h.cell.styles.fontStyle = 'bold'
       },
@@ -328,24 +351,42 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   }
 
   // ── Running header / footer ────────────────────────────────────────────────
+  const logo = style.showLogo ? opts.logo : null
   const total = doc.getNumberOfPages()
   for (let p = 1; p <= total; p++) {
     doc.setPage(p)
     const w = doc.internal.pageSize.getWidth()
     const h = doc.internal.pageSize.getHeight()
-    doc.setFont('helvetica', 'bold')
+    doc.setFont(F, 'bold')
     doc.setFontSize(9)
     doc.setTextColor(30, 30, 30)
     doc.text(pdfText(data.projectTitle), M, 26)
-    doc.setFont('helvetica', 'normal')
+    doc.setFont(F, 'normal')
     doc.setTextColor(100, 100, 100)
     doc.text(`${pdfText(data.teamName)} · ${formatDateEn(data.eventDate)}`, w - M, 26, { align: 'right' })
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.5)
+    doc.setDrawColor(...accent)
+    doc.setLineWidth(0.75)
     doc.line(M, 33, w - M, 33)
+
+    // Footer: three slots (left / centre / right). The logo takes the one the team chose; the
+    // footer text and the page number use the others, page number as far right as it can go.
+    const logoSlot = logo ? (style.logoPosition.replace('bottom-', '') as 'left' | 'center' | 'right') : null
+    const textSlot = logoSlot === 'left' ? 'center' : 'left'
+    const pageSlot = logoSlot === 'right' ? 'center' : 'right'
+    const at = (slot: 'left' | 'center' | 'right') => (slot === 'left' ? M : slot === 'center' ? w / 2 : w - M)
     doc.setFontSize(8)
-    doc.text('Venuria', M, h - 20)
-    doc.text(`Page ${p} of ${total}`, w - M, h - 20, { align: 'right' })
+    doc.setTextColor(100, 100, 100)
+    const footerText = pdfText(style.footerText)
+    if (footerText) doc.text(footerText, at(textSlot), h - 20, { align: textSlot })
+    doc.text(`Page ${p} of ${total}`, at(pageSlot), h - 20, { align: pageSlot })
+
+    if (logo && logoSlot) {
+      const aspect = Math.min(logo.widthPx / logo.heightPx, LOGO_MAX_ASPECT)
+      const lh = LOGO_HEIGHT_PT[style.logoSize]
+      const lw = lh * aspect
+      const x = logoSlot === 'left' ? M : logoSlot === 'center' ? (w - lw) / 2 : w - M - lw
+      doc.addImage(logo.dataUrl, logo.format, x, h - 10 - lh, lw, lh, undefined, 'FAST')
+    }
   }
 
   return doc

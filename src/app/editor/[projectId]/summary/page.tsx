@@ -4,10 +4,9 @@ import { getAllLayoutObjectsForProject, getAllProjectZones } from '@/lib/supabas
 import { zoneAreaM2 } from '@/lib/zones'
 import type { ProjectZone } from '@/types'
 import Link from 'next/link'
-import { DbCatalogItem, DbGuest, DbGuestFamily, DbRoom } from '@/types/db'
-import { mapDbObject } from '@/lib/supabase/queries'
-import type { DbLayoutObject } from '@/types/db'
-import type { PdfExportData, PdfItemRow } from '@/lib/pdfExport/types'
+import type { DbCatalogItem } from '@/types/db'
+import type { PdfExportData } from '@/lib/pdfExport/types'
+import { loadPdfExportData } from '@/lib/pdfExport/loadData'
 import ExportPanel from './ExportPanel'
 import { STOCK_TRACKED_CATEGORIES, tableSettingDemand } from '@/lib/tableSetting'
 
@@ -54,52 +53,8 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   ])
   const roomNameById = new Map<string, string>((roomRows ?? []).map((r) => [r.id, r.name]))
 
-  // ── PDF export data (planner team only; RLS on the tables below is the real gate) ──
-  const { data: canPlan } = await supabase.rpc('planner_can_access_project', { pid: projectId })
-  let exportData: PdfExportData | null = null
-  if (canPlan === true) {
-    const [{ data: team }, { data: fullRooms }, { data: rawObjects }, { data: guestRows }, { data: familyRows }, { data: seatRows }] =
-      await Promise.all([
-        project.team_id ? supabase.from('teams').select('name').eq('id', project.team_id).maybeSingle() : Promise.resolve({ data: null }),
-        supabase.from('rooms').select('*').eq('venue_id', project.venue_id).order('name'),
-        supabase.from('layout_objects').select('*').eq('project_id', projectId),
-        supabase.from('guests').select('*').eq('project_id', projectId),
-        supabase.from('guest_families').select('*').eq('project_id', projectId),
-        supabase.from('seat_assignments').select('guest_id, layout_object_id').eq('project_id', projectId),
-      ])
-    const familyName = new Map(((familyRows ?? []) as DbGuestFamily[]).map((f) => [f.id, f.name]))
-    exportData = {
-      venueName,
-      projectTitle: title,
-      teamName: (team as { name: string } | null)?.name ?? '',
-      eventDate: (project as { event_date: string | null }).event_date ?? null,
-      rooms: ((fullRooms ?? []) as DbRoom[]).map((r) => ({
-        id: r.id,
-        name: r.name,
-        polygon: r.floor_polygon ?? [],
-        widthCm: r.bounding_box_width_cm,
-        depthCm: r.bounding_box_depth_cm,
-        obstacles: r.obstacles ?? [],
-      })),
-      objects: ((rawObjects ?? []) as DbLayoutObject[]).map((o) => ({ ...mapDbObject(o), roomId: o.room_id })),
-      catalog: {},
-      zones,
-      itemRows: [],
-      // Guests who declined are not coming: leave them out of the counts, the guest list and the "not seated" list.
-      guests: ((guestRows ?? []) as DbGuest[]).filter((g) => g.rsvp_status !== 'declined').map((g) => ({
-        id: g.id,
-        name: g.name,
-        vip: g.is_vip,
-        speech: g.gives_speech,
-        ageGroup: g.age_group,
-        dietary: g.dietary,
-        notes: g.notes,
-        family: g.family_id ? (familyName.get(g.family_id) ?? null) : null,
-        seatDismissed: !!g.seat_dismissed_at,
-      })),
-      assignments: (seatRows ?? []).map((a) => ({ guestId: a.guest_id as string, layoutObjectId: a.layout_object_id as string })),
-    }
-  }
+  // PDF export data (planner team only; null for anyone else). RLS on the tables it reads is the real gate.
+  const exportData: PdfExportData | null = await loadPdfExportData(supabase, projectId)
 
   const zoneLegend = <ZoneLegend zones={zones} roomNameById={roomNameById} />
 
@@ -181,26 +136,6 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
 
   const totalShortfallItems = rows.filter((r) => r.shortfall > 0).length
-
-  if (exportData) {
-    exportData.itemRows = rows.map(
-      (r): PdfItemRow => ({
-        name: r.name,
-        category: r.category,
-        used: r.used,
-        venueStock: r.venueStock,
-        isStockTracked: r.isStockTracked,
-        shortfall: r.shortfall,
-        rentalAvailability: r.rentalAvailability,
-      }),
-    )
-    exportData.catalog = Object.fromEntries(
-      (catalogItems ?? []).map((c: DbCatalogItem) => [
-        c.id,
-        { name: c.name, category: c.category, widthCm: c.width_cm, depthCm: c.depth_cm },
-      ]),
-    )
-  }
 
   return (
     <SummaryShell projectId={projectId} title={title}>

@@ -80,6 +80,7 @@ export function drawPlan(
   catalog: Record<string, PdfCatalogItem>,
   zones: ProjectZone[],
   box: Box,
+  font = 'helvetica',
 ) {
   const b = roomBounds(room, roomObjects)
   const s = Math.min(box.w / b.w, box.h / b.h)
@@ -159,7 +160,7 @@ export function drawPlan(
     const label = table ? (o.tableLabel?.trim() ? o.tableLabel.trim() : String((idx ?? 0) + 1)) : (item?.name ?? '')
     if (label) {
       const fit = Math.max(w, d) * s
-      doc.setFont('helvetica', table ? 'bold' : 'normal')
+      doc.setFont(font, table ? 'bold' : 'normal')
       doc.setFontSize(table ? 7 : 5.5)
       doc.setTextColor(30, 30, 30)
       let t = pdfText(label)
@@ -169,7 +170,7 @@ export function drawPlan(
   }
 
   // Zone names last, on top
-  doc.setFont('helvetica', 'bold')
+  doc.setFont(font, 'bold')
   doc.setFontSize(7)
   for (const z of zones) {
     const a = zoneLabelAnchor(z.shape)
@@ -187,7 +188,7 @@ export function drawPlan(
   doc.setDrawColor(0, 0, 0)
   const barY = oy + b.h * s + 14
   doc.line(box.x, barY, box.x + barPt, barY)
-  doc.setFont('helvetica', 'normal')
+  doc.setFont(font, 'normal')
   doc.setFontSize(7)
   doc.text(`${barCm / 100} m`, box.x + barPt + 4, barY + 2.5)
 }
