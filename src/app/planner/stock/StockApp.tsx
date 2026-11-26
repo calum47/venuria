@@ -85,8 +85,8 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile label="Products" value={String(stats.products)} />
-        {canManage && <StatTile label="Stock value (avg cost)" value={money(stats.costValue, currency)} />}
-        {canManage && <StatTile label="Stock value (sell)" value={money(stats.sellValue, currency)} />}
+        {canManage && <StatTile label="What my stock cost me" value={money(stats.costValue, currency)} />}
+        {canManage && <StatTile label="Worth at selling price" value={money(stats.sellValue, currency)} />}
         <StatTile
           label="Low stock"
           value={String(stats.lowStockCount)}
