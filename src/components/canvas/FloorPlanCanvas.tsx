@@ -11,7 +11,7 @@ import ZoneOverlay, { type ZoneDraft } from '@/components/zones/ZoneOverlay'
 import type { ZoneTool } from '@/lib/zones'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import Konva from 'konva'
-import { flattenForJpg, type ExportLogo } from '@/lib/pdfExport/jpgLogo'
+import { flattenForJpg, type ExportBranding } from '@/lib/pdfExport/jpgLogo'
 import { mirrorDragRound, mirrorDragRect, rotateChairsWithTable, reassignChairEdge } from '@/lib/utils/seating'
 import { findNearestValidAlongPath, getFootprintCorners, validateFootprint } from '@/lib/utils/geometry'
 
@@ -23,8 +23,8 @@ const MAX_ZOOM = 3
 type Props = {
   /** The editor fills this with a function that downloads the current room as a JPG. */
   exportRef?: React.MutableRefObject<(() => Promise<void>) | null>
-  /** The team logo (and where to print it) for the JPG export; omitted or null → no logo. */
-  getExportLogo?: () => Promise<ExportLogo | null>
+  /** The logos for the JPG export: the team's (optional) and the Venuria mark (always). */
+  getExportBranding?: () => Promise<ExportBranding | null>
   catalogItems: DbCatalogItem[]
   /** Items a table setting can use (plates, glasses, candles…) — drawn on tables that have a setting. */
   settingItems?: DbCatalogItem[]
@@ -52,7 +52,7 @@ type Props = {
 
 export default function FloorPlanCanvas({
   exportRef,
-  getExportLogo,
+  getExportBranding,
   catalogItems,
   settingItems = [],
   currentRoom,
@@ -490,9 +490,9 @@ export default function FloorPlanCanvas({
       stage.scale({ x: 1, y: 1 })
       stage.position({ x: 0, y: 0 })
       const shot = stage.toCanvas({ x, y, width, height, pixelRatio: 2 })
-      // A logo that cannot be loaded never blocks the export.
-      const exportLogo = getExportLogo ? await getExportLogo().catch(() => null) : null
-      const flat = await flattenForJpg(shot, exportLogo)
+      // Logos that cannot be loaded never block the export (the Venuria name is then printed as text).
+      const branding = getExportBranding ? await getExportBranding().catch(() => null) : null
+      const flat = await flattenForJpg(shot, branding)
       const url = flat.toDataURL('image/jpeg', 0.92)
       const safe = currentRoom.name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'room'
       const a = document.createElement('a')

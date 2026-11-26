@@ -4,7 +4,7 @@ import { zoneAreaM2 } from '@/lib/zones'
 import { drawPlan, tableHeading, tablesOfRoom } from './plan'
 import { formatDateEn, pdfText } from './text'
 import type { PdfExportData, PdfGuest, PdfOptions } from './types'
-import { DEFAULT_PDF_STYLE, LOGO_HEIGHT_PT, LOGO_MAX_ASPECT, SPACING_FACTOR, fontOption, hexToRgb } from './style'
+import { BRAND_HEIGHT_PT, DEFAULT_PDF_STYLE, LOGO_HEIGHT_PT, LOGO_MAX_ASPECT, SPACING_FACTOR, fontOption, hexToRgb } from './style'
 
 const M = 36 // page margin, pt
 const TOP = 52 // first content line under the running header
@@ -368,23 +368,39 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setLineWidth(0.75)
     doc.line(M, 33, w - M, 33)
 
-    // Footer: three slots (left / centre / right). The logo takes the one the team chose; the
-    // footer text and the page number use the others, page number as far right as it can go.
-    const logoSlot = logo ? (style.logoPosition.replace('bottom-', '') as 'left' | 'center' | 'right') : null
-    const textSlot = logoSlot === 'left' ? 'center' : 'left'
-    const pageSlot = logoSlot === 'right' ? 'center' : 'right'
-    const at = (slot: 'left' | 'center' | 'right') => (slot === 'left' ? M : slot === 'center' ? w / 2 : w - M)
+    // Footer. The Venuria mark is fixed at the bottom right and cannot be turned off; the page
+    // number sits just left of it. The team logo takes the bottom left or centre (their choice)
+    // and the footer text uses whichever of those two it leaves free.
+    const brandH = BRAND_HEIGHT_PT
+    let brandLeft: number
+    if (opts.brandMark) {
+      const bw = brandH * (opts.brandMark.widthPx / opts.brandMark.heightPx)
+      brandLeft = w - M - bw
+      doc.addImage(opts.brandMark.dataUrl, opts.brandMark.format, brandLeft, h - 10 - brandH, bw, brandH, undefined, 'FAST')
+    } else {
+      // Fallback if the image could not be loaded: the name is still printed.
+      doc.setFont(F, 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(...accent)
+      const tw = doc.getTextWidth('Venuria')
+      brandLeft = w - M - tw
+      doc.text('Venuria', brandLeft, h - 16)
+    }
+    doc.setFont(F, 'normal')
     doc.setFontSize(8)
     doc.setTextColor(100, 100, 100)
+    doc.text(`Page ${p} of ${total}`, brandLeft - 12, h - 20, { align: 'right' })
+
+    const logoSlot = logo ? (style.logoPosition === 'bottom-left' ? 'left' : 'center') : null
+    const textSlot = logoSlot === 'left' ? 'center' : 'left'
     const footerText = pdfText(style.footerText)
-    if (footerText) doc.text(footerText, at(textSlot), h - 20, { align: textSlot })
-    doc.text(`Page ${p} of ${total}`, at(pageSlot), h - 20, { align: pageSlot })
+    if (footerText) doc.text(footerText, textSlot === 'left' ? M : w / 2, h - 20, { align: textSlot })
 
     if (logo && logoSlot) {
       const aspect = Math.min(logo.widthPx / logo.heightPx, LOGO_MAX_ASPECT)
       const lh = LOGO_HEIGHT_PT[style.logoSize]
       const lw = lh * aspect
-      const x = logoSlot === 'left' ? M : logoSlot === 'center' ? (w - lw) / 2 : w - M - lw
+      const x = logoSlot === 'left' ? M : (w - lw) / 2
       doc.addImage(logo.dataUrl, logo.format, x, h - 10 - lh, lw, lh, undefined, 'FAST')
     }
   }

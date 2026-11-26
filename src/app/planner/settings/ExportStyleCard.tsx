@@ -14,7 +14,7 @@ import {
   type PdfSpacing,
   type PdfStyle,
 } from '@/lib/pdfExport/style'
-import { LOGO_BUCKET, loadFontData, loadLogo, prepareLogoFile } from '@/lib/pdfExport/assets'
+import { LOGO_BUCKET, loadBrandMark, loadFontData, loadLogo, prepareLogoFile } from '@/lib/pdfExport/assets'
 import type { PdfExportData, PdfLogo } from '@/lib/pdfExport/types'
 import { loadPreviewData, saveExportStyle, saveTeamLogo } from './actions'
 
@@ -32,7 +32,6 @@ const ACCENT_SWATCHES = ['#282828', '#8b4a6b', '#1f4e79', '#2f6b4f', '#9a6a1f', 
 const POSITIONS: { value: LogoPosition; label: string }[] = [
   { value: 'bottom-left', label: 'Bottom left' },
   { value: 'bottom-center', label: 'Bottom centre' },
-  { value: 'bottom-right', label: 'Bottom right' },
 ]
 const SIZES: { value: LogoSize; label: string }[] = [
   { value: 'small', label: 'Small' },
@@ -50,6 +49,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
   const [style, setStyle] = useState<PdfStyle>(initialStyle)
   const [logoPath, setLogoPath] = useState<string | null>(initialLogoPath)
   const [loadedLogo, setLoadedLogo] = useState<PdfLogo | null>(null)
+  const [brandMark, setBrandMark] = useState<PdfLogo | null>(null)
   const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? '')
   const [data, setData] = useState<PdfExportData | null>(null)
   const [dataError, setDataError] = useState<string | null>(null)
@@ -94,6 +94,15 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
     }
   }, [logoPath])
 
+  // The Venuria mark that every export carries.
+  useEffect(() => {
+    let cancelled = false
+    loadBrandMark().then((b) => !cancelled && setBrandMark(b))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Re-render the preview a moment after the last change.
   useEffect(() => {
     if (!data) return
@@ -110,6 +119,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           style,
           fonts,
           logo,
+          brandMark,
         })
         url = URL.createObjectURL(doc.output('blob'))
         if (cancelled) {
@@ -132,7 +142,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       cancelled = true
       clearTimeout(timer)
     }
-  }, [data, style, logo])
+  }, [data, style, logo, brandMark])
 
   function save() {
     setMessage(null)
@@ -198,8 +208,8 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       <div>
         <h2 className="text-sm font-semibold text-gray-900">Exports: look and logo</h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          How your team&apos;s exported PDFs look, and the logo printed on every page (also on floor plan JPGs). Applies to the whole
-          team.
+          How your team&apos;s exported PDFs look, and your own logo printed on every page (also on floor plan JPGs). Applies to the
+          whole team. The Venuria mark always appears at the bottom right of every page and cannot be turned off.
         </p>
       </div>
 

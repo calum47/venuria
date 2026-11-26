@@ -27,17 +27,18 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
     setError(null)
     try {
       // Loaded on demand so the PDF libraries never weigh on the editor pages.
-      const [{ buildProjectPdf }, { loadFontData, loadLogo }] = await Promise.all([
+      const [{ buildProjectPdf }, { loadFontData, loadLogo, loadBrandMark }] = await Promise.all([
         import('@/lib/pdfExport/build'),
         import('@/lib/pdfExport/assets'),
       ])
       // The team's look (Settings → Exports). A font or logo that cannot be loaded never blocks the export.
       const style = data.teamStyle
-      const [fonts, logo] = await Promise.all([
+      const [fonts, logo, brandMark] = await Promise.all([
         loadFontData(style.font),
         style.showLogo && data.logoPath ? loadLogo(supabase, data.logoPath) : Promise.resolve(null),
+        loadBrandMark(),
       ])
-      const doc = buildProjectPdf(data, { sections, roomIds, style, fonts, logo })
+      const doc = buildProjectPdf(data, { sections, roomIds, style, fonts, logo, brandMark })
       doc.save(`venuria-${safeFilePart(data.projectTitle)}-${data.eventDate ?? 'plan'}.pdf`)
     } catch (e) {
       console.error('PDF export failed', e)

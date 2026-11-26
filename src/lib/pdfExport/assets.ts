@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { fontOption, normalizePdfStyle, type PdfFontKey } from './style'
-import type { ExportLogo } from './jpgLogo'
+import type { ExportBranding } from './jpgLogo'
 import type { PdfFontData, PdfLogo } from './types'
 
 /** Browser-only helpers: fetch the font files and the team logo that the PDF/JPG exports embed. */
@@ -134,24 +134,57 @@ export function loadLogo(supabase: SupabaseClient, path: string): Promise<PdfLog
   return p
 }
 
+let brandPromise: Promise<PdfLogo | null> | null = null
+
+/** The Venuria mark printed on every export (public/brand/venuria-mark.png). Null if it cannot be fetched; exports then print the name as text. */
+export function loadBrandMark(): Promise<PdfLogo | null> {
+  if (!brandPromise) {
+    brandPromise = (async () => {
+      try {
+        const res = await fetch('/brand/venuria-mark.png')
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        try {
+          const img = await loadImage(url)
+          const canvas = document.createElement('canvas')
+          canvas.width = img.naturalWidth
+          canvas.height = img.naturalHeight
+          canvas.getContext('2d')?.drawImage(img, 0, 0)
+          return { dataUrl: canvas.toDataURL('image/png'), format: 'PNG' as const, widthPx: canvas.width, heightPx: canvas.height }
+        } finally {
+          URL.revokeObjectURL(url)
+        }
+      } catch (e) {
+        console.error('Could not load the Venuria mark.', e)
+        brandPromise = null // allow a retry next time
+        return null
+      }
+    })()
+  }
+  return brandPromise
+}
+
 /**
- * The logo (and its position/size) for a project's plan JPG, or null when the team has none, turned
- * it off, or the caller cannot read the team (e.g. a client in guest mode). Never throws.
+ * Everything printed besides the plan on a project's JPG: the Venuria mark (always) and the team's
+ * logo with its position and size (when the team has one and left it on, and the caller can read the
+ * team: a client in guest mode cannot). Never throws.
  */
-export async function loadExportLogoForProject(supabase: SupabaseClient, projectId: string): Promise<ExportLogo | null> {
+export async function loadExportBrandingForProject(supabase: SupabaseClient, projectId: string): Promise<ExportBranding> {
+  const brand = await loadBrandMark()
   try {
     const { data: project } = await supabase.from('projects').select('team_id').eq('id', projectId).maybeSingle()
     const teamId = (project as { team_id: string | null } | null)?.team_id
-    if (!teamId) return null
+    if (!teamId) return { team: null, brand }
     const { data: team, error } = await supabase.from('teams').select('export_style, logo_path').eq('id', teamId).maybeSingle()
     const row = team as { export_style: unknown; logo_path: string | null } | null
-    if (error || !row?.logo_path) return null
+    if (error || !row?.logo_path) return { team: null, brand }
     const style = normalizePdfStyle(row.export_style)
-    if (!style.showLogo) return null
+    if (!style.showLogo) return { team: null, brand }
     const logo = await loadLogo(supabase, row.logo_path)
-    return logo ? { logo, position: style.logoPosition, size: style.logoSize } : null
+    return { team: logo ? { logo, position: style.logoPosition, size: style.logoSize } : null, brand }
   } catch (e) {
     console.error('Could not load the team logo for the JPG.', e)
-    return null
+    return { team: null, brand }
   }
 }

@@ -45,7 +45,8 @@ export const PDF_FONTS: PdfFontOption[] = [
 ]
 
 export type PdfSpacing = 'compact' | 'normal' | 'roomy'
-export type LogoPosition = 'bottom-left' | 'bottom-center' | 'bottom-right'
+/** The Venuria mark always owns the bottom-right of every page, so the team logo can only take the other two slots. */
+export type LogoPosition = 'bottom-left' | 'bottom-center'
 export type LogoSize = 'small' | 'medium' | 'large'
 
 export type PdfStyle = {
@@ -57,7 +58,7 @@ export type PdfStyle = {
   /** Headings, table headers and the header rule. #rrggbb */
   accent: string
   spacing: PdfSpacing
-  /** Left of the page footer. Empty → nothing. */
+  /** Left of the page footer (centre when the team logo is bottom-left). Empty → nothing. */
   footerText: string
   showLogo: boolean
   logoPosition: LogoPosition
@@ -70,7 +71,7 @@ export const DEFAULT_PDF_STYLE: PdfStyle = {
   baseSize: 9,
   accent: '#282828',
   spacing: 'normal',
-  footerText: 'Venuria',
+  footerText: '',
   showLogo: true,
   logoPosition: 'bottom-center',
   logoSize: 'medium',
@@ -82,12 +83,14 @@ export const FOOTER_TEXT_MAX = 60
 
 /** Logo height in pt (PDF) — the footer band is 40 pt tall, so "large" still fits. */
 export const LOGO_HEIGHT_PT: Record<LogoSize, number> = { small: 16, medium: 24, large: 32 }
+/** Height of the always-on Venuria mark in the PDF footer, pt. Not configurable. */
+export const BRAND_HEIGHT_PT = 14
 /** Longest side a logo may have, as a multiple of its height, so a very wide banner cannot swallow the footer. */
 export const LOGO_MAX_ASPECT = 4.5
 
 const FONT_KEYS = new Set<string>(PDF_FONTS.map((f) => f.key))
 const SPACINGS = new Set<string>(['compact', 'normal', 'roomy'])
-const POSITIONS = new Set<string>(['bottom-left', 'bottom-center', 'bottom-right'])
+const POSITIONS = new Set<string>(['bottom-left', 'bottom-center'])
 const SIZES = new Set<string>(['small', 'medium', 'large'])
 
 function clampNum(v: unknown, min: number, max: number, fallback: number): number {

@@ -34,7 +34,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     roles: ['planner', 'admin'],
     items: [
       'Managers can now style the team’s exported PDFs in Settings: font (seven to choose from), title and text size, accent colour, spacing and the footer text, with a live preview built from one of your real projects.',
-      'Upload your logo once and it is printed on every page of the PDF, at the bottom left, centre or right and in the size you choose. The floor plan JPG gets it too.',
+      'Upload your logo once and it is printed on every page of the PDF, at the bottom left or centre and in the size you choose. The floor plan JPG gets it too. Venuria’s own mark is always printed at the bottom right.',
       'Everyone on the team’s exports use the saved look automatically.',
     ],
   },

@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 import FloorPlanCanvas from '@/components/canvas/FloorPlanCanvas'
 import { supabase } from '@/lib/supabase/client'
-import { loadExportLogoForProject } from '@/lib/pdfExport/assets'
+import { loadExportBrandingForProject } from '@/lib/pdfExport/assets'
 import CatalogSidebar from '@/components/canvas/CatalogSidebar'
 import PropertiesPanel from '@/components/canvas/PropertiesPanel'
 import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
@@ -507,7 +507,7 @@ export default function EditorPage() {
           <div className="flex-1 overflow-hidden min-w-0">
             <FloorPlanCanvas
               exportRef={exportJpgRef}
-              getExportLogo={() => loadExportLogoForProject(supabase, projectId)}
+              getExportBranding={() => loadExportBrandingForProject(supabase, projectId)}
               catalogItems={catalogItems}
               settingItems={settingItems}
               currentRoom={currentRoom}

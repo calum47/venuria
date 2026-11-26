@@ -80,6 +80,8 @@ export type PdfOptions = {
   style?: PdfStyle
   /** Required for any font other than Helvetica; without it the PDF falls back to Helvetica. */
   fonts?: PdfFontData | null
-  /** Drawn on every page when the style has showLogo on. */
+  /** The team's logo; drawn on every page when the style has showLogo on. */
   logo?: PdfLogo | null
+  /** The Venuria mark: always drawn, whatever the style says. If it could not be loaded a text fallback is printed. */
+  brandMark?: PdfLogo | null
 }
