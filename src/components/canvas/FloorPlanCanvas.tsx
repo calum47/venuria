@@ -37,6 +37,8 @@ type Props = {
   onChairClickInGuestMode?: (chairId: string) => void
   onGuestDropOnChair?: (chairId: string, guestId: string) => void
   draggingGuestId?: string | null
+  /** View-only: nothing can be moved, dropped, resized or deleted. */
+  viewOnly?: boolean
   // ── Zones (Phase 4b) — all optional so existing callers are unaffected ──
   zones?: ProjectZone[]
   zoneMode?: boolean
@@ -72,6 +74,7 @@ export default function FloorPlanCanvas({
   onChairClickInGuestMode,
   onGuestDropOnChair,
   draggingGuestId,
+  viewOnly = false,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null)
   // While true the canvas draws without editing chrome (grid, selection, handles) for the JPG export.
@@ -196,7 +199,7 @@ export default function FloorPlanCanvas({
 
   useEffect(() => {
     if (!transformerRef.current || !stageRef.current) return
-    if (selectedObjectId && !isGuestMode && !zoneMode) {
+    if (selectedObjectId && !isGuestMode && !zoneMode && !viewOnly) {
       const shape = stageRef.current.findOne(`#${selectedObjectId}`)
       if (shape) {
         transformerRef.current.nodes([shape])
@@ -206,7 +209,7 @@ export default function FloorPlanCanvas({
       transformerRef.current.nodes([])
       transformerRef.current.getLayer()?.batchDraw()
     }
-  }, [selectedObjectId, isGuestMode, zoneMode])
+  }, [selectedObjectId, isGuestMode, zoneMode, viewOnly])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -218,13 +221,13 @@ export default function FloorPlanCanvas({
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedZoneId) onZoneDelete?.(selectedZoneId)
         return
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0 && !isGuestMode) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0 && !isGuestMode && !viewOnly) {
         deleteSelection()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedObjectIds, deleteSelection, isGuestMode, zoneMode, selectedZoneId, onZoneDelete, onZoneSelect])
+  }, [selectedObjectIds, deleteSelection, isGuestMode, viewOnly, zoneMode, selectedZoneId, onZoneDelete, onZoneSelect])
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
@@ -813,7 +816,7 @@ export default function FloorPlanCanvas({
     }
 
     const handleDragStart = (e: Konva.KonvaEventObject<DragEvent>) => {
-      if (isGuestMode) { e.target.stopDrag(); return }
+      if (isGuestMode || viewOnly) { e.target.stopDrag(); return }
       const store = useLayoutStore.getState()
       const currentSelectedIds = store.selectedObjectIds
       if (currentSelectedIds.length > 1 && currentSelectedIds.includes(obj.id)) {
@@ -867,7 +870,7 @@ export default function FloorPlanCanvas({
         x={x}
         y={y}
         rotation={obj.rotationDeg}
-        draggable={!isGuestMode && !zoneMode}
+        draggable={!isGuestMode && !zoneMode && !viewOnly}
         listening={!zoneMode}
         onDragStart={handleDragStart}
         onDragMove={handleDragMove}
@@ -1014,7 +1017,7 @@ export default function FloorPlanCanvas({
 
     // Catalog item drop
     const itemData = e.dataTransfer.getData('catalogItem')
-    if (!itemData || isGuestMode || zoneMode) return
+    if (!itemData || isGuestMode || zoneMode || viewOnly) return
     const item: DbCatalogItem = JSON.parse(itemData)
     const stage = stageRef.current
     if (!stage) return

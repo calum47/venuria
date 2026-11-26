@@ -6,6 +6,8 @@ import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { formatDate } from '@/lib/projectDates'
 import type { DbProjectDay, DbTeamVendor, DbTimetableBlock } from '@/types/db'
 import TimetableApp from './TimetableApp'
+import { getProjectAccess } from '@/lib/projectAccess'
+import ViewOnlyBanner from '@/components/ViewOnlyBanner'
 
 type Params = { projectId: string }
 
@@ -31,6 +33,7 @@ export default async function TimetablePage({ params }: { params: Promise<Params
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
+  const access = await getProjectAccess(supabase, projectId)
 
   const [daysRes, blocksRes, vendorsRes] = await Promise.all([
     supabase.from('project_days').select('*').eq('project_id', projectId).order('position').order('created_at'),
@@ -64,7 +67,9 @@ export default async function TimetablePage({ params }: { params: Promise<Params
           </p>
         )}
 
+        {access === 'view' && <ViewOnlyBanner />}
         <TimetableApp
+          readOnly={access === 'view'}
           projectId={projectId}
           teamId={ctx.team.id}
           eventDate={project.event_date}

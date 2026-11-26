@@ -12,6 +12,8 @@ import { areaHint, summariseAreas } from '@/lib/hubAreas'
 import { capacityLine } from '@/lib/capacity'
 import type { DbProjectRoomSetting } from '@/types/db'
 import ProjectOrders from './ProjectOrders'
+import { getProjectAccess } from '@/lib/projectAccess'
+import ViewOnlyBanner from '@/components/ViewOnlyBanner'
 import { HubCard, hubCardClass as card } from '@/components/brand/HubCard'
 import type { DbStockOrder } from '@/types/db'
 
@@ -46,6 +48,8 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
+  // 'view' = a Member looking at a Public project they are not assigned to (migration 038).
+  const viewOnly = (await getProjectAccess(supabase, projectId)) === 'view'
 
   const { data: payments } = await supabase
     .from('project_payments')
@@ -123,13 +127,15 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
             {project.couple_names?.trim() ? `${venueName} · ` : ''}{project.event_date ? `${formatDate(project.event_date)} · ${countdownLabel(project.event_date)}` : 'No event date set'}
             {project.status ? ` · ${project.status}` : ''}
           </p>
-          <ProjectNameEditor projectId={projectId} coupleNames={project.couple_names} />
+          {!viewOnly && <ProjectNameEditor projectId={projectId} coupleNames={project.couple_names} />}
         </div>
+
+        {viewOnly && <ViewOnlyBanner />}
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan, seating and 3D view" />
           <HubCard href={`/editor/${projectId}/summary`} icon="summary" title="Layout summary" hint="Everything placed, stock shortfalls and zones" />
-          <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />
+          {!viewOnly && <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />}
           <HubCard href={`/planner/projects/${projectId}/timetable`} icon="timetable" title="Timetable" hint={timetableHint} />
           <HubCard href={`/planner/projects/${projectId}/rundown`} icon="rundown" title="Run-down list" hint="Day-of list for the team and vendors — print or save as PDF" />
           <HubCard href={`/planner/projects/${projectId}/guests`} icon="guests" title="Guest list details" hint={guestsHint} hintClass={needSeat > 0 ? 'text-amber-700' : 'text-gray-500'} />
@@ -162,14 +168,14 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
           )}
         </section>
 
-        <ProjectOrders
+        {!viewOnly && <ProjectOrders
           projectId={projectId}
           teamId={ctx.team.id}
           items={(itemRows ?? []) as { id: string; name: string }[]}
           initialOrders={(orderRows ?? []) as DbStockOrder[]}
-        />
+        />}
 
-        {(project.planner_id === ctx.planner.id || ctx.planner.role === 'manager' || ctx.planner.role === 'lead') && (
+        {!viewOnly && (project.planner_id === ctx.planner.id || ctx.planner.role === 'manager' || ctx.planner.role === 'lead') && (
           <DeleteProjectSection projectId={projectId} title={projectTitle(project.couple_names, venueName)} />
         )}
       </div>

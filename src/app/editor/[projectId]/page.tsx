@@ -90,6 +90,9 @@ export default function EditorPage() {
   const [zoom, setZoom] = useState(1)
   const [isLoading, setIsLoading] = useState(true)
   const [isSwitchingRoom, setIsSwitchingRoom] = useState(false)
+  // True for a Member opening a Public project they are not assigned to (migration 038): look, don't touch.
+  const [viewOnly, setViewOnly] = useState(false)
+  const viewOnlyRef = useRef(false)
   const [show3D, setShow3D] = useState(false)
   const [showAutoArrange, setShowAutoArrange] = useState(false)
   // Table settings (plates, glasses, candles…): scoped catalog items + team-wide templates
@@ -134,6 +137,10 @@ export default function EditorPage() {
         if (!project) { router.push('/'); return }
 
         setProjectId(projectId)
+
+        // Only an explicit 'view' switches editing off; any other answer leaves the editor as it was.
+        const { data: access } = await supabase.rpc('planner_project_access', { pid: projectId })
+        if (access === 'view') { viewOnlyRef.current = true; setViewOnly(true) }
 
         const [items, venueRooms, guestList, assignments] = await Promise.all([
           getCatalogItems(project.venue_id),
@@ -193,7 +200,7 @@ export default function EditorPage() {
   // ── Auto-save ───────────────────────────────────────────────────────────────
 
   const triggerSave = useCallback(() => {
-    if (!projectId || isSwitchingRoomRef.current) return
+    if (!projectId || isSwitchingRoomRef.current || viewOnlyRef.current) return
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
 
     saveTimerRef.current = setTimeout(async () => {
@@ -228,7 +235,7 @@ export default function EditorPage() {
     setIsSwitchingRoom(true)
     isSwitchingRoomRef.current = true
 
-    if (currentRoomId && projectId) {
+    if (currentRoomId && projectId && !viewOnlyRef.current) {
       try {
         await saveLayoutObjects(projectId, currentRoomId, layoutObjectsRef.current)
       } catch (err) {
@@ -391,7 +398,7 @@ export default function EditorPage() {
     <main className="flex h-screen w-screen overflow-hidden bg-gray-100">
 
       {/* Left sidebar — item catalog (hidden in guest and zone modes) */}
-      {!isGuestMode && !zoneMode && (
+      {!viewOnly && !isGuestMode && !zoneMode && (
         <div className="flex-shrink-0">
           <CatalogSidebar catalogItems={catalogItems} />
         </div>
@@ -410,6 +417,9 @@ export default function EditorPage() {
             📋 Summary
           </Link>
           <span className="text-gray-300">|</span>
+          {viewOnly ? (
+            <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800" title="You are not assigned to this project, so you can look but not change anything">View only</span>
+          ) : (<>
           <button
             onClick={() => setShowAutoArrange(true)}
             disabled={!currentRoom || isGuestMode}
@@ -417,6 +427,7 @@ export default function EditorPage() {
           >
             ✨ Auto-Arrange
           </button>
+          </>)}
           <span className="text-gray-300">|</span>
           <button
             onClick={() => exportJpgRef.current?.().catch((err) => console.error('JPG export failed:', err))}
@@ -448,7 +459,7 @@ export default function EditorPage() {
           <span className="text-gray-300">|</span>
 
           {/* Seating plan toggle (seat guests at tables) */}
-          <button
+          {!viewOnly && <button
             onClick={() => { if (!isGuestMode) setZoneMode(false); setGuestMode(!isGuestMode) }}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               isGuestMode
@@ -457,10 +468,10 @@ export default function EditorPage() {
             }`}
           >
             👥 Seating plan
-          </button>
+          </button>}
 
           {/* Zone mode toggle */}
-          <button
+          {!viewOnly && <button
             onClick={toggleZoneMode}
             disabled={!currentRoom}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-30 ${
@@ -470,15 +481,17 @@ export default function EditorPage() {
             }`}
           >
             🎨 {zoneMode ? 'Zones ON' : 'Zones'}
-          </button>
+          </button>}
 
           {/* Area capacity: seated / standing choice, load vs the venue's limit, over-the-limit warning */}
+          <fieldset disabled={viewOnly} className="m-0 min-w-0 border-0 p-0">
           <RoomCapacity
             projectId={projectId}
             room={currentRoom}
             chairsInRoom={layoutObjects.filter((o) => o.isChairFor || catalogItems.find((c) => c.id === o.catalogItemId)?.category === 'chairs').length}
             guestTotal={guests.filter((g) => g.rsvp_status !== 'declined').length}
           />
+          </fieldset>
 
           {/* Zoom hint / level */}
           <span className="text-xs text-gray-400 ml-auto">
@@ -517,6 +530,7 @@ export default function EditorPage() {
               onChairClickInGuestMode={setAssigningChairId}
               onGuestDropOnChair={handleGuestDropOnChair}
               draggingGuestId={draggingGuestId}
+              viewOnly={viewOnly}
               zones={zones}
               zoneMode={zoneMode}
               zoneTool={zoneTool}
@@ -534,7 +548,7 @@ export default function EditorPage() {
           </div>
 
           {/* Properties panel — only when an object is selected outside guest mode */}
-          {!isGuestMode && !zoneMode && liveObject && (
+          {!viewOnly && !isGuestMode && !zoneMode && liveObject && (
             <div className="flex-shrink-0">
               <PropertiesPanel
                 object={liveObject}

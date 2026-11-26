@@ -9,6 +9,8 @@ import { GUEST_PHOTOS_BUCKET, buildSeatIndex } from '@/lib/guests'
 import { RSVP_MEDIA_BUCKET } from '@/lib/rsvpContent'
 import type { DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import GuestsApp from './GuestsApp'
+import { getProjectAccess } from '@/lib/projectAccess'
+import ViewOnlyBanner from '@/components/ViewOnlyBanner'
 
 type Params = { projectId: string }
 
@@ -46,6 +48,7 @@ export default async function GuestsPage({
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
+  const access = await getProjectAccess(supabase, projectId)
 
   const [guestsRes, familiesRes, staysRes, assignRes, objectsRes, roomsRes, rsvpRes, rsvpPhotosRes, rsvpHotelsRes] = await Promise.all([
     supabase.from('guests').select('*').eq('project_id', projectId).order('name'),
@@ -116,7 +119,9 @@ export default async function GuestsPage({
           </p>
         )}
 
+        {access === 'view' && <ViewOnlyBanner />}
         <GuestsApp
+          readOnly={access === 'view'}
           projectId={projectId}
           teamId={ctx.team.id}
           eventDate={project.event_date}

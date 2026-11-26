@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
-import { updateProjectDates, updateProjectCoupleNames, assignProject, setProjectVisibility } from './actions'
+import { updateProjectDates, updateProjectCoupleNames, setProjectAssignees, setProjectVisibility } from './actions'
 import { projectTitle } from '@/lib/projectTitle'
 import { countdownLabel, daysUntil, formatDate, suggestDueBy } from '@/lib/projectDates'
 
@@ -15,9 +15,10 @@ export type ProjectRowData = {
   coupleNames: string | null
   creatorId: string
   creatorName: string
-  assigneeId: string | null
-  assigneeName: string | null
+  assignees: { id: string; name: string }[]
   visibility: 'private' | 'public'
+  /** 'view' = a Public project the viewer is not assigned to (Member): look only. */
+  access: 'edit' | 'view'
 }
 
 type Props = {
@@ -53,7 +54,10 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
       ? 'Created by you'
       : `Created by ${project.creatorName}`
   const assignee =
-    project.assigneeId === null ? null : project.assigneeId === meId ? 'assigned to you' : `assigned to ${project.assigneeName}`
+    project.assignees.length === 0
+      ? null
+      : `assigned to ${project.assignees.map((a) => (a.id === meId ? 'you' : a.name)).join(', ')}`
+  const viewOnly = project.access === 'view'
 
   return (
     <li className={`px-5 py-4 text-sm ${isPast ? 'opacity-50' : ''}`}>
@@ -61,6 +65,9 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
         <div className="min-w-0">
           <span className="font-serif text-xl font-semibold text-gray-900">{projectTitle(project.coupleNames, project.venueName)}</span>
           <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] capitalize text-gray-500">{project.status}</span>
+          {viewOnly && (
+            <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-800 bg-amber-50 rounded-full px-2 py-0.5">View only</span>
+          )}
           {project.visibility === 'private' && (
             <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Private</span>
           )}
@@ -90,16 +97,18 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
           </div>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <button onClick={() => { setEditing((v) => !v); setError(null) }} className="text-xs text-gray-400 hover:text-gray-700">
-            {editing ? 'Close' : 'Edit'}
-          </button>
+          {!viewOnly && (
+            <button onClick={() => { setEditing((v) => !v); setError(null) }} className="text-xs text-gray-400 hover:text-gray-700">
+              {editing ? 'Close' : 'Edit'}
+            </button>
+          )}
           <Link href={`/planner/projects/${project.id}`} className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-100">
             Open project →
           </Link>
         </div>
       </div>
 
-      {editing && (
+      {editing && !viewOnly && (
         <div className="mt-3 space-y-2 rounded-xl bg-gray-50 border border-gray-100 p-3">
           <form key={project.coupleNames ?? ''} action={run(updateProjectCoupleNames)} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="projectId" value={project.id} />
@@ -134,25 +143,31 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
           {(canAssign || canToggleVisibility) && (
             <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-gray-100">
               {canAssign && (
-                <form action={run(assignProject)} className="flex flex-col gap-1">
-                  <label className="text-[11px] text-gray-500">Assigned to</label>
+                <form
+                  // key remounts the checkboxes when the saved assignees change, so they show what is stored.
+                  key={project.assignees.map((x) => x.id).join(',') || 'none'}
+                  action={run(setProjectAssignees)}
+                  className="flex flex-col gap-1"
+                >
+                  <span className="text-[11px] text-gray-500">Assigned to (any number)</span>
                   <input type="hidden" name="projectId" value={project.id} />
-                  <select
-                    // key forces a remount when the assignee changes, so the box
-                    // reflects the saved value after a revalidation (defaultValue
-                    // alone only applies on first mount).
-                    key={project.assigneeId ?? 'none'}
-                    name="plannerId"
-                    defaultValue={project.assigneeId ?? ''}
-                    onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                    disabled={isPending}
-                    className="rounded-lg border bg-white px-2 py-1 text-xs text-gray-900"
-                  >
-                    <option value="">Nobody</option>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
                     {teammates.map((t) => (
-                      <option key={t.id} value={t.id}>{t.id === meId ? `${t.name} (you)` : t.name}</option>
+                      <label key={t.id} className="flex items-center gap-1 text-xs text-gray-800">
+                        <input
+                          type="checkbox"
+                          name="plannerIds"
+                          value={t.id}
+                          defaultChecked={project.assignees.some((x) => x.id === t.id)}
+                          disabled={isPending}
+                        />
+                        {t.id === meId ? `${t.name} (you)` : t.name}
+                      </label>
                     ))}
-                  </select>
+                  </div>
+                  <button type="submit" disabled={isPending} className="self-start rounded-lg border bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-40">
+                    {isPending ? 'Saving…' : 'Save assignees'}
+                  </button>
                 </form>
               )}
               {canToggleVisibility && (

@@ -64,6 +64,8 @@ type Props = {
   initialRsvpUrls: Record<string, string>
   /** From ?guest=ID (the editor's "Edit details" link): open this guest's panel on load. */
   initialSelectedId?: string | null
+  /** View-only access (a Member on a Public project they are not assigned to): nothing here can be changed. */
+  readOnly?: boolean
 }
 
 const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
@@ -75,7 +77,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null, readOnly = false }: Props) {
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   // The nav bell lists guests waiting for review: tell it when that number changes.
   const reviewCount = guests.filter((g) => g.rsvp_needs_review).length
@@ -193,6 +195,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
     <div className="space-y-4">
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
+      <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
       <RsvpPanel
         projectId={projectId}
         origin={origin}
@@ -204,8 +207,9 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         initialUrls={initialRsvpUrls}
         hasContactEmail={hasContactEmail}
       />
+      </fieldset>
 
-      <form onSubmit={add} className="flex flex-wrap items-center gap-2">
+      {!readOnly && <form onSubmit={add} className="flex flex-wrap items-center gap-2">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -216,7 +220,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         />
         <button type="submit" disabled={adding || !newName.trim()} className={btnPrimary}>{adding ? 'Adding…' : 'Add guest'}</button>
         <button type="button" onClick={() => setImporting(true)} className={btn}>Import from file…</button>
-      </form>
+      </form>}
 
       {importing && (
         <GuestImport
@@ -269,7 +273,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       <p className="text-sm text-gray-500">
         {filtering ? `${visible.length} of ${stats.total} guests` : `${stats.total} ${stats.total === 1 ? 'guest' : 'guests'}`}
         {stats.families > 0 ? ` · ${stats.families} ${stats.families === 1 ? 'family' : 'families'}` : ''}
-        {' · click a guest or Edit to change details, add a photo, family or hotel'}
+        {readOnly ? ' · click a guest to see their details' : ' · click a guest or Edit to change details, add a photo, family or hotel'}
       </p>
 
       {nChecked > 0 && (
@@ -340,6 +344,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                     type="checkbox"
                     checked={allShownChecked}
                     onChange={toggleAllShown}
+                    disabled={readOnly}
                     aria-label={filtering ? `Select all ${visible.length} shown guests` : `Select all ${visible.length} guests`}
                   />
                 </th>
@@ -370,6 +375,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                         type="checkbox"
                         checked={checked.has(g.id)}
                         onChange={() => toggleChecked(g.id)}
+                        disabled={readOnly}
                         aria-label={`Select ${g.name}`}
                       />
                     </td>
@@ -409,7 +415,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                       {gStays.length === 0 ? <span className="text-gray-400">—</span> : <span className="line-clamp-2" title={staySummary(gStays)}>{staySummary(gStays)}</span>}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <button type="button" onClick={() => setSelectedId(g.id)} className={btn} aria-label={`Edit ${g.name}`}>Edit</button>
+                      <button type="button" onClick={() => setSelectedId(g.id)} className={btn} aria-label={`${readOnly ? 'View' : 'Edit'} ${g.name}`}>{readOnly ? 'View' : 'Edit'}</button>
                     </td>
                   </tr>
                 )
@@ -439,6 +445,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
           setPhotoUrls={setPhotoUrls}
           onSelect={setSelectedId}
           onClose={() => setSelectedId(null)}
+          readOnly={readOnly}
         />
       )}
     </div>
@@ -492,6 +499,7 @@ type PanelProps = {
   setPhotoUrls: Dispatch<SetStateAction<Record<string, string>>>
   onSelect: (id: string) => void
   onClose: () => void
+  readOnly: boolean
 }
 
 function GuestPanel(p: PanelProps) {
@@ -701,7 +709,7 @@ function GuestPanel(p: PanelProps) {
         {dirty && <p className="mt-1 text-xs text-amber-700">Unsaved changes — save, or revert by reopening this guest.</p>}
         {error && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
-        <div className="mt-4 space-y-4">
+        <fieldset disabled={p.readOnly} className="m-0 mt-4 min-w-0 space-y-4 border-0 p-0">
           {/* Photo */}
           <div className="flex items-center gap-4">
             <Avatar name={guest.name} url={p.photoUrl} size={96} />
@@ -906,7 +914,7 @@ function GuestPanel(p: PanelProps) {
               </div>
             )}
           </div>
-        </div>
+        </fieldset>
       </aside>
     </>
   )

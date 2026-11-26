@@ -34,6 +34,8 @@ type Props = {
   eventDate: string | null
   initialDays: DbProjectDay[]
   initialBlocks: DbTimetableBlock[]
+  /** View-only access: no adding, dragging, editing or deleting. */
+  readOnly?: boolean
   initialVendors: DbTeamVendor[]
 }
 
@@ -52,7 +54,7 @@ function errMsg(e: unknown): string {
 type Editing = { kind: 'block'; id: string } | { kind: 'new'; start: number; end: number } | null
 type Drag = { id: string; mode: 'move' | 'resize'; delta: number }
 
-export default function TimetableApp({ projectId, teamId, eventDate, initialDays, initialBlocks, initialVendors }: Props) {
+export default function TimetableApp({ projectId, teamId, eventDate, initialDays, initialBlocks, initialVendors, readOnly = false }: Props) {
   const [days, setDays] = useState<DbProjectDay[]>(initialDays)
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
   const [vendors, setVendors] = useState<DbTeamVendor[]>(initialVendors)
@@ -113,7 +115,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
   }
 
   const onPointerDown = (e: React.PointerEvent<HTMLElement>, b: DbTimetableBlock, mode: 'move' | 'resize') => {
-    if (e.button !== 0) return
+    if (readOnly || e.button !== 0) return
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = { id: b.id, mode, startY: e.clientY, moved: false, delta: 0 }
@@ -157,7 +159,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
   }
 
   const onGridClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!day || e.target !== e.currentTarget) return
+    if (readOnly || !day || e.target !== e.currentTarget) return
     const rect = e.currentTarget.getBoundingClientRect()
     const start = Math.min(1439, snap(range.from + (e.clientY - rect.top) / PX_PER_MIN, DRAG_SNAP_MIN))
     setEditing({ kind: 'new', start, end: Math.min(start + 60, 1800) })
@@ -183,20 +185,20 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
             {d.label}{d.day_date ? ` · ${shortDay(d.day_date)}` : ''}
           </button>
         ))}
-        <button type="button" onClick={addDay} disabled={busy} className={btn}>+ Add day</button>
+        {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btn}>+ Add day</button>}
         <span className="flex-1" />
-        <button type="button" onClick={() => setShowVendors(true)} className={btn}>Vendors ({vendors.length})</button>
-        {day && <button type="button" onClick={() => setEditing({ kind: 'new', start: 18 * 60, end: 19 * 60 })} className={btnPrimary}>+ Add block</button>}
+        {!readOnly && <button type="button" onClick={() => setShowVendors(true)} className={btn}>Vendors ({vendors.length})</button>}
+        {!readOnly && day && <button type="button" onClick={() => setEditing({ kind: 'new', start: 18 * 60, end: 19 * 60 })} className={btnPrimary}>+ Add block</button>}
       </div>
 
       {!day ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
           <p className="text-sm text-gray-600">A project can span several days: the wedding itself, a welcome party, a brunch.</p>
-          <button type="button" onClick={addDay} disabled={busy} className={btnPrimary + ' mt-3'}>Add the first day</button>
+          {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btnPrimary + ' mt-3'}>Add the first day</button>}
         </div>
       ) : (
         <>
-          <DayBar key={day.id} day={day} blockCount={dayBlocks.length} setDays={setDays} setBlocks={setBlocks} setActiveDayId={setActiveDayId} run={run} />
+          {!readOnly && <DayBar key={day.id} day={day} blockCount={dayBlocks.length} setDays={setDays} setBlocks={setBlocks} setActiveDayId={setActiveDayId} run={run} />}
 
           {vendors.length > 0 && (
             <div className="flex flex-wrap gap-1.5 text-xs text-gray-600" aria-label="Vendor colours">
@@ -209,9 +211,9 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
             </div>
           )}
 
-          <p className="text-xs text-gray-500">
+          {!readOnly && <p className="text-xs text-gray-500">
             Click an empty slot to add a block. Drag a block up or down to shift it (snaps to {DRAG_SNAP_MIN} min), drag its bottom edge to change its length, or click it to type exact times.
-          </p>
+          </p>}
 
           <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <div className="flex" style={{ minWidth: 480 }}>
@@ -222,7 +224,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                   </span>
                 ))}
               </div>
-              <div ref={gridRef} className="relative flex-1 cursor-cell" style={{ height: heightPx }} onClick={onGridClick} data-testid="timetable-grid">
+              <div ref={gridRef} className={`relative flex-1 ${readOnly ? '' : 'cursor-cell'}`} style={{ height: heightPx }} onClick={onGridClick} data-testid="timetable-grid">
                 {hours.map((m) => (
                   <div key={m} className="pointer-events-none absolute inset-x-0 border-t border-gray-100" style={{ top: (m - range.from) * PX_PER_MIN }} />
                 ))}
@@ -240,12 +242,12 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                       role="button"
                       tabIndex={0}
                       aria-label={`${b.title}, ${formatRange(b.start_min, b.end_min)}`}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setEditing({ kind: 'block', id: b.id }) } }}
+                      onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditing({ kind: 'block', id: b.id }) } }}
                       onPointerDown={(e) => onPointerDown(e, b, 'move')}
                       onPointerMove={onPointerMove}
                       onPointerUp={() => onPointerUp(b)}
                       onPointerCancel={onPointerCancel}
-                      className={`absolute touch-none select-none overflow-hidden rounded-lg border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-brand-600' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-brand-600' : ''}`}
+                      className={`absolute touch-none select-none overflow-hidden rounded-lg border text-left shadow-sm ${isDragging ? 'z-20 cursor-grabbing opacity-90 ring-2 ring-brand-600' : readOnly ? '' : 'cursor-grab'} ${editing?.kind === 'block' && editing.id === b.id ? 'ring-2 ring-brand-600' : ''}`}
                       style={{
                         top: (t.start - range.from) * PX_PER_MIN,
                         height,

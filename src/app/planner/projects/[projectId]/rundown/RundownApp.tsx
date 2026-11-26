@@ -14,6 +14,7 @@ type Props = {
   days: DbProjectDay[]
   initialBlocks: DbTimetableBlock[]
   vendors: DbTeamVendor[]
+  readOnly?: boolean
 }
 
 const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
@@ -23,7 +24,7 @@ function errMsg(e: unknown): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
 }
 
-export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors }: Props) {
+export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors, readOnly = false }: Props) {
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
   const [filter, setFilter] = useState<Set<string>>(new Set())
   const [dayFilter, setDayFilter] = useState<string>('all')
@@ -121,7 +122,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
             ) : (
               <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white print:border-0">
                 {rows.map((r) => (
-                  <RundownEntry key={r.block.id} row={r} vendor={r.block.vendor_id ? vendorById.get(r.block.vendor_id) : undefined} onPatch={patch} />
+                  <RundownEntry key={r.block.id} row={r} vendor={r.block.vendor_id ? vendorById.get(r.block.vendor_id) : undefined} onPatch={patch} readOnly={readOnly} />
                 ))}
               </ul>
             )}
@@ -136,10 +137,12 @@ function RundownEntry({
   row,
   vendor,
   onPatch,
+  readOnly,
 }: {
   row: ReturnType<typeof rundownRows<DbTimetableBlock>>[number]
   vendor: DbTeamVendor | undefined
   onPatch: (b: DbTimetableBlock, f: Parameters<typeof updateBlock>[1]) => Promise<void>
+  readOnly: boolean
 }) {
   const { block: b } = row
   const [editMaterials, setEditMaterials] = useState(false)
@@ -203,14 +206,14 @@ function RundownEntry({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 print:hidden">
           {vendor ? (
             <>
-              <label className={sw}><input type="checkbox" checked={b.show_vendor} onChange={(e) => onPatch(b, { show_vendor: e.target.checked })} /> Show vendor</label>
-              <label className={sw}><input type="checkbox" checked={b.show_contact} onChange={(e) => onPatch(b, { show_contact: e.target.checked })} /> Show contact</label>
-              <label className={sw}><input type="checkbox" checked={b.show_instagram} onChange={(e) => onPatch(b, { show_instagram: e.target.checked })} /> Show Instagram</label>
+              <label className={sw}><input type="checkbox" disabled={readOnly} checked={b.show_vendor} onChange={(e) => onPatch(b, { show_vendor: e.target.checked })} /> Show vendor</label>
+              <label className={sw}><input type="checkbox" disabled={readOnly} checked={b.show_contact} onChange={(e) => onPatch(b, { show_contact: e.target.checked })} /> Show contact</label>
+              <label className={sw}><input type="checkbox" disabled={readOnly} checked={b.show_instagram} onChange={(e) => onPatch(b, { show_instagram: e.target.checked })} /> Show Instagram</label>
             </>
           ) : (
             <span className="text-xs text-gray-400">No vendor tagged</span>
           )}
-          {!editMaterials && <button type="button" onClick={() => setEditMaterials(true)} className={btn}>{b.materials.length > 0 ? 'Edit materials' : '+ Materials'}</button>}
+          {!readOnly && !editMaterials && <button type="button" onClick={() => setEditMaterials(true)} className={btn}>{b.materials.length > 0 ? 'Edit materials' : '+ Materials'}</button>}
         </div>
       </div>
     </li>

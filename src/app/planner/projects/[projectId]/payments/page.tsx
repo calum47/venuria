@@ -1,6 +1,7 @@
 import { projectTitle } from '@/lib/projectTitle'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
+import { getProjectAccess } from '@/lib/projectAccess'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { formatDate } from '@/lib/projectDates'
@@ -32,6 +33,9 @@ export default async function PaymentsPage({
       </main>
     )
   }
+
+  // Payments & documents are for people who can edit the project: view-only people are sent back to the hub.
+  if ((await getProjectAccess(supabase, projectId)) !== 'edit') redirect(`/planner/projects/${projectId}`)
 
   const { data: project } = await supabase
     .from('projects')

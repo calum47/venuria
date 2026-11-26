@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-projects-assignees-payments',
+    date: '2026-11-27',
+    title: 'Assign several people, and see every payment',
+    roles: ['planner', 'admin'],
+    items: [
+      'A project can now be assigned to as many teammates as you like. Leads and Managers set this under Edit on My projects, and can filter the whole list by teammate.',
+      'My projects now shows every payment, paid and pending, as a calendar (the default) or a list. It covers the projects you created or are assigned to; Leads and Managers see the whole team.',
+      'New projects start as Private. A Public project can be opened by any teammate, but if you are not assigned to it you can look at it without changing anything, and Payments & documents stay hidden.',
+    ],
+  },
+  {
     id: '2026-11-27-export-look-and-logo',
     date: '2026-11-27',
     title: 'Your own look and logo on exports',

@@ -117,23 +117,61 @@ export async function updateProjectDates(formData: FormData): Promise<{ error?: 
 }
 
 /**
- * Assign / unassign a project (Phase 22c). Who may do this is enforced by
- * the projects_before_update trigger (manager or lead only, assignee must be
- * a teammate) — the UI only decides whether to show the control.
+ * Set who a project is assigned to (migration 038): any number of teammates.
+ * Only Leads and Managers may do this; the project_assignees RLS policies enforce it
+ * and that every assignee belongs to the project's own team. The UI only decides
+ * whether to show the control.
+ *
+ * Projects assigned before 038 still carry the old single `assigned_to_planner_id`. It was
+ * copied into project_assignees by the migration, but is cleared here as well so that
+ * unassigning someone really removes their access (the access function honours both).
  */
-export async function assignProject(formData: FormData): Promise<{ error?: string }> {
+export async function setProjectAssignees(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
   const projectId = formData.get('projectId') as string
-  const raw = (formData.get('plannerId') as string | null) ?? ''
   if (!projectId) return { error: 'Missing project.' }
-  const { data, error } = await supabase
-    .from('projects')
-    .update({ assigned_to_planner_id: raw || null })
-    .eq('id', projectId)
-    .select('id')
-  if (error) return { error: error.code === '42501' ? 'Only a manager or lead can assign projects.' : error.message }
-  if (!data || data.length === 0) return { error: 'You don\u2019t have access to that project.' }
+  const wanted = new Set(formData.getAll('plannerIds').map(String).filter(Boolean))
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const { data: me } = await supabase.from('planners').select('id').eq('user_id', user?.id ?? '').maybeSingle()
+  if (!me) return { error: 'No planner account linked to this login.' }
+
+  const { data: project } = await supabase.from('projects').select('id, assigned_to_planner_id').eq('id', projectId).maybeSingle()
+  if (!project) return { error: 'You don\u2019t have access to that project.' }
+
+  const { data: current, error: curErr } = await supabase.from('project_assignees').select('planner_id').eq('project_id', projectId)
+  if (curErr) return { error: curErr.message }
+  const have = new Set((current ?? []).map((r) => r.planner_id as string))
+
+  const toAdd = [...wanted].filter((id) => !have.has(id))
+  const toRemove = [...have].filter((id) => !wanted.has(id))
+  const denied = 'Only a manager or lead can assign projects.'
+
+  if (toAdd.length > 0) {
+    const { error } = await supabase
+      .from('project_assignees')
+      .insert(toAdd.map((plannerId) => ({ project_id: projectId, planner_id: plannerId, assigned_by: me.id })))
+    if (error) return { error: error.code === '42501' ? denied : error.message }
+  }
+  if (toRemove.length > 0) {
+    const { data: removed, error } = await supabase
+      .from('project_assignees')
+      .delete()
+      .eq('project_id', projectId)
+      .in('planner_id', toRemove)
+      .select('planner_id')
+    if (error) return { error: error.message }
+    // RLS hides rows you may not delete instead of failing, so count what really went.
+    if ((removed ?? []).length !== toRemove.length) return { error: denied }
+  }
+  if (project.assigned_to_planner_id) {
+    const { error } = await supabase.from('projects').update({ assigned_to_planner_id: null }).eq('id', projectId)
+    if (error) return { error: error.code === '42501' ? denied : error.message }
+  }
   revalidatePath('/planner')
+  revalidatePath(`/planner/projects/${projectId}`)
   return {}
 }
 
