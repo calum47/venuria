@@ -7,6 +7,7 @@ import {
   createFamily,
   createGuest,
   deleteGuestAndPhoto,
+  deleteGuestsAndPhotos,
   deleteStays,
   dismissSeatFlag,
   removeGuestPhoto,
@@ -112,6 +113,61 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
   const multiRoom = useMemo(() => new Set(Object.values(seats).flat().map((s) => s.room)).size > 1, [seats])
   const selected = selectedId ? guests.find((g) => g.id === selectedId) ?? null : null
 
+  // Multi-select. Anything acted on is the ticked guests that are also currently shown, so a
+  // filter can never leave hidden guests that a delete would take along by surprise.
+  const [checked, setChecked] = useState<Set<string>>(new Set())
+  const [confirmingBulk, setConfirmingBulk] = useState(false)
+  const [bulkText, setBulkText] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const checkedShown = useMemo(() => visible.filter((g) => checked.has(g.id)), [visible, checked])
+  const nChecked = checkedShown.length
+  const allShownChecked = visible.length > 0 && nChecked === visible.length
+  const headerCheck = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (headerCheck.current) headerCheck.current.indeterminate = nChecked > 0 && !allShownChecked
+  }, [nChecked, allShownChecked])
+  // Deleting everyone in the project asks for one extra deliberate step.
+  const deletingEveryone = nChecked > 0 && nChecked === guests.length
+
+  /** Every change to the selection closes an open delete confirmation. */
+  const pick = (next: Set<string>) => {
+    setChecked(next)
+    setConfirmingBulk(false)
+    setBulkText('')
+  }
+  const toggleChecked = (id: string) => {
+    const next = new Set(checked)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    pick(next)
+  }
+  const toggleAllShown = () => pick(allShownChecked ? new Set() : new Set(visible.map((g) => g.id)))
+
+  const deleteChecked = async () => {
+    const victims = checkedShown
+    if (victims.length === 0) return
+    setError(null)
+    setBulkBusy(true)
+    try {
+      const res = await deleteGuestsAndPhotos(victims)
+      const gone = new Set(res.deletedIds)
+      const goneFamilies = new Set(res.removedFamilyIds)
+      setGuests((prev) => prev.filter((g) => !gone.has(g.id)))
+      setStays((prev) => prev.filter((s) => !gone.has(s.guest_id)))
+      if (goneFamilies.size) setFamilies((prev) => prev.filter((f) => !goneFamilies.has(f.id)))
+      setChecked((prev) => new Set([...prev].filter((id) => !gone.has(id))))
+      if (selectedId && gone.has(selectedId)) setSelectedId(null)
+      if (res.error) {
+        setError(`${res.deletedIds.length} of ${victims.length} guests were deleted before something went wrong: ${errMsg(res.error)} The rest are still ticked.`)
+      } else {
+        setConfirmingBulk(false)
+        setBulkText('')
+      }
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const add = async (e: React.FormEvent) => {
     e.preventDefault()
     const name = newName.trim()
@@ -216,6 +272,57 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         {' · click a guest or Edit to change details, add a photo, family or hotel'}
       </p>
 
+      {nChecked > 0 && (
+        <div className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" role="region" aria-label="Selected guests">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-gray-900">
+              {nChecked} selected{filtering ? ` (of ${visible.length} shown)` : ''}
+            </span>
+            {!allShownChecked && (
+              <button type="button" onClick={() => pick(new Set(visible.map((g) => g.id)))} className={btn}>
+                {filtering ? `Select all ${visible.length} shown` : `Select all ${visible.length}`}
+              </button>
+            )}
+            <button type="button" onClick={() => pick(new Set())} className={btn}>Clear selection</button>
+            {!confirmingBulk && (
+              <button type="button" onClick={() => setConfirmingBulk(true)} className="rounded-lg border border-red-300 bg-white px-2.5 py-1 text-xs text-red-700 hover:bg-red-50">
+                Delete selected…
+              </button>
+            )}
+          </div>
+          {confirmingBulk && (
+            <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+              <p className="text-red-800">
+                Delete {nChecked} {nChecked === 1 ? 'guest' : 'guests'}? Their seats, hotel stays, photos and RSVP answers are removed too. This cannot be undone.
+              </p>
+              {deletingEveryone && (
+                <label className="block text-xs text-red-800">
+                  This is every guest in the project. Type DELETE to confirm:
+                  <input
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                    className={input + ' ml-2 w-28'}
+                    aria-label="Type DELETE to confirm deleting every guest"
+                    autoComplete="off"
+                  />
+                </label>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void deleteChecked()}
+                  disabled={bulkBusy || (deletingEveryone && bulkText.trim() !== 'DELETE')}
+                  className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {bulkBusy ? 'Deleting…' : `Delete ${nChecked} ${nChecked === 1 ? 'guest' : 'guests'}`}
+                </button>
+                <button type="button" onClick={() => { setConfirmingBulk(false); setBulkText('') }} disabled={bulkBusy} className={btn}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {guests.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
           No guests yet. Add one above, or import a list from a file.
@@ -227,6 +334,15 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
           <table className="w-full text-left text-sm">
             <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
               <tr>
+                <th className="w-8 px-3 py-2">
+                  <input
+                    ref={headerCheck}
+                    type="checkbox"
+                    checked={allShownChecked}
+                    onChange={toggleAllShown}
+                    aria-label={filtering ? `Select all ${visible.length} shown guests` : `Select all ${visible.length} guests`}
+                  />
+                </th>
                 <th className="w-14 px-3 py-2"><span className="sr-only">Photo</span></th>
                 <th className="px-3 py-2">Guest</th>
                 <th className="px-3 py-2">Family</th>
@@ -249,6 +365,14 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                     onClick={() => setSelectedId(g.id)}
                     className={`cursor-pointer border-t hover:bg-gray-50 ${newBlock ? 'border-t-2 border-gray-300' : 'border-gray-100'} ${selectedId === g.id ? 'bg-amber-50' : ''}`}
                   >
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={checked.has(g.id)}
+                        onChange={() => toggleChecked(g.id)}
+                        aria-label={`Select ${g.name}`}
+                      />
+                    </td>
                     <td className="px-3 py-2"><Avatar name={g.name} url={g.photo_path ? photoUrls[g.photo_path] : undefined} size={36} /></td>
                     <td className="px-3 py-2">
                       <button type="button" onClick={() => setSelectedId(g.id)} className="text-left font-medium text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900">{g.name}</button>

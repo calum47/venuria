@@ -76,6 +76,57 @@ export async function deleteGuestAndPhoto(guest: Pick<DbGuest, 'id' | 'photo_pat
   if (guest.family_id) await removeFamilyIfEmpty(guest.family_id)
 }
 
+export type BulkDeleteResult = {
+  /** Guests whose rows are gone (all of them on success, the finished chunks on a partial failure). */
+  deletedIds: string[]
+  /** Families that were left empty and have been removed. */
+  removedFamilyIds: string[]
+  /** Set when something failed part-way: what is listed above did happen, the rest did not. */
+  error: unknown | null
+}
+
+const BULK_CHUNK = 100
+
+/**
+ * Deletes many guests (rows first, in chunks so the request URL stays short), then their photo
+ * files, then any family they leave empty. Never throws: a failure part-way is returned so the
+ * caller can still drop the guests that really are gone from the screen.
+ */
+export async function deleteGuestsAndPhotos(
+  guests: Pick<DbGuest, 'id' | 'photo_path' | 'family_id'>[],
+): Promise<BulkDeleteResult> {
+  const deleted: Pick<DbGuest, 'id' | 'photo_path' | 'family_id'>[] = []
+  let error: unknown | null = null
+
+  for (let i = 0; i < guests.length; i += BULK_CHUNK) {
+    const chunk = guests.slice(i, i + BULK_CHUNK)
+    const { error: delErr } = await supabase.from('guests').delete().in('id', chunk.map((g) => g.id))
+    if (delErr) {
+      error = delErr
+      break
+    }
+    deleted.push(...chunk)
+  }
+
+  // Leftover files are harmless, so a failure here is not reported as a failed delete.
+  const paths = deleted.map((g) => g.photo_path).filter((p): p is string => !!p)
+  for (let i = 0; i < paths.length; i += BULK_CHUNK) {
+    await supabase.storage.from(GUEST_PHOTOS_BUCKET).remove(paths.slice(i, i + BULK_CHUNK))
+  }
+
+  const removedFamilyIds: string[] = []
+  const familyIds = [...new Set(deleted.map((g) => g.family_id).filter((f): f is string => !!f))]
+  for (const familyId of familyIds) {
+    try {
+      if (await removeFamilyIfEmpty(familyId)) removedFamilyIds.push(familyId)
+    } catch (e) {
+      error ??= e
+    }
+  }
+
+  return { deletedIds: deleted.map((g) => g.id), removedFamilyIds, error }
+}
+
 // ── Families ─────────────────────────────────────────────────────────────────
 
 export async function createFamily(projectId: string, name: string): Promise<DbGuestFamily> {

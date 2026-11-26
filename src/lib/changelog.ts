@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-26-guest-multi-select',
+    date: '2026-11-26',
+    title: 'Select and delete several guests at once',
+    roles: ['planner', 'admin'],
+    items: [
+      'On the guest list details page, tick guests with the new checkboxes, or use the box at the top of the table to tick everyone shown.',
+      'A bar appears with “Delete selected…”. It asks you to confirm first, and asks you to type DELETE if you are removing every guest in the project.',
+    ],
+  },
+  {
     id: '2026-11-21-table-settings-summary',
     date: '2026-11-21',
     title: 'Plates, glasses and candles in the summary',
