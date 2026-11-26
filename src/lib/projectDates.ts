@@ -20,6 +20,35 @@ export function addDays(isoDate: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** Calendar-month arithmetic on a YYYY-MM-DD date. If the target month is shorter, the day is clamped (31 Jan + 1 month = 28/29 Feb). */
+export function addMonths(isoDate: string, months: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const total = y * 12 + (m - 1) + months
+  const ny = Math.floor(total / 12)
+  const nm = ((total % 12) + 12) % 12
+  const lastDay = new Date(Date.UTC(ny, nm + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(ny, nm, Math.min(d, lastDay))).toISOString().slice(0, 10)
+}
+
+export type DueUnit = 'days' | 'weeks' | 'months'
+
+/** A payment due date written relative to the event date in a contract: "1 month before the event". */
+export type DueRule = { amount: number; unit: DueUnit; direction: 'before' | 'after' }
+
+/** The actual due date for a rule, given the project's event date. */
+export function applyDueRule(eventDate: string, rule: DueRule): string {
+  const n = rule.direction === 'before' ? -rule.amount : rule.amount
+  if (rule.unit === 'months') return addMonths(eventDate, n)
+  return addDays(eventDate, rule.unit === 'weeks' ? n * 7 : n)
+}
+
+/** "1 month before the event", "2 weeks before the event", "on the event day". */
+export function describeDueRule(rule: DueRule): string {
+  if (rule.amount === 0) return 'on the event day'
+  const unit = rule.amount === 1 ? rule.unit.slice(0, -1) : rule.unit
+  return `${rule.amount} ${unit} ${rule.direction} the event`
+}
+
 /** Default Due By: two weeks before the event — the point at which the layout should be locked with the venue and rental companies. */
 export function suggestDueBy(eventDate: string): string {
   return addDays(eventDate, -DUE_BY_LEAD_DAYS)

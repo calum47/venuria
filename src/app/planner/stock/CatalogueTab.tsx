@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import type { DbStockGroup, DbStockItem } from '@/types/db'
+import { Labelled } from '@/components/Labelled'
 import {
   createStockGroup,
   deleteStockGroup,
@@ -50,7 +51,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-end gap-1.5">
         <Chip active={activeGroup === 'all'} onClick={() => setActiveGroup('all')}>
           All ({items.length})
         </Chip>
@@ -68,13 +69,17 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
             </button>}
           </div>
         ))}
-        {canManage && <input
-          value={newGroupName}
-          onChange={(e) => setNewGroupName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addGroup()}
-          placeholder="+ group"
-          className="w-20 text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 text-gray-500 focus:outline-none"
-        />}
+        {canManage && (
+          <Labelled label="New group (press Enter)" className="w-32">
+            <input
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addGroup()}
+              placeholder="e.g. Centrepieces"
+              className="w-full text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 text-gray-500 focus:outline-none"
+            />
+          </Labelled>
+        )}
         {canManage && <button
           onClick={() => setEditing('new')}
           className="ml-auto rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 hover:bg-brand-700"
@@ -270,7 +275,6 @@ function EditProductModal({
   }
 
   const input = 'w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm text-gray-900'
-  const label = 'text-xs text-gray-500'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
@@ -292,37 +296,37 @@ function EditProductModal({
               <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded-lg ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
             </div>
             {iconType === 'emoji' ? (
-              <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="📦" maxLength={4} className={input} />
+              <Labelled label="Emoji (shown on the product card)">
+                <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="📦" maxLength={4} className={input} />
+              </Labelled>
             ) : (
-              <input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} disabled={isUploading} className="text-xs" />
+              <Labelled label="Photo">
+                <input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} disabled={isUploading} className="text-xs" />
+              </Labelled>
             )}
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className={label}>Name</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className={input} />
-        </div>
+        <Labelled label="Name">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Gold candle holder" className={input} />
+        </Labelled>
 
-        <div className="space-y-1">
-          <label className={label}>Group</label>
+        <Labelled label="Group">
           <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className={input}>
             <option value="">Ungrouped</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
           </select>
-        </div>
+        </Labelled>
 
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className={label}>Cost price</label>
+          <Labelled label="Cost price">
             <input type="number" step="0.01" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className={input} />
-          </div>
-          <div className="space-y-1">
-            <label className={label}>Sell price</label>
+          </Labelled>
+          <Labelled label="Sell price">
             <input type="number" step="0.01" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className={input} />
-          </div>
+          </Labelled>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -340,16 +344,14 @@ function EditProductModal({
         )}
 
         {!onDemand && (
-          <div className="space-y-1">
-            <label className={label}>Low-stock alert threshold</label>
-            <input type="number" value={minStockAlert} onChange={(e) => setMinStockAlert(e.target.value)} className={input} />
-          </div>
+          <Labelled label="Low-stock alert threshold (warn when stock falls to this number)">
+            <input type="number" value={minStockAlert} onChange={(e) => setMinStockAlert(e.target.value)} placeholder="e.g. 5" className={input} />
+          </Labelled>
         )}
 
-        <div className="space-y-1">
-          <label className={label}>Notes</label>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={input} />
-        </div>
+        <Labelled label="Notes (optional)">
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="e.g. Comes in sets of 4, stored in the blue crate" className={input} />
+        </Labelled>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 

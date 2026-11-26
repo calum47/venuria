@@ -1,6 +1,6 @@
 import { supabase } from './client'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
-import { DOCUMENTS_BUCKET } from '@/lib/payments'
+import { DOCUMENTS_BUCKET, detectAttachment } from '@/lib/payments'
 import type { ExtractionResult } from '@/lib/pdfPayments'
 
 // Payment tracker data access (migration 015). Browser client, like
@@ -109,7 +109,7 @@ export type DocumentUpload = {
  * a table CHECK both key off the project segment.
  */
 export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjectDocument> {
-  const path = await uploadPdfObject(u.teamId, u.projectId, u.file)
+  const path = await uploadDocumentObject(u.teamId, u.projectId, u.file)
   try {
     return await registerDocument({
       projectId: u.projectId,
@@ -132,14 +132,32 @@ export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjec
   }
 }
 
-/** Uploads only the file (no database row yet). Returns its storage path {team_id}/{project_id}/{uuid}.pdf. */
-export async function uploadPdfObject(teamId: string, projectId: string, file: File): Promise<string> {
-  const path = `${teamId}/${projectId}/${crypto.randomUUID()}.pdf`
+/**
+ * Uploads only the file (no database row yet). Returns its storage path {team_id}/{project_id}/{uuid}.{ext}.
+ * The extension and content type come from the file's own bytes (PDF, JPG, PNG or WebP), not its name.
+ */
+export async function uploadDocumentObject(teamId: string, projectId: string, file: File): Promise<string> {
+  const type = await detectAttachment(file)
+  if (!type) throw new Error('Only PDF, JPG, PNG or WebP files can be attached.')
+  const path = `${teamId}/${projectId}/${crypto.randomUUID()}.${type.ext}`
   const { error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)
-    .upload(path, file, { contentType: 'application/pdf', upsert: false })
+    .upload(path, file, { contentType: type.mime, upsert: false })
   if (error) throw error
   return path
+}
+
+/**
+ * Server-side copy of an already uploaded PDF, into the same {team_id}/{project_id}/ folder under a new
+ * name. Each document row needs its own file (storage_path is unique, and deleting one document deletes
+ * its file), so attaching one PDF to several payments means one copy per payment.
+ */
+export async function copyPdfObject(fromPath: string): Promise<string> {
+  const ext = fromPath.slice(fromPath.lastIndexOf('.') + 1)
+  const to = `${fromPath.slice(0, fromPath.lastIndexOf('/'))}/${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from(DOCUMENTS_BUCKET).copy(fromPath, to)
+  if (error) throw error
+  return to
 }
 
 /** Best-effort removal of an uploaded file that never got a database row (cancelled review, failed save). */

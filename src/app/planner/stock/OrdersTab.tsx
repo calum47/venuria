@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import type { DbStockItem, DbStockOrder } from '@/types/db'
 import { addStockOrder, setStockOrderStatus, deleteStockOrder } from '@/lib/supabase/stockQueries'
 import type { ProjectOption } from './StockApp'
+import { Labelled } from '@/components/Labelled'
 
 type Props = {
   teamId: string
@@ -80,32 +81,40 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
           Anything you&apos;ve ordered in — from a catalogue product to a one-off personalized piece. Doesn&apos;t change stock counts.
         </p>
         <div className="flex flex-wrap items-end gap-2">
-          <select
-            value={itemId}
-            onChange={(e) => { setItemId(e.target.value); if (e.target.value) setFreeText('') }}
-            className={input}
-          >
-            <option value="">Catalogue product…</option>
-            {items.map((i) => (
-              <option key={i.id} value={i.id}>{i.name}</option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-400">or</span>
-          <input
-            value={freeText}
-            onChange={(e) => { setFreeText(e.target.value); if (e.target.value) setItemId('') }}
-            placeholder="One-off order (not saved — see note below)"
-            disabled={!!itemId}
-            title="v1 limitation: only tracked as a reminder while filling this form — not persisted without a catalogue product"
-            className={`${input} w-56 disabled:bg-gray-50`}
-          />
-          <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" className={`${input} w-20`} />
-          <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-            <option value="">No wedding tag</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>{p.label}</option>
-            ))}
-          </select>
+          <Labelled label="Catalogue product">
+            <select
+              value={itemId}
+              onChange={(e) => { setItemId(e.target.value); if (e.target.value) setFreeText('') }}
+              className={input}
+            >
+              <option value="">Choose a product…</option>
+              {items.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))}
+            </select>
+          </Labelled>
+          <span className="pb-2 text-xs text-gray-400">or</span>
+          <Labelled label="One-off order (not saved — see note below)">
+            <input
+              value={freeText}
+              onChange={(e) => { setFreeText(e.target.value); if (e.target.value) setItemId('') }}
+              placeholder="e.g. Personalised welcome sign"
+              disabled={!!itemId}
+              title="v1 limitation: only tracked as a reminder while filling this form — not persisted without a catalogue product"
+              className={`${input} w-64 disabled:bg-gray-50`}
+            />
+          </Labelled>
+          <Labelled label="Quantity">
+            <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
+          </Labelled>
+          <Labelled label="Wedding">
+            <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
+              <option value="">No wedding tag</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </Labelled>
           <button onClick={submit} disabled={isSaving || (!itemId && !freeText.trim())} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
             {isSaving ? 'Saving…' : 'Add order'}
           </button>

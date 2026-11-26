@@ -117,6 +117,42 @@ export async function checkPdf(file: File): Promise<string | null> {
   return null
 }
 
+/** File types that can be attached to a payment or project: PDFs and common pictures / screenshots. */
+export type AttachmentType = { mime: 'application/pdf' | 'image/jpeg' | 'image/png' | 'image/webp'; ext: 'pdf' | 'jpg' | 'png' | 'webp' }
+
+/** Value for <input accept>. Listing image/jpeg (not image/*) makes iPhones and iPads hand over JPEG instead of HEIC. */
+export const ATTACHMENT_ACCEPT = 'application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp'
+
+/**
+ * What a file really is, from its first bytes — never from its name or the browser's claimed type,
+ * so a renamed .exe is not accepted. Null = not a PDF / JPEG / PNG / WebP.
+ */
+export async function detectAttachment(file: File): Promise<AttachmentType | null> {
+  const b = new Uint8Array(await file.slice(0, 12).arrayBuffer())
+  const at = (i: number, s: string) => [...s].every((c, k) => b[i + k] === c.charCodeAt(0))
+  if (at(0, '%PDF-')) return { mime: 'application/pdf', ext: 'pdf' }
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { mime: 'image/jpeg', ext: 'jpg' }
+  if (b[0] === 0x89 && at(1, 'PNG') && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a) return { mime: 'image/png', ext: 'png' }
+  if (at(0, 'RIFF') && at(8, 'WEBP')) return { mime: 'image/webp', ext: 'webp' }
+  return null
+}
+
+/**
+ * UI-level check for anything attached to a payment or project: PDF, JPG, PNG or WebP, up to the
+ * bucket's size limit. The bucket enforces size and MIME type server-side; this gives an early,
+ * readable error.
+ */
+export async function checkAttachment(file: File): Promise<string | null> {
+  if (file.size === 0) return 'That file is empty.'
+  if (file.size > MAX_PDF_BYTES) return `Files can be at most ${MAX_PDF_BYTES / 1024 / 1024} MB (this one is ${(file.size / 1024 / 1024).toFixed(1)} MB).`
+  if (!(await detectAttachment(file))) {
+    return /\.(heic|heif)$/i.test(file.name)
+      ? 'HEIC photos are not supported. Choose the picture as JPEG, or take a screenshot instead.'
+      : 'Only PDF, JPG, PNG or WebP files can be attached.'
+  }
+  return null
+}
+
 export function formatBytes(n: number): string {
   return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`
 }

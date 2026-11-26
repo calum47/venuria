@@ -15,12 +15,13 @@ import {
   filterAndSort,
   groupDocuments,
   nextVersion,
+  vendorKey,
   vendorOptions,
   type DocGroup,
   type DocSort,
 } from '@/lib/documents'
 import { formatDate } from '@/lib/projectDates'
-import { UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
+import { Labelled, UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
 
 type Props = {
   teamId: string
@@ -50,6 +51,34 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
   const shown = useMemo(() => filterAndSort(groups, { query, vendors, sort }), [groups, query, vendors, sort])
   const vendorOpts = useMemo(() => vendorOptions(groups), [groups])
   const filtering = query.trim() !== '' || vendors.size > 0
+
+  // One collapsible section per vendor (A–Z, "No vendor" last); order inside follows the chosen sort.
+  const [openSections, setOpenSections] = useState<ReadonlySet<string>>(new Set())
+  const sections = useMemo(() => {
+    const m = new Map<string, { key: string; name: string; groups: DocGroup[] }>()
+    for (const g of shown) {
+      const key = vendorKey(g.current.vendor_name)
+      const sec = m.get(key)
+      if (sec) sec.groups.push(g)
+      else m.set(key, { key, name: key === NO_VENDOR ? 'No vendor' : (g.current.vendor_name ?? '').trim(), groups: [g] })
+    }
+    return [...m.values()].sort((a, b) =>
+      a.key === NO_VENDOR ? 1 : b.key === NO_VENDOR ? -1 : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
+    )
+  }, [shown])
+  const isSectionOpen = (sec: { key: string; groups: DocGroup[] }) =>
+    openSections.has(sec.key) ||
+    // Keep a section open while searching (so matches are visible) or while one of its documents has a form open.
+    query.trim() !== '' ||
+    sec.groups.some((g) => g.id === editingId || g.id === updatingId || g.id === removingId)
+  const allOpen = sections.length > 0 && sections.every(isSectionOpen)
+  const toggleSection = (key: string) =>
+    setOpenSections((cur) => {
+      const n = new Set(cur)
+      if (n.has(key)) n.delete(key)
+      else n.add(key)
+      return n
+    })
 
   const run = async (key: string, fn: () => Promise<void>) => {
     onError(null)
@@ -275,7 +304,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Contracts &amp; other documents</h2>
-          <p className="text-xs text-gray-500">Draft contracts, quotes, anything you want to keep with this project. PDF only, up to 10 MB.</p>
+          <p className="text-xs text-gray-500">Draft contracts, quotes, anything you want to keep with this project. PDF, JPG, PNG or WebP, up to 10 MB.</p>
         </div>
         {!adding && <button onClick={() => setAdding(true)} className={btnPrimary}>Add document</button>}
       </div>
@@ -350,7 +379,45 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
           No documents match. <button onClick={clearFilters} className="underline">Clear search and filters</button>
         </p>
       ) : (
-        <ul className="divide-y divide-gray-100 px-4">{shown.map(renderGroup)}</ul>
+        <div>
+          {sections.length > 1 && (
+            <div className="flex justify-end border-b border-gray-100 px-4 py-2 text-xs">
+              <button
+                type="button"
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                onClick={() => setOpenSections(allOpen ? new Set() : new Set(sections.map((x) => x.key)))}
+              >
+                {allOpen ? 'Close all' : 'Open all'}
+              </button>
+            </div>
+          )}
+          {sections.map((sec) => {
+            const open = isSectionOpen(sec)
+            const locked = sec.groups.some((g) => g.id === editingId || g.id === updatingId || g.id === removingId)
+            const panelId = `docs-${sec.key.replace(/[^a-z0-9]/gi, '')}`
+            return (
+              <section key={sec.key} className="border-b border-gray-100 last:border-b-0">
+                <button
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={panelId}
+                  disabled={locked || query.trim() !== ''}
+                  onClick={() => toggleSection(sec.key)}
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 disabled:cursor-default disabled:hover:bg-transparent"
+                >
+                  <span aria-hidden className={`text-gray-400 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{sec.name}</span>
+                  <span className="text-xs text-gray-500">{sec.groups.length} document{sec.groups.length === 1 ? '' : 's'}</span>
+                </button>
+                {open && (
+                  <ul id={panelId} className="divide-y divide-gray-100 border-t border-gray-100 px-4">
+                    {sec.groups.map(renderGroup)}
+                  </ul>
+                )}
+              </section>
+            )
+          })}
+        </div>
       )}
     </section>
   )
@@ -386,13 +453,19 @@ function EditForm({
   return (
     <form onSubmit={submit} className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Name" aria-label="Document name" className={input} maxLength={150} />
-        <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="Document type" className={input}>
-          {kinds.map((k) => (
-            <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
-          ))}
-        </select>
-        <input value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Vendor (optional)" aria-label="Vendor" className={input} maxLength={120} />
+        <Labelled label="Name">
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Contract, Quote, Floor plan…" className={`${input} w-full`} maxLength={150} />
+        </Labelled>
+        <Labelled label="Type">
+          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
+            {kinds.map((k) => (
+              <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+            ))}
+          </select>
+        </Labelled>
+        <Labelled label="Vendor / supplier (optional)">
+          <input value={vendor} onChange={(e) => setVendor(e.target.value)} className={`${input} w-full`} maxLength={120} />
+        </Labelled>
       </div>
       {group.previous.length > 0 && (
         <p className="text-xs text-gray-500">Applies to all {group.previous.length + 1} versions of this document.</p>

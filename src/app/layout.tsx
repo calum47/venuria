@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
+import ScrollDebug from "@/components/debug/ScrollDebug";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
         {children}
         {/* Release notes — renders nothing unless there's a session with unseen entries */}
         <WhatsNewModal />
+        <ScrollDebug />
       </body>
     </html>
   );

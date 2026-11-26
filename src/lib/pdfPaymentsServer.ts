@@ -16,6 +16,7 @@ Rules:
 - label: a short name for what the payment is for, e.g. "Deposit", "Second instalment", "Balance", "Full payment".
 - amount: the amount payable for that instalment, as a plain decimal with a dot and no thousands separators or currency symbols (Spanish "1.500,00 €" becomes "1500.00"). Use the total due including VAT/IVA when the document shows it.
 - due_date: YYYY-MM-DD, only when an explicit calendar date is written for that payment. If the due date is relative or vague ("30 days before the event", "on signing"), set due_date to null and copy the wording into due_text.
+- due_rule: only when the due date is stated relative to the event / wedding / celebration date, e.g. "1 month before the event", "30 days before the wedding", "two weeks prior to the event", "on the day of the event". Give the whole number amount, the unit ("days", "weeks" or "months", exactly as written — do not convert months to days) and the direction ("before" or "after"). "On the day of the event" is amount 0, unit "days", direction "before". Do NOT calculate any date yourself. Use null for due_rule when the date is relative to anything else (signing, the invoice date, receipt of the invoice, delivery) or is in business/working days.
 - currency: ISO 4217 code such as EUR, or null if unclear.
 - evidence: a short quote (at most about 150 characters) copied from the document that supports the amount or date.
 - If the document lists several instalments, return one entry per instalment. If it has no payment information, return an empty payments array.
@@ -40,9 +41,19 @@ export const TOOL = {
             amount: { type: ['string', 'null'], description: 'Plain decimal, e.g. "1500.00"' },
             due_date: { type: ['string', 'null'], description: 'YYYY-MM-DD or null' },
             due_text: { type: ['string', 'null'], description: 'Due date wording when no explicit date' },
+            due_rule: {
+              type: ['object', 'null'],
+              description: 'Due date relative to the event date, or null',
+              properties: {
+                amount: { type: 'integer', minimum: 0 },
+                unit: { type: 'string', enum: ['days', 'weeks', 'months'] },
+                direction: { type: 'string', enum: ['before', 'after'] },
+              },
+              required: ['amount', 'unit', 'direction'],
+            },
             evidence: { type: ['string', 'null'] },
           },
-          required: ['vendor', 'label', 'amount', 'due_date', 'due_text', 'evidence'],
+          required: ['vendor', 'label', 'amount', 'due_date', 'due_text', 'due_rule', 'evidence'],
         },
       },
     },
