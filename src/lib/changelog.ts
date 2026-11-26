@@ -28,6 +28,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-26-plan-export-jpg',
+    date: '2026-11-26',
+    title: 'Floor plan export is now a JPG',
+    roles: ['planner', 'admin'],
+    items: [
+      'The editor’s “Export” button now downloads the room as a JPG with a white background, instead of a PNG. JPGs are smaller and open anywhere.',
+    ],
+  },
+  {
     id: '2026-11-26-stock-avg-cost-member-privacy',
     date: '2026-11-26',
     title: 'My Stock: average cost, and prices hidden from Members',

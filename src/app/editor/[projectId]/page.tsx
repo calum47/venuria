@@ -110,7 +110,7 @@ export default function EditorPage() {
 
   // ── Refs (keep stable values accessible inside async callbacks) ─────────────
 
-  const exportPngRef = useRef<(() => Promise<void>) | null>(null)
+  const exportJpgRef = useRef<(() => Promise<void>) | null>(null)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const currentRoomIdRef = useRef<string | null>(null)
   const layoutObjectsRef = useRef<LayoutObject[]>([])
@@ -417,12 +417,12 @@ export default function EditorPage() {
           </button>
           <span className="text-gray-300">|</span>
           <button
-            onClick={() => exportPngRef.current?.().catch((err) => console.error('PNG export failed:', err))}
+            onClick={() => exportJpgRef.current?.().catch((err) => console.error('JPG export failed:', err))}
             disabled={!currentRoom}
-            title="Download the current room as a PNG image"
+            title="Download the current room as a JPG image"
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
           >
-            🖼 Export PNG
+            🖼 Export JPG
           </button>
           <span className="text-gray-300">|</span>
           {/* Room tabs */}
@@ -504,7 +504,7 @@ export default function EditorPage() {
         <div className="flex-1 flex min-w-0 min-h-0">
           <div className="flex-1 overflow-hidden min-w-0">
             <FloorPlanCanvas
-              exportRef={exportPngRef}
+              exportRef={exportJpgRef}
               catalogItems={catalogItems}
               settingItems={settingItems}
               currentRoom={currentRoom}

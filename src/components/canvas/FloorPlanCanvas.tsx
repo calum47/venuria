@@ -20,7 +20,7 @@ const MIN_ZOOM = 0.2
 const MAX_ZOOM = 3
 
 type Props = {
-  /** The editor fills this with a function that downloads the current room as a PNG. */
+  /** The editor fills this with a function that downloads the current room as a JPG. */
   exportRef?: React.MutableRefObject<(() => Promise<void>) | null>
   catalogItems: DbCatalogItem[]
   /** Items a table setting can use (plates, glasses, candles…) — drawn on tables that have a setting. */
@@ -70,7 +70,7 @@ export default function FloorPlanCanvas({
   draggingGuestId,
 }: Props) {
   const stageRef = useRef<Konva.Stage>(null)
-  // While true the canvas draws without editing chrome (grid, selection, handles) for the PNG export.
+  // While true the canvas draws without editing chrome (grid, selection, handles) for the JPG export.
   const [exporting, setExporting] = useState(false)
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -464,9 +464,10 @@ export default function FloorPlanCanvas({
     return validT
   }
 
-  // PNG of the current room as drawn: tables, chairs, zones, obstacles and labels,
-  // without grid, selection or handles. Renders at 2x for a sharp image.
-  const exportPng = async () => {
+  // JPG of the current room as drawn: tables, chairs, zones, obstacles and labels,
+  // without grid, selection or handles. Renders at 2x for a sharp image on a white
+  // background (JPG has no transparency; transparent pixels would turn black).
+  const exportJpg = async () => {
     const stage = stageRef.current
     if (!stage || !currentRoom) return
     const xs = hasTracedBoundary ? boundaryPolygonPx.map((p) => p.x) : [roomOffsetX, roomOffsetX + roomWidthPx]
@@ -484,11 +485,20 @@ export default function FloorPlanCanvas({
     try {
       stage.scale({ x: 1, y: 1 })
       stage.position({ x: 0, y: 0 })
-      const url = stage.toDataURL({ x, y, width, height, pixelRatio: 2, mimeType: 'image/png' })
+      const shot = stage.toCanvas({ x, y, width, height, pixelRatio: 2 })
+      const flat = document.createElement('canvas')
+      flat.width = shot.width
+      flat.height = shot.height
+      const ctx = flat.getContext('2d')
+      if (!ctx) throw new Error('Could not create the export canvas.')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, flat.width, flat.height)
+      ctx.drawImage(shot, 0, 0)
+      const url = flat.toDataURL('image/jpeg', 0.92)
       const safe = currentRoom.name.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '') || 'room'
       const a = document.createElement('a')
       a.href = url
-      a.download = `venuria-${safe}.png`
+      a.download = `venuria-${safe}.jpg`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -501,7 +511,7 @@ export default function FloorPlanCanvas({
   }
   useEffect(() => {
     if (!exportRef) return
-    exportRef.current = exportPng
+    exportRef.current = exportJpg
     return () => { exportRef.current = null }
   })
 
