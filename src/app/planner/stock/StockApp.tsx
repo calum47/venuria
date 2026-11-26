@@ -85,8 +85,8 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatTile label="Products" value={String(stats.products)} />
-        <StatTile label="Stock value (cost)" value={money(stats.costValue, currency)} />
-        <StatTile label="Stock value (sell)" value={money(stats.sellValue, currency)} />
+        {canManage && <StatTile label="Stock value (avg cost)" value={money(stats.costValue, currency)} />}
+        {canManage && <StatTile label="Stock value (sell)" value={money(stats.sellValue, currency)} />}
         <StatTile
           label="Low stock"
           value={String(stats.lowStockCount)}
@@ -102,7 +102,10 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
             ['sales', 'Sales'],
             ['orders', `Orders${pendingOrders > 0 ? ` (${pendingOrders})` : ''}`],
           ] as [Tab, string][]
-        ).map(([t, label]) => (
+        )
+          // Purchases carry unit costs, which Members must not see (migration 036).
+          .filter(([t]) => canManage || t !== 'purchases')
+          .map(([t, label]) => (
           <button
             key={t}
             onClick={() => setTab(t)}

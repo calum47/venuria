@@ -36,7 +36,8 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
   const onPickItem = (id: string) => {
     setItemId(id)
     const item = itemById.get(id)
-    if (item) setUnitPrice(String(item.sell_price))
+    // Members never see prices; the database prices their sale from the catalogue.
+    if (item && canManage) setUnitPrice(String(item.sell_price))
   }
 
   const submit = async () => {
@@ -48,15 +49,17 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
     // Members can only record items used on a wedding (enforced by the database too).
     if (!canManage && !projectId) return setError('Pick the wedding these items were used on.')
     if (!Number.isFinite(q) || q <= 0) return setError('Quantity must be a positive number.')
-    if (!Number.isFinite(price) || price < 0) return setError('Sale price must be a number.')
+    if (canManage && (!Number.isFinite(price) || price < 0)) return setError('Sale price must be a number.')
 
     setIsSaving(true)
     try {
       await addStockSale({
         itemId,
         qty: q,
-        unitPrice: price,
-        unitCostSnapshot: item.cost_price, // captured now, per spec, so later cost changes don't rewrite historical margin
+        // The database re-takes the cost snapshot from the item's current average cost (migration 036),
+        // and for a Member also the price, so those two values only matter for managers and leads.
+        unitPrice: canManage ? price : 0,
+        unitCostSnapshot: canManage ? item.cost_price : 0,
         projectId: projectId || null,
       })
       setQty('1')
@@ -108,9 +111,11 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
           <Labelled label="Quantity">
             <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
           </Labelled>
-          <Labelled label="Sale price">
-            <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={`${input} w-28`} />
-          </Labelled>
+          {canManage && (
+            <Labelled label="Sale price">
+              <input type="number" step="0.01" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} className={`${input} w-28`} />
+            </Labelled>
+          )}
           <Labelled label={canManage ? 'Wedding' : 'Wedding (required)'}>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
               <option value="">{canManage ? 'No wedding' : 'Choose a wedding…'}</option>
@@ -135,8 +140,8 @@ export default function SalesTab({ items, sales, projects, canManage, currency, 
             <li key={s.id} className="px-4 py-2.5 text-sm flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <span className="text-gray-900">{itemById.get(s.item_id)?.name ?? 'Deleted product'}</span>
-                <span className="text-gray-400 ml-2">×{s.qty} @ {money(s.unit_price, currency)}</span>
-                <span className={`ml-2 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{money(profit, currency)} profit{awaiting ? ' so far' : ''}</span>
+                <span className="text-gray-400 ml-2">×{s.qty}{canManage ? ` @ ${money(s.unit_price, currency)}` : ''}</span>
+                {canManage && <span className={`ml-2 ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>{money(profit, currency)} profit{awaiting ? ' so far' : ''}</span>}
                 {s.project_id && <span className="text-gray-400 ml-2">· {projectById.get(s.project_id) ?? 'project'}</span>}
                 {s.return_confirmed_at && (
                   <span className="text-indigo-600 ml-2">

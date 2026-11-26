@@ -83,7 +83,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     supabase.from('layout_objects').select('id, room_id, catalog_item_id').eq('project_id', projectId),
     supabase.from('seat_assignments').select('layout_object_id').eq('project_id', projectId),
     supabase.from('stock_orders').select('*').eq('project_id', projectId).order('ordered_at', { ascending: false }).limit(200),
-    supabase.from('stock_items').select('id, name').order('name'),
+    supabase.rpc('stock_items_for_me').select('id, name').order('name'),
     supabase.from('project_room_settings').select('*').eq('project_id', projectId),
     supabase.from('guests').select('id', { count: 'exact', head: true }).eq('project_id', projectId).or('rsvp_status.is.null,rsvp_status.neq.declined'),
   ])

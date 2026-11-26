@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-26-stock-avg-cost-member-privacy',
+    date: '2026-11-26',
+    title: 'My Stock: average cost, and prices hidden from Members',
+    roles: ['planner', 'admin'],
+    items: [
+      'A product’s cost is now an average (“Avg cost”): every purchase blends its price into the cost, weighted by quantity. Buying 10 at €1.10 and then 30 at €0.80 gives €0.875.',
+      'New products ask for the selling price when you create them; you can still change it later.',
+      'Members no longer see costs, selling prices, margins or profit anywhere in My Stock, and the Purchases tab is for managers and leads only. A Member’s sale is priced automatically.',
+    ],
+  },
+  {
     id: '2026-11-26-guest-multi-select',
     date: '2026-11-26',
     title: 'Select and delete several guests at once',

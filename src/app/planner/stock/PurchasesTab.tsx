@@ -52,7 +52,7 @@ export default function PurchasesTab({ items, purchases, projects, canManage, on
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Remove this purchase? Stock will be adjusted back down.')) return
+    if (!confirm('Remove this purchase? Stock will be adjusted back down. The average cost is NOT recalculated — correct it on the product if needed.')) return
     await deleteStockPurchase(id)
     onChanged()
   }
@@ -76,7 +76,7 @@ export default function PurchasesTab({ items, purchases, projects, canManage, on
             <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
           </Labelled>
           <Labelled label="Unit cost">
-            <input type="number" step="0.01" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} className={`${input} w-28`} />
+            <input type="number" step="0.0001" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} className={`${input} w-28`} />
           </Labelled>
           <Labelled label="Vendor / supplier (optional)">
             <input value={supplier} onChange={(e) => setSupplier(e.target.value)} className={`${input} w-48`} />

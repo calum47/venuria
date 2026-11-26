@@ -94,7 +94,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visible.map((item) => (
-            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} out={outByItem.get(item.id) ?? 0} onClick={canManage ? () => setEditing(item) : () => {}} />
+            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} out={outByItem.get(item.id) ?? 0} showPrices={canManage} onClick={canManage ? () => setEditing(item) : () => {}} />
           ))}
         </div>
       )}
@@ -126,17 +126,25 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   )
 }
 
+/** The selling price box was filled in (an empty box is not the same as 0). */
+function sellPriceEntered(raw: string): boolean {
+  return raw.trim() !== '' && Number.isFinite(Number(raw))
+}
+
 function ItemCard({
   item,
   currency,
   groupName,
   out,
+  showPrices,
   onClick,
 }: {
   item: DbStockItem
   currency: string
   groupName: string | undefined
   out: number
+  /** Managers and leads only — Members never see prices or margin (migration 036). */
+  showPrices: boolean
   onClick: () => void
 }) {
   const margin = item.sell_price > 0 ? ((item.sell_price - item.cost_price) / item.sell_price) * 100 : 0
@@ -158,10 +166,12 @@ function ItemCard({
         )}
       </div>
       <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-      <div className="flex items-center justify-between text-xs text-gray-500">
-        <span>{money(item.sell_price, currency)}</span>
-        <span>{margin.toFixed(0)}% margin</span>
-      </div>
+      {showPrices && (
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{money(item.sell_price, currency)}</span>
+          <span title="Margin on the average cost">{margin.toFixed(0)}% margin</span>
+        </div>
+      )}
       {item.reusable && (
         <p className="text-[10px] text-indigo-600">Reusable{out > 0 ? ` · ${out} out with clients` : ''}</p>
       )}
@@ -235,6 +245,8 @@ function EditProductModal({
     const cost = Number(costPrice)
     const sell = Number(sellPrice)
     if (Number.isNaN(cost) || Number.isNaN(sell)) return setError('Prices must be numbers.')
+    // A new product must say what it will be sold for (use 0 if it is given away). Editable later.
+    if (!item && !sellPriceEntered(sellPrice)) return setError('Enter the selling price for this product (0 if it is not charged for).')
 
     const input: Omit<StockItemInput, 'teamId'> = {
       groupId: groupId || null,
@@ -321,13 +333,16 @@ function EditProductModal({
         </Labelled>
 
         <div className="grid grid-cols-2 gap-3">
-          <Labelled label="Cost price">
-            <input type="number" step="0.01" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className={input} />
+          <Labelled label={item ? 'Avg cost' : 'Starting cost (optional)'}>
+            <input type="number" step="0.0001" min="0" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className={input} />
           </Labelled>
-          <Labelled label="Sell price">
-            <input type="number" step="0.01" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className={input} />
+          <Labelled label={item ? 'Selling price' : 'Selling price (required)'}>
+            <input type="number" step="0.01" min="0" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder="0.00" className={input} />
           </Labelled>
         </div>
+        <p className="text-xs text-gray-500">
+          Avg cost is the weighted average of everything bought, and updates by itself with each purchase. Edit it by hand only to correct it.
+        </p>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={onDemand} onChange={(e) => { setOnDemand(e.target.checked); if (e.target.checked) setReusable(false) }} className="rounded-lg border-gray-300" />

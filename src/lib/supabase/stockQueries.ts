@@ -26,8 +26,12 @@ export async function deleteStockGroup(id: string): Promise<void> {
 
 // ─── Items ───────────────────────────────────────────────────────────────────
 
+/**
+ * Read through stock_items_for_me() (migration 036), not the table: Members have no direct
+ * access to the table, and for them the function returns cost_price and sell_price as 0.
+ */
 export async function getStockItems(): Promise<DbStockItem[]> {
-  const { data, error } = await supabase.from('stock_items').select('*').order('name')
+  const { data, error } = await supabase.rpc('stock_items_for_me').order('name')
   if (error) throw error
   return data as DbStockItem[]
 }
@@ -138,15 +142,18 @@ export async function deleteStockPurchase(id: string): Promise<void> {
 
 // ─── Sales ───────────────────────────────────────────────────────────────────
 
+/** Read through stock_sales_for_me() (migration 036): for Members unit_price and unit_cost_snapshot come back as 0. */
 export async function getStockSales(itemId?: string): Promise<DbStockSale[]> {
-  let query = supabase.from('stock_sales').select('*').order('sold_at', { ascending: false }).limit(200)
+  let query = supabase.rpc('stock_sales_for_me').order('sold_at', { ascending: false }).limit(200)
   if (itemId) query = query.eq('item_id', itemId)
   const { data, error } = await query
   if (error) throw error
   return data as DbStockSale[]
 }
 
-/** unit_cost_snapshot is taken from the item's current cost_price at the moment of sale — the caller passes the item so this doesn't need a second round trip. */
+/**
+ * The database now fills unit_cost_snapshot from the item's current (average) cost, and for a Member
+ * also the unit price from the item's sell price (migration 036), so Members may pass 0 for both. */
 export async function addStockSale(input: {
   itemId: string
   qty: number
