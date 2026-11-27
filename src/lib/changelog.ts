@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-auto-arrange-even-spread',
+    date: '2026-11-27',
+    title: 'Auto-Arrange spreads tables evenly',
+    roles: ['planner'],
+    items: [
+      'Tables are now spread evenly across the free floor instead of being bunched around the middle of the room.',
+      'With "Balance around Sweetheart Table" on, the tables are placed in mirrored pairs on either side of the line through the Sweetheart Table, an odd one out sitting on the line itself.',
+    ],
+  },
+  {
     id: '2026-11-27-auto-arrange-flexible',
     date: '2026-11-27',
     title: 'Auto-Arrange no longer needs the seats to match your guest list',
