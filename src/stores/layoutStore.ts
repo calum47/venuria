@@ -31,6 +31,28 @@ type LayoutStore = {
   deleteSelection: () => void
 }
 
+
+/**
+ * After removing objects, keep each surviving table's chair bookkeeping
+ * (chairIds / chairCount) in step with the chairs that actually remain, so
+ * deleting a single chair doesn't leave its table pointing at a ghost.
+ */
+function syncChairBookkeeping(objects: LayoutObject[]): LayoutObject[] {
+  const chairsByTable = new Map<string, string[]>()
+  objects.forEach((o) => {
+    if (!o.isChairFor) return
+    const list = chairsByTable.get(o.isChairFor) ?? []
+    list.push(o.id)
+    chairsByTable.set(o.isChairFor, list)
+  })
+  return objects.map((o) => {
+    if (!o.chairIds) return o
+    const remaining = chairsByTable.get(o.id) ?? []
+    if (remaining.length === o.chairIds.length && remaining.every((id) => o.chairIds!.includes(id))) return o
+    return { ...o, chairIds: remaining, chairCount: remaining.length }
+  })
+}
+
 export const useLayoutStore = create<LayoutStore>((set) => ({
   layoutObjects: [],
   selectedObjectId: null,
@@ -66,11 +88,12 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   removeObjectWithChairs: (id) =>
     set((state) => ({
-      layoutObjects: state.layoutObjects.filter(
-        (obj) => obj.id !== id && obj.isChairFor !== id
+      layoutObjects: syncChairBookkeeping(
+        state.layoutObjects.filter((obj) => obj.id !== id && obj.isChairFor !== id),
       ),
       selectedObjectId:
-        state.selectedObjectId === id ? null : state.selectedObjectId
+        state.selectedObjectId === id ? null : state.selectedObjectId,
+      selectedObjectIds: state.selectedObjectIds.filter((i) => i !== id),
     })),
 
   // In the store implementation:
@@ -125,15 +148,22 @@ export const useLayoutStore = create<LayoutStore>((set) => ({
 
   deleteSelection: () =>
     set((state) => {
+      // A plain click only sets selectedObjectId; marquee selection fills
+      // selectedObjectIds. Delete whichever is active.
+      const selected = state.selectedObjectIds.length > 0
+        ? state.selectedObjectIds
+        : state.selectedObjectId ? [state.selectedObjectId] : []
+      if (selected.length === 0) return state
+
       // Also delete any chairs that belong to selected tables
-      const idsToDelete = new Set(state.selectedObjectIds)
+      const idsToDelete = new Set(selected)
       state.layoutObjects.forEach((obj) => {
         if (obj.isChairFor && idsToDelete.has(obj.isChairFor)) {
           idsToDelete.add(obj.id)
         }
       })
       return {
-        layoutObjects: state.layoutObjects.filter((o) => !idsToDelete.has(o.id)),
+        layoutObjects: syncChairBookkeeping(state.layoutObjects.filter((o) => !idsToDelete.has(o.id))),
         selectedObjectIds: [],
         selectedObjectId: null,
       }

@@ -28,6 +28,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-auto-arrange-flexible',
+    date: '2026-11-27',
+    title: 'Auto-Arrange no longer needs the seats to match your guest list',
+    roles: ['planner'],
+    items: [
+      'Pick any mix of tables and press Arrange — fewer or more seats than guests is fine. The seat count still shows how you compare, as a hint only.',
+      'Every table is placed with its maximum chairs, so you can then remove the ones you do not need.',
+      'Click a chair or table and press Delete (Backspace on a Mac) to remove it. Removing a chair leaves the rest of the table as it was.',
+      'Clicking an empty part of the floor plan now deselects again.',
+    ],
+  },
+  {
     id: '2026-11-27-rotation-and-seating',
     date: '2026-11-27',
     title: 'Editor: rotation and seating in one place',

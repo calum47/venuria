@@ -45,7 +45,9 @@ export default function AutoArrangeModal({
 
   const capacity = computeMixCapacity(selections)
   const delta = guestCount - capacity
-  const canRun = selections.length > 0 && delta === 0 && !isRunning
+  // Arranging is never blocked by the guest count: tables go in with their maximum
+  // chairs and the planner removes the ones they don't need afterwards.
+  const canRun = selections.length > 0 && !isRunning
 
   const setQty = (itemId: string, next: number) => {
     setError(null)
@@ -119,8 +121,9 @@ export default function AutoArrangeModal({
           <h3 className="font-semibold text-gray-900">✨ Auto-Arrange</h3>
           <p className="text-sm text-gray-500 mt-0.5">{currentRoom.name}</p>
           <p className="text-xs text-gray-400 mt-1">
-            Adds new tables and chairs inside the room boundary, avoiding obstacles and anything already
-            placed. Doesn&apos;t move or remove anything that&apos;s already there.
+            Adds new tables inside the room boundary, avoiding obstacles and anything already placed. Every
+            table gets its maximum chairs — remove the ones you don&apos;t need afterwards. Doesn&apos;t move or
+            remove anything that&apos;s already there.
           </p>
         </div>
 
@@ -193,9 +196,16 @@ export default function AutoArrangeModal({
           <span>Selected seats</span>
           <span className="font-medium">
             {capacity}
-            {delta !== 0 && (delta > 0 ? ` (${delta} short)` : ` (${-delta} too many)`)}
+            {delta !== 0 && (delta > 0 ? ` (${delta} short)` : ` (${-delta} spare)`)}
           </span>
         </div>
+        {delta !== 0 && selections.length > 0 && (
+          <p className="text-xs text-gray-400 px-1 -mt-2">
+            {delta > 0
+              ? 'Fewer seats than guests — you can still arrange and add more tables later.'
+              : 'More seats than guests — you can still arrange, then remove chairs from the tables you want.'}
+          </p>
+        )}
 
         <p className="text-xs text-gray-400">
           ~{AUTO_ARRANGE_CLEARANCE_CM}cm walking-space clearance between tables.

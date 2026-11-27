@@ -226,13 +226,19 @@ export default function FloorPlanCanvas({
         if ((e.key === 'Delete' || e.key === 'Backspace') && selectedZoneId) onZoneDelete?.(selectedZoneId)
         return
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedObjectIds.length > 0 && !isGuestMode && !viewOnly) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && (selectedObjectIds.length > 0 || selectedObjectId) && !isGuestMode && !viewOnly) {
+        e.preventDefault()
+        const before = new Set(useLayoutStore.getState().layoutObjects.map((o) => o.id))
         deleteSelection()
+        // Free any guest seated on a chair that just went away (in-memory; the
+        // layout autosave removes the chair rows themselves).
+        const after = new Set(useLayoutStore.getState().layoutObjects.map((o) => o.id))
+        before.forEach((id) => { if (!after.has(id)) useGuestStore.getState().unassignChair(id) })
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedObjectIds, deleteSelection, isGuestMode, viewOnly, zoneMode, selectedZoneId, onZoneDelete, onZoneSelect])
+  }, [selectedObjectIds, selectedObjectId, deleteSelection, isGuestMode, viewOnly, zoneMode, selectedZoneId, onZoneDelete, onZoneSelect])
 
   const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault()
@@ -263,6 +269,11 @@ export default function FloorPlanCanvas({
   const handleZoomOut   = () => { const z = Math.max(MIN_ZOOM, zoomRef.current - 0.1); setZoom(z); onZoomChange?.(z) }
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
+  // True when a Konva target belongs to a placed layout object (a table/chair Group
+  // or one of its shapes, or the Transformer) rather than empty canvas/room floor.
+  const isOnLayoutObject = (target: Konva.Node) =>
+    target.getType() === 'Group' || (target.getParent() !== null && target.getParent()?.getType() === 'Group')
+
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
     didPan.current = false
     if (e.evt.button === 1 || e.evt.button === 2) {
@@ -285,7 +296,7 @@ export default function FloorPlanCanvas({
     }
     if (e.evt.button === 0) {
       const target = e.target
-      const isOnObject = target.getType() === 'Group' || (target.getParent() !== null && target.getParent()?.getType() === 'Group')
+      const isOnObject = isOnLayoutObject(target)
       if (isOnObject) return
       // Plain left-drag on empty canvas pans. Ctrl/⌘/Shift + left-drag draws the
       // selection marquee (Ctrl+click is a right-click on macOS, so ⌘ and Shift are
@@ -995,8 +1006,11 @@ export default function FloorPlanCanvas({
       if (e.target === e.target.getStage()) onZoneSelect?.(null)
       return
     }
-    if (e.target === e.target.getStage() && !isGuestMode) {
+    // The canvas background and room floor are Rects, so e.target is rarely the Stage
+    // itself — any click that isn't on a placed object counts as "empty canvas".
+    if (!isOnLayoutObject(e.target) && !isGuestMode) {
       selectObject(null)
+      setSelectedObjectIds([])
     }
   }
 

@@ -38,7 +38,9 @@ export type AutoArrangeParams = {
   catalogItemsById: Map<string, DbCatalogItem>
   chairCatalogItem: DbCatalogItem
   tableSelections: TableSelection[] // the guest-table mix only — never include the Sweetheart Table itself here, it isn't a quantity the planner picks
-  guestCount: number
+  // Informational only: the arrangement no longer has to match the guest list.
+  // Every table is placed with its maximum chairs and the planner trims from there.
+  guestCount?: number
   // When true: requires a Sweetheart Table already placed in this room, and
   // splits each table type's quantity into matched left/right pairs. An odd
   // quantity's leftover instance goes dead-centre on the aisle line itself,
@@ -51,7 +53,7 @@ export type AutoArrangeResult =
   | { success: true; objects: LayoutObject[] }
   | { success: false; reason: string }
 
-/** Total seats across a table mix, using each table's real max-chair capacity — the same figure the guest-count block check compares against. Never include the Sweetheart Table in this — the couple aren't part of the guest list's seat count. */
+/** Total seats across a table mix, using each table's real max-chair capacity — used by the modal to show how the mix compares with the guest list (informational, never blocks). Never include the Sweetheart Table in this — the couple aren't part of the guest list's seat count. */
 export function computeMixCapacity(tableSelections: TableSelection[]): number {
   return tableSelections.reduce((sum, sel) => {
     const { maxChairs } = getTableChairConfig(sel.catalogItem.name)
@@ -191,24 +193,11 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
     catalogItemsById,
     chairCatalogItem,
     tableSelections,
-    guestCount,
     balanceAroundSweetheart,
   } = params
 
   if (tableSelections.length === 0) {
     return { success: false, reason: 'Select at least one table to arrange.' }
-  }
-
-  const capacity = computeMixCapacity(tableSelections)
-  if (capacity !== guestCount) {
-    const delta = guestCount - capacity
-    return {
-      success: false,
-      reason:
-        delta > 0
-          ? `The selected tables seat ${capacity}, but there are ${guestCount} guests — ${delta} short. Add more seats or another table before arranging.`
-          : `The selected tables seat ${capacity}, but there are ${guestCount} guests — ${-delta} too many. Remove a table or reduce the mix before arranging.`,
-    }
   }
 
   // Sweetheart-balance setup — resolved once, before any placement work.
