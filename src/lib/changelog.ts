@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-stock-tiles',
+    date: '2026-11-27',
+    title: 'My stock: clearer numbers',
+    roles: ['planner', 'rental'],
+    items: [
+      'The top of My stock now shows what your stock cost you (at average cost), the profit on everything sold so far, products running low, and how many reusable items are out with clients.',
+      'Every product shows its own average cost, selling price, margin and how many you have sold.',
+    ],
+  },
+  {
     id: '2026-11-27-vendor-account',
     date: '2026-11-27',
     title: 'Planner and Vendor on one login',

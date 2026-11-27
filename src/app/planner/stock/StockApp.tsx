@@ -8,12 +8,13 @@ import {
   getStockPurchases,
   getStockSales,
   getStockOrders,
+  getStockItemTotals,
+  type StockItemTotals,
 } from '@/lib/supabase/stockQueries'
 import CatalogueTab from './CatalogueTab'
 import PurchasesTab from './PurchasesTab'
 import SalesTab from './SalesTab'
 import OrdersTab from './OrdersTab'
-import { outNowByItem } from '@/lib/stockReusable'
 
 export type ProjectOption = { id: string; label: string }
 
@@ -41,10 +42,16 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
   const [purchases, setPurchases] = useState<DbStockPurchase[]>([])
   const [sales, setSales] = useState<DbStockSale[]>([])
   const [orders, setOrders] = useState<DbStockOrder[]>([])
+  const [totals, setTotals] = useState<StockItemTotals[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const reloadItems = async () => setItems(await getStockItems())
+  // Items and the sales totals move together: any sale, return, purchase or edit can change both.
+  const reloadItems = async () => {
+    const [i, t] = await Promise.all([getStockItems(), getStockItemTotals()])
+    setItems(i)
+    setTotals(t)
+  }
   const reloadGroups = async () => setGroups(await getStockGroups())
   const reloadPurchases = async () => setPurchases(await getStockPurchases())
   const reloadSales = async () => setSales(await getStockSales())
@@ -52,14 +59,15 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
 
   useEffect(() => {
     let cancelled = false
-    Promise.all([getStockGroups(), getStockItems(), getStockPurchases(), getStockSales(), getStockOrders()])
-      .then(([g, i, p, s, o]) => {
+    Promise.all([getStockGroups(), getStockItems(), getStockPurchases(), getStockSales(), getStockOrders(), getStockItemTotals()])
+      .then(([g, i, p, s, o, t]) => {
         if (cancelled) return
         setGroups(g)
         setItems(i)
         setPurchases(p)
         setSales(s)
         setOrders(o)
+        setTotals(t)
       })
       .catch((err) => !cancelled && setError(err.message ?? 'Failed to load stock.'))
       .finally(() => !cancelled && setIsLoading(false))
@@ -67,15 +75,18 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
   }, [])
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
+  const outByItem = useMemo(() => new Map(totals.filter((t) => t.units_out > 0).map((t) => [t.item_id, t.units_out])), [totals])
+  const soldByItem = useMemo(() => new Map(totals.map((t) => [t.item_id, t.units_sold])), [totals])
   const stats = useMemo(() => {
     const trackable = items.filter((i) => !i.on_demand)
     const lowStock = trackable.filter((i) => i.current_stock <= i.min_stock_alert)
-    const costValue = trackable.reduce((sum, i) => sum + i.current_stock * i.cost_price, 0)
-    const sellValue = trackable.reduce((sum, i) => sum + i.current_stock * i.sell_price, 0)
-    return { products: items.length, lowStockCount: lowStock.length, costValue, sellValue }
-  }, [items])
+    // Units of a reusable product out with clients are still owned, so they count in what the stock cost.
+    const costValue = trackable.reduce((sum, i) => sum + (i.current_stock + (outByItem.get(i.id) ?? 0)) * i.cost_price, 0)
+    const profit = totals.reduce((sum, t) => sum + t.profit, 0)
+    const outTotal = totals.reduce((sum, t) => sum + t.units_out, 0)
+    return { lowStockCount: lowStock.length, costValue, profit, outTotal, hasReusable: items.some((i) => i.reusable) }
+  }, [items, totals, outByItem])
 
-  const outByItem = useMemo(() => outNowByItem(items, sales), [items, sales])
   const pendingOrders = orders.filter((o) => o.status === 'pending').length
 
   if (isLoading) return <p className="text-sm text-gray-400">Loading stock…</p>
@@ -84,14 +95,14 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatTile label="Products" value={String(stats.products)} />
-        {canManage && <StatTile label="What my stock cost me" value={money(stats.costValue, currency)} />}
-        {canManage && <StatTile label="Worth at selling price" value={money(stats.sellValue, currency)} />}
+        {canManage && <StatTile label="Stock cost" hint="What the stock you own cost, at average cost" value={money(stats.costValue, currency)} />}
+        {canManage && <StatTile label="Profit to date" hint="Everything sold, all time" value={money(stats.profit, currency)} />}
         <StatTile
           label="Low stock"
           value={String(stats.lowStockCount)}
           tone={stats.lowStockCount > 0 ? 'warn' : undefined}
         />
+        {stats.hasReusable && <StatTile label="Out with clients" hint="Reusable units not yet returned" value={String(stats.outTotal)} />}
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">
@@ -126,6 +137,7 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
           groups={groups}
           canManage={canManage}
           outByItem={outByItem}
+          soldByItem={soldByItem}
           onItemsChanged={reloadItems}
           onGroupsChanged={reloadGroups}
         />
@@ -164,9 +176,9 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
   )
 }
 
-function StatTile({ label, value, tone }: { label: string; value: string; tone?: 'warn' }) {
+function StatTile({ label, value, tone, hint }: { label: string; value: string; tone?: 'warn'; hint?: string }) {
   return (
-    <div className={`rounded-xl border p-3 ${tone === 'warn' ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+    <div title={hint} className={`rounded-xl border p-3 ${tone === 'warn' ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
       <p className="text-xs text-gray-400">{label}</p>
       <p className={`text-lg font-semibold mt-0.5 ${tone === 'warn' ? 'text-amber-700' : 'text-gray-900'}`}>{value}</p>
     </div>

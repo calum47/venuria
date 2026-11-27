@@ -22,11 +22,13 @@ type Props = {
   canManage: boolean
   /** itemId → units out with clients (reusable items awaiting return) */
   outByItem: Map<string, number>
+  /** itemId → units ever sold */
+  soldByItem: Map<string, number>
   onItemsChanged: () => void
   onGroupsChanged: () => void
 }
 
-export default function CatalogueTab({ teamId, currency, items, groups, canManage, outByItem, onItemsChanged, onGroupsChanged }: Props) {
+export default function CatalogueTab({ teamId, currency, items, groups, canManage, outByItem, soldByItem, onItemsChanged, onGroupsChanged }: Props) {
   const [activeGroup, setActiveGroup] = useState<string | 'all'>('all')
   const [editing, setEditing] = useState<DbStockItem | 'new' | null>(null)
   const [newGroupName, setNewGroupName] = useState('')
@@ -94,7 +96,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visible.map((item) => (
-            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} out={outByItem.get(item.id) ?? 0} showPrices={canManage} onClick={canManage ? () => setEditing(item) : () => {}} />
+            <ItemCard key={item.id} item={item} currency={currency} groupName={groupName.get(item.group_id ?? '')} out={outByItem.get(item.id) ?? 0} sold={soldByItem.get(item.id) ?? 0} showPrices={canManage} onClick={canManage ? () => setEditing(item) : () => {}} />
           ))}
         </div>
       )}
@@ -136,6 +138,7 @@ function ItemCard({
   currency,
   groupName,
   out,
+  sold,
   showPrices,
   onClick,
 }: {
@@ -143,6 +146,7 @@ function ItemCard({
   currency: string
   groupName: string | undefined
   out: number
+  sold: number
   /** Managers and leads only — Members never see prices or margin (migration 036). */
   showPrices: boolean
   onClick: () => void
@@ -167,11 +171,18 @@ function ItemCard({
       </div>
       <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
       {showPrices && (
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{money(item.sell_price, currency)}</span>
-          <span title="Margin on the average cost">{margin.toFixed(0)}% margin</span>
-        </div>
+        <>
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span title="Weighted average of everything bought">Avg cost {money(item.cost_price, currency)}</span>
+            <span>Sell {money(item.sell_price, currency)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-gray-500">
+            <span title="Margin on the average cost">{margin.toFixed(0)}% margin</span>
+            <span>{sold} sold</span>
+          </div>
+        </>
       )}
+      {!showPrices && sold > 0 && <p className="text-xs text-gray-500">{sold} sold</p>}
       {item.reusable && (
         <p className="text-[10px] text-indigo-600">Reusable{out > 0 ? ` · ${out} out with clients` : ''}</p>
       )}

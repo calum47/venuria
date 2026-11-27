@@ -36,6 +36,18 @@ export async function getStockItems(): Promise<DbStockItem[]> {
   return data as DbStockItem[]
 }
 
+/**
+ * Per-product sales totals worked out by the database (migration 039), so they cover every sale and not
+ * only the latest 200 the page loads. `profit` is 0 for anyone who is not a manager or lead.
+ */
+export type StockItemTotals = { item_id: string; units_sold: number; units_out: number; profit: number }
+
+export async function getStockItemTotals(): Promise<StockItemTotals[]> {
+  const { data, error } = await supabase.rpc('stock_item_totals')
+  if (error) throw error
+  return (data as StockItemTotals[]).map((r) => ({ ...r, profit: Number(r.profit) }))
+}
+
 export type StockItemInput = {
   teamId: string
   groupId: string | null
