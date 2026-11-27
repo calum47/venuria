@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-rotation-and-seating',
+    date: '2026-11-27',
+    title: 'Editor: rotation and seating in one place',
+    roles: ['planner'],
+    items: [
+      'The Placement box is now "Rotation and seating". Rotate a table or item to any of 8 angles, including the diagonals (45°, 135°, 225°, 315°).',
+      'Chair sides, adding chairs and mirror drag now sit in the same box, right under the rotation buttons.',
+      'The X / Y position boxes are gone — drag items on the plan to place them.',
+    ],
+  },
+  {
     id: '2026-11-27-editor-pan-select',
     date: '2026-11-27',
     title: 'Editor: easier to move around on a trackpad',

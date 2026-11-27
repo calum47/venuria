@@ -18,6 +18,9 @@ type Props = {
   onManageTemplates: () => void
 }
 
+// Quick-rotate presets: the four right angles plus the diagonals between them.
+const ROTATION_OPTIONS = [0, 45, 90, 135, 180, 225, 270, 315]
+
 const DEFAULT_SIDES: ChairSides = { top: true, bottom: true, left: true, right: true }
 
 // calculateChairPositionsFromSides returns {x, y, rotationDeg}.
@@ -56,18 +59,6 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
   const currentSides = object.chairSides ?? DEFAULT_SIDES
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-
-  const handleRotationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value)
-    if (isNaN(value)) return
-    rotateObjectWithChairs(object.id, value % 360)
-  }
-
-  const handlePositionChange = (axis: 'x' | 'y', e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = Number(e.target.value)
-    if (isNaN(value)) return
-    updateObject(object.id, { positionCm: { ...object.positionCm, [axis]: value } })
-  }
 
   const handleDelete = () => {
     removeObjectWithChairs(object.id)
@@ -194,8 +185,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
   const isRealTable   = !object.isChairFor && catalogItem?.category === 'tables'
   const settingCount  = object.tableSetting?.items.length ?? 0
   const showSeating   = isTable && (currentChairCount > 0 || canAddChairs)
-
-  const numberInput = 'mt-0.5 w-full min-w-0 text-sm border border-gray-200 rounded-lg px-2 py-1 focus:outline-none focus:border-blue-400'
+  const currentRotation = ((Math.round(object.rotationDeg) % 360) + 360) % 360
 
   return (
     <div className="w-72 h-full bg-white border-l border-gray-200 flex flex-col">
@@ -226,100 +216,91 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
-        {/* Placement */}
-        <Section title="Placement">
-          <div className="grid grid-cols-3 gap-2">
-            <label className="block min-w-0">
-              <span className="text-[11px] text-gray-400">X (cm)</span>
-              <input type="number" value={Math.round(object.positionCm.x)} onChange={(e) => handlePositionChange('x', e)} className={numberInput} />
-            </label>
-            <label className="block min-w-0">
-              <span className="text-[11px] text-gray-400">Y (cm)</span>
-              <input type="number" value={Math.round(object.positionCm.y)} onChange={(e) => handlePositionChange('y', e)} className={numberInput} />
-            </label>
-            <label className="block min-w-0">
-              <span className="text-[11px] text-gray-400">Rotation °</span>
-              <input type="number" value={Math.round(object.rotationDeg)} onChange={handleRotationChange} className={numberInput} />
-            </label>
-          </div>
-          <div className="grid grid-cols-4 gap-1">
-            {[0, 90, 180, 270].map((deg) => (
-              <button
-                key={deg}
-                onClick={() => rotateObjectWithChairs(object.id, deg)}
-                className="text-xs py-1 rounded-lg border border-gray-200 text-gray-600
-                           hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700 transition-colors"
-              >
-                {deg}°
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        {/* Seating */}
-        {showSeating && (
-          <Section title="Seating" hint={`${currentChairCount} chair${currentChairCount === 1 ? '' : 's'}`}>
-            {isRectTable && currentChairCount > 0 && (
-              <div>
-                <p className="text-[11px] text-gray-400 mb-1">Chair sides</p>
-                <div className="grid grid-cols-4 gap-1">
-                  {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
-                    <button
-                      key={side}
-                      onClick={() => handleSideToggle(side)}
-                      className={`text-xs py-1.5 rounded-lg border capitalize transition-colors ${
-                        currentSides[side]
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {side}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {canAddChairs && (
-              <div>
-                <p className="text-[11px] text-gray-400 mb-1">
-                  Add chairs <span className="text-gray-300">({currentChairCount}/{tableConfig?.maxChairs})</span>
-                </p>
-                <div className="grid grid-cols-3 gap-1">
-                  {[1, 2, 4]
-                    .filter((n) => currentChairCount + n <= (tableConfig?.maxChairs ?? 0))
-                    .map((n) => (
-                      <button
-                        key={n}
-                        onClick={() => handleAddChairs(n)}
-                        className="text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600
-                                   hover:bg-green-50 hover:border-green-400 hover:text-green-700 transition-colors"
-                      >
-                        +{n}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {currentChairCount > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">Mirror drag</span>
+        {/* Rotation and seating */}
+        <Section title="Rotation and seating" hint={showSeating ? `${currentChairCount} chair${currentChairCount === 1 ? '' : 's'}` : undefined}>
+          <div>
+            <p className="text-[11px] text-gray-400 mb-1">Rotation</p>
+            <div className="grid grid-cols-4 gap-1">
+              {ROTATION_OPTIONS.map((deg) => (
                 <button
-                  onClick={() => updateObject(object.id, { mirrorEnabled: !(object.mirrorEnabled ?? true) })}
-                  aria-label="Toggle mirror drag"
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    (object.mirrorEnabled ?? true) ? 'bg-blue-600' : 'bg-gray-300'
+                  key={deg}
+                  onClick={() => rotateObjectWithChairs(object.id, deg)}
+                  className={`text-xs py-1 rounded-lg border transition-colors ${
+                    currentRotation === deg
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-gray-200 text-gray-600 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-700'
                   }`}
                 >
-                  <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                    (object.mirrorEnabled ?? true) ? 'translate-x-5' : 'translate-x-1'
-                  }`} />
+                  {deg}°
                 </button>
-              </div>
-            )}
-          </Section>
-        )}
+              ))}
+            </div>
+          </div>
+
+          {showSeating && (
+            <>
+              {isRectTable && currentChairCount > 0 && (
+                <div>
+                  <p className="text-[11px] text-gray-400 mb-1">Chair sides</p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
+                      <button
+                        key={side}
+                        onClick={() => handleSideToggle(side)}
+                        className={`text-xs py-1.5 rounded-lg border capitalize transition-colors ${
+                          currentSides[side]
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        {side}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {canAddChairs && (
+                <div>
+                  <p className="text-[11px] text-gray-400 mb-1">
+                    Add chairs <span className="text-gray-300">({currentChairCount}/{tableConfig?.maxChairs})</span>
+                  </p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[1, 2, 4]
+                      .filter((n) => currentChairCount + n <= (tableConfig?.maxChairs ?? 0))
+                      .map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => handleAddChairs(n)}
+                          className="text-xs py-1.5 rounded-lg border border-gray-200 text-gray-600
+                                     hover:bg-green-50 hover:border-green-400 hover:text-green-700 transition-colors"
+                        >
+                          +{n}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {currentChairCount > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600">Mirror drag</span>
+                  <button
+                    onClick={() => updateObject(object.id, { mirrorEnabled: !(object.mirrorEnabled ?? true) })}
+                    aria-label="Toggle mirror drag"
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      (object.mirrorEnabled ?? true) ? 'bg-blue-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                      (object.mirrorEnabled ?? true) ? 'translate-x-5' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </Section>
 
         {/* Table setting — real tables only (not chairs, not placed decorations) */}
         {isRealTable && (
