@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { PASSWORD_HINT } from '@/lib/passwordPolicy'
 
 type Venue = { id: string; name: string }
 type RentalCompany = { id: string; name: string }
@@ -177,11 +178,11 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
         <input
           type="text"
           required
-          minLength={8}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono"
         />
+        <p className="text-xs text-gray-400">{PASSWORD_HINT}</p>
       </div>
 
       <button

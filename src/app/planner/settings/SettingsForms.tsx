@@ -6,6 +6,7 @@ import { updateMyName, updateMyTeam } from './actions'
 import type { PlannerRole } from '@/lib/supabase/plannerContext'
 import type { PdfStyle } from '@/lib/pdfExport/style'
 import ExportStyleCard from './ExportStyleCard'
+import { passwordProblem, PASSWORD_HINT } from '@/lib/passwordPolicy'
 
 type Props = {
   plannerName: string
@@ -102,7 +103,8 @@ function PasswordForm() {
     e.preventDefault()
     setError(null)
     setSaved(false)
-    if (password.length < 8) return setError('Password must be at least 8 characters.')
+    const problem = passwordProblem(password)
+    if (problem) return setError(problem)
     if (password !== confirm) return setError('Passwords don\u2019t match.')
     setIsPending(true)
     // Runs against the browser session directly — no server round trip needed.
@@ -119,16 +121,17 @@ function PasswordForm() {
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">New password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">Confirm</label>
-          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={8} autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
+          <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
         <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40">
           {isPending ? 'Updating…' : 'Update password'}
         </button>
       </form>
+      <p className="text-xs text-gray-400">{PASSWORD_HINT}</p>
       {error && <p className="text-xs text-red-600">{error}</p>}
       {saved && <p className="text-xs text-green-600">Password updated.</p>}
     </Card>

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { acceptInvite } from './actions'
+import { passwordProblem, PASSWORD_HINT } from '@/lib/passwordPolicy'
 
 export default function JoinForm({ token, teamName, roleLabel }: { token: string; teamName: string; roleLabel: string }) {
   const [isPending, startTransition] = useTransition()
@@ -11,6 +12,8 @@ export default function JoinForm({ token, teamName, roleLabel }: { token: string
 
   const submit = (fd: FormData) => {
     setError(null)
+    const problem = passwordProblem(password)
+    if (problem) return setError(problem)
     if (password !== confirm) return setError('Passwords don\u2019t match.')
     startTransition(async () => {
       const r = await acceptInvite(fd)
@@ -38,11 +41,12 @@ export default function JoinForm({ token, teamName, roleLabel }: { token: string
       </div>
       <div className="space-y-1">
         <label className="text-xs text-gray-500">Password</label>
-        <input type="password" name="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
+        <input type="password" name="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={input} />
       </div>
       <div className="space-y-1">
+        <p className="text-xs text-gray-400">{PASSWORD_HINT}</p>
         <label className="text-xs text-gray-500">Confirm password</label>
-        <input type="password" required minLength={8} autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={input} />
+        <input type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={input} />
       </div>
       <button type="submit" disabled={isPending} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50">
         {isPending ? 'Creating your account…' : 'Join team'}

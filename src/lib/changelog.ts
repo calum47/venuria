@@ -28,6 +28,24 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-stronger-passwords',
+    date: '2026-11-28',
+    title: 'Stronger passwords',
+    items: [
+      'New and changed passwords need at least 8 characters, with one upper-case letter, one number and one special character (for example ! @ # $ % &). Your current password keeps working.',
+      'Forgot your password? Ask your Venuria admin for a temporary one, then change it in Settings.',
+    ],
+  },
+  {
+    id: '2026-11-28-new-projects-public',
+    date: '2026-11-28',
+    title: 'New projects are visible to your team',
+    roles: ['planner'],
+    items: [
+      'New projects now start as Public: everyone on your team can open them to look, while only the creator, the people assigned, and leads and managers can edit. Use "Public — make private" on a project to restrict it.',
+    ],
+  },
+  {
     id: '2026-11-27-auto-arrange-dining-only',
     date: '2026-11-27',
     title: 'Auto-Arrange only offers dining tables',

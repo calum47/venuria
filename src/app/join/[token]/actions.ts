@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { passwordProblem } from '@/lib/passwordPolicy'
 
 function generatePlannerCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -28,7 +29,8 @@ export async function acceptInvite(formData: FormData): Promise<{ error?: string
   if (!token) return { error: 'Missing invite.' }
   if (name.length < 2) return { error: 'Enter your name.' }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid email.' }
-  if (password.length < 8) return { error: 'Password must be at least 8 characters.' }
+  const passwordIssue = passwordProblem(password)
+  if (passwordIssue) return { error: passwordIssue }
 
   const admin = createAdminClient()
 

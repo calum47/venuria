@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveUserRole } from '@/lib/supabase/role'
+import { passwordProblem } from '@/lib/passwordPolicy'
 
 function generatePlannerCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -44,8 +45,9 @@ export async function POST(request: Request) {
   if (!name || !email || !password) {
     return NextResponse.json({ error: 'name, email, and password are required.' }, { status: 400 })
   }
-  if (password.length < 8) {
-    return NextResponse.json({ error: 'Password must be at least 8 characters.' }, { status: 400 })
+  const passwordIssue = passwordProblem(password)
+  if (passwordIssue) {
+    return NextResponse.json({ error: passwordIssue }, { status: 400 })
   }
   if (targetRole === 'venue_manager' && !venueId) {
     return NextResponse.json(

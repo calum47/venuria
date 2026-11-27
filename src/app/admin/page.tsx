@@ -4,6 +4,7 @@ import { CreateVenueForm } from './CreateVenueForm'
 import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
 import { AddVendorRoleForm } from './AddVendorRoleForm'
+import { ResetPasswordForm, type ResettableAccount } from './ResetPasswordForm'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -19,7 +20,7 @@ export default async function AdminPage() {
         .order('created_at', { ascending: false }),
       supabase
         .from('venue_managers')
-        .select('id, name, email, venue_id, venues(name)')
+        .select('id, name, email, user_id, venue_id, venues(name)')
         .order('created_at', { ascending: false }),
       supabase
         .from('rental_companies')
@@ -35,6 +36,21 @@ export default async function AdminPage() {
         .order('created_at', { ascending: false }),
     ])
 
+  // One entry per login (a planner who is also a vendor shares one login), labelled with every role it has.
+  const byUser = new Map<string, { name: string; email: string; roles: string[] }>()
+  const addLogin = (userId: string | null, name: string, email: string, roleLabel: string) => {
+    if (!userId) return
+    const e = byUser.get(userId) ?? { name, email, roles: [] }
+    if (!e.roles.includes(roleLabel)) e.roles.push(roleLabel)
+    byUser.set(userId, e)
+  }
+  for (const p of planners ?? []) addLogin(p.user_id, p.name, p.email, 'planner')
+  for (const m of venueManagers ?? []) addLogin(m.user_id, m.name, m.email, 'venue manager')
+  for (const m of rentalManagers ?? []) addLogin(m.user_id, m.name, m.email, 'rental manager / vendor')
+  const resettable: ResettableAccount[] = [...byUser.entries()]
+    .map(([userId, e]) => ({ userId, label: `${e.name} — ${e.email} (${e.roles.join(' + ')})` }))
+    .sort((a, b) => a.label.localeCompare(b.label))
+
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto space-y-8">
@@ -49,6 +65,7 @@ export default async function AdminPage() {
         <CreateVenueForm />
         <CreateRentalCompanyForm />
         <CreateAccountForm venues={venues ?? []} rentalCompanies={rentalCompanies ?? []} />
+        <ResetPasswordForm accounts={resettable} />
         <AddVendorRoleForm
           planners={(planners ?? []).filter((p) => !(rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => ({ id: p.id, name: p.name, email: p.email }))}
           vendorUserNames={(planners ?? []).filter((p) => (rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => p.name)}
