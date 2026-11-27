@@ -38,7 +38,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
     supabase.from('venues').select('id, name').order('name'),
     supabase
       .from('projects')
-      .select('id, status, event_date, due_by, created_at, planner_id, assigned_to_planner_id, visibility, couple_names, venues(name)'),
+      .select('id, status, event_date, due_by, created_at, planner_id, visibility, couple_names, venues(name)'),
     supabase.from('planners').select('id, name').eq('team_id', ctx.team.id).order('name'),
     supabase.from('project_assignees').select('project_id, planner_id'),
     supabase.from('project_payments').select('id, project_id, vendor_name, label, amount, due_date, paid_at'),
@@ -46,12 +46,9 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
 
   const nameById = new Map<string, string>((teammates ?? []).map((t) => [t.id, t.name]))
 
-  // Everyone assigned to a project: the new table, plus the old single column for rows it does not cover yet.
+  // Everyone assigned to a project.
   const assigneesOf = new Map<string, Set<string>>()
   for (const r of assigneeRows ?? []) assigneesOf.set(r.project_id, (assigneesOf.get(r.project_id) ?? new Set()).add(r.planner_id))
-  for (const p of projects ?? []) {
-    if (p.assigned_to_planner_id) assigneesOf.set(p.id, (assigneesOf.get(p.id) ?? new Set()).add(p.assigned_to_planner_id))
-  }
 
   const allRows: ProjectRowData[] = (projects ?? []).map((p) => {
     const assignees = [...(assigneesOf.get(p.id) ?? [])].map((id) => ({ id, name: nameById.get(id) ?? 'Former teammate' }))

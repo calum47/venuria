@@ -121,10 +121,6 @@ export async function updateProjectDates(formData: FormData): Promise<{ error?: 
  * Only Leads and Managers may do this; the project_assignees RLS policies enforce it
  * and that every assignee belongs to the project's own team. The UI only decides
  * whether to show the control.
- *
- * Projects assigned before 038 still carry the old single `assigned_to_planner_id`. It was
- * copied into project_assignees by the migration, but is cleared here as well so that
- * unassigning someone really removes their access (the access function honours both).
  */
 export async function setProjectAssignees(formData: FormData): Promise<{ error?: string }> {
   const supabase = await createClient()
@@ -138,7 +134,7 @@ export async function setProjectAssignees(formData: FormData): Promise<{ error?:
   const { data: me } = await supabase.from('planners').select('id').eq('user_id', user?.id ?? '').maybeSingle()
   if (!me) return { error: 'No planner account linked to this login.' }
 
-  const { data: project } = await supabase.from('projects').select('id, assigned_to_planner_id').eq('id', projectId).maybeSingle()
+  const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).maybeSingle()
   if (!project) return { error: 'You don\u2019t have access to that project.' }
 
   const { data: current, error: curErr } = await supabase.from('project_assignees').select('planner_id').eq('project_id', projectId)
@@ -165,10 +161,6 @@ export async function setProjectAssignees(formData: FormData): Promise<{ error?:
     if (error) return { error: error.message }
     // RLS hides rows you may not delete instead of failing, so count what really went.
     if ((removed ?? []).length !== toRemove.length) return { error: denied }
-  }
-  if (project.assigned_to_planner_id) {
-    const { error } = await supabase.from('projects').update({ assigned_to_planner_id: null }).eq('id', projectId)
-    if (error) return { error: error.code === '42501' ? denied : error.message }
   }
   revalidatePath('/planner')
   revalidatePath(`/planner/projects/${projectId}`)
