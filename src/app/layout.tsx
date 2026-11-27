@@ -1,24 +1,32 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cormorant_Garamond } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 
-const geistSans = Geist({
+// All fonts are self-hosted from src/app/fonts (Latin subset, which covers the accents ES/EN/FR need) so a
+// production build never has to fetch anything from Google. Licences: SIL Open Font License 1.1, see the
+// *-OFL.txt files next to the font files. Geist and Geist Mono are the variable-weight files.
+const geistSans = localFont({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
+  display: "swap",
+  src: [{ path: "./fonts/geist-latin-wght-normal.woff2", weight: "100 900", style: "normal" }],
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
+  src: [{ path: "./fonts/geist-mono-latin-wght-normal.woff2", weight: "100 900", style: "normal" }],
 });
 
-// Display serif for page titles (see globals.css). Self-hosted by next/font at
-// build time, like Geist. "latin" covers the accents ES/EN/FR need.
-const cormorant = Cormorant_Garamond({
+// Display serif for page titles (see globals.css).
+const cormorant = localFont({
   variable: "--font-cormorant",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  display: "swap",
+  src: [
+    { path: "./fonts/cormorant-garamond-latin-500-normal.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/cormorant-garamond-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
