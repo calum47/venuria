@@ -28,6 +28,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-auto-arrange-dining-only',
+    date: '2026-11-27',
+    title: 'Auto-Arrange only offers dining tables',
+    roles: ['planner'],
+    items: [
+      'Cocktail tables and tall tables no longer appear in Auto-Arrange — it lays out the dinner seating, so only dining tables can be picked.',
+    ],
+  },
+  {
     id: '2026-11-27-auto-arrange-even-spread',
     date: '2026-11-27',
     title: 'Auto-Arrange spreads tables evenly',

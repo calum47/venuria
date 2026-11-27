@@ -26,6 +26,19 @@ const SCAN_STEP_CM = 40
 // and the isRound heuristic already use elsewhere in this codebase.
 const SWEETHEART_TABLE_NAME = 'Sweetheart Table'
 
+/**
+ * Auto-Arrange lays out the dinner seating around the Sweetheart Table, so only
+ * dining tables are offered: not the Sweetheart Table itself, cocktail tables or
+ * tall/standing tables. The catalog has no table-type field, so this goes by
+ * name (same convention as getTableChairConfig / tableSetting.ts) — anything
+ * custom-named stays available.
+ */
+export function isDiningTable(item: DbCatalogItem): boolean {
+  const name = item.name.toLowerCase()
+  if (name.includes('sweetheart') || name.includes('cocktail')) return false
+  return getTableChairConfig(item.name).acceptsChairs // Round Tall Table = standing, no chairs
+}
+
 export type TableSelection = {
   catalogItem: DbCatalogItem
   quantity: number

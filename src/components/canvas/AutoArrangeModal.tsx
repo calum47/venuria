@@ -6,6 +6,7 @@ import { DbCatalogItem, DbRoom } from '@/types/db'
 import {
   autoArrangeRoom,
   computeMixCapacity,
+  isDiningTable,
   AUTO_ARRANGE_CLEARANCE_CM,
   TableSelection,
 } from '@/lib/utils/autoArrange'
@@ -31,7 +32,7 @@ export default function AutoArrangeModal({
   onArranged,
 }: Props) {
   const tableItems = useMemo(
-    () => catalogItems.filter((i) => i.category === 'tables' && i.name !== 'Sweetheart Table'),
+    () => catalogItems.filter((i) => i.category === 'tables' && isDiningTable(i)),
     [catalogItems],
   )
   const [quantities, setQuantities] = useState<Record<string, number>>({})
@@ -121,7 +122,7 @@ export default function AutoArrangeModal({
           <h3 className="font-semibold text-gray-900">✨ Auto-Arrange</h3>
           <p className="text-sm text-gray-500 mt-0.5">{currentRoom.name}</p>
           <p className="text-xs text-gray-400 mt-1">
-            Adds new tables inside the room boundary, avoiding obstacles and anything already placed. Every
+            Dining tables only. Adds new tables inside the room boundary, avoiding obstacles and anything already placed. Every
             table gets its maximum chairs — remove the ones you don&apos;t need afterwards. Doesn&apos;t move or
             remove anything that&apos;s already there.
           </p>
