@@ -12,6 +12,8 @@ type Props = {
   role: PlannerRole
   teamName: string
   lastProjectId: string | null
+  /** Set when this login is also a Vendor: shows the Planner / Vendor switch. */
+  vendorName: string | null
 }
 
 /**
@@ -21,7 +23,7 @@ type Props = {
  *
  * "My Stock" links to Phase 23's inventory page, added once that existed.
  */
-export default function PlannerNav({ plannerName, role, teamName, lastProjectId }: Props) {
+export default function PlannerNav({ plannerName, role, teamName, lastProjectId, vendorName }: Props) {
   const pathname = usePathname()
   const item = (href: string, label: string, active: boolean) => (
     <Link
@@ -56,6 +58,15 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId 
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
+          {vendorName && (
+            <Link
+              href="/rental"
+              title={`Switch to your Vendor account — ${vendorName}`}
+              className="hidden sm:inline-flex shrink-0 whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs text-brand-800 hover:bg-brand-100"
+            >
+              Planner ⇄ Vendor
+            </Link>
+          )}
           <NotificationBell />
           <div className="hidden sm:block text-right leading-tight">
             <p className="text-sm text-gray-900">{plannerName}</p>

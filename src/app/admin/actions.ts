@@ -59,3 +59,42 @@ export async function createRentalCompany(formData: FormData) {
   revalidatePath('/admin')
   return { success: true }
 }
+
+/**
+ * Makes an existing planner also a Vendor: creates the vendor's company and links it to the planner's own login
+ * (a rental_managers row with the planner's user id), so one login has both roles and can switch between them.
+ * Admin only, by the admin_manage_* RLS policies (same pattern as createRentalCompany).
+ */
+export async function addVendorRole(formData: FormData) {
+  const supabase = await createClient()
+
+  const plannerId = formData.get('plannerId') as string
+  const companyName = ((formData.get('companyName') as string) ?? '').trim()
+  if (!plannerId) return { error: 'Choose the planner.' }
+  if (!companyName) return { error: 'Vendor company name is required.' }
+
+  const { data: planner } = await supabase.from('planners').select('id, user_id, name, email').eq('id', plannerId).maybeSingle()
+  if (!planner) return { error: 'That planner was not found.' }
+
+  const { data: existing } = await supabase.from('rental_managers').select('id').eq('user_id', planner.user_id).maybeSingle()
+  if (existing) return { error: `${planner.name} is already linked to a vendor company.` }
+
+  const { data: company, error: cErr } = await supabase
+    .from('rental_companies')
+    .insert({ name: companyName, contact_email: planner.email || null })
+    .select('id')
+    .single()
+  if (cErr || !company) return { error: cErr?.message ?? 'Could not create the company.' }
+
+  const { error: mErr } = await supabase
+    .from('rental_managers')
+    .insert({ rental_company_id: company.id, user_id: planner.user_id, name: planner.name, email: planner.email })
+  if (mErr) {
+    // Don't leave a company nobody manages behind.
+    await supabase.from('rental_companies').delete().eq('id', company.id)
+    return { error: mErr.message }
+  }
+
+  revalidatePath('/admin')
+  return { success: true }
+}

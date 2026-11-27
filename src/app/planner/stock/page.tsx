@@ -1,7 +1,6 @@
-import { projectTitle } from '@/lib/projectTitle'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
-import StockApp from './StockApp'
+import StockSection from './StockSection'
 
 /**
  * My Stock (Phase 23 core CRUD). Team-shared retail inventory — welcome
@@ -26,11 +25,6 @@ export default async function StockPage() {
     )
   }
 
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, event_date, couple_names, venues(name)')
-    .order('event_date', { ascending: false, nullsFirst: false })
-
   return (
     <main className="p-8">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -40,15 +34,7 @@ export default async function StockPage() {
             {ctx.team.name}&apos;s inventory — shared with everyone on the team, currency {ctx.team.currency}
           </p>
         </div>
-        <StockApp
-          teamId={ctx.team.id}
-          currency={ctx.team.currency}
-          canManage={ctx.planner.role !== 'member'}
-          projects={(projects ?? []).map((p) => ({
-            id: p.id,
-            label: `${projectTitle(p.couple_names, (p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue')}${p.event_date ? ` — ${p.event_date}` : ''}`,
-          }))}
-        />
+        <StockSection supabase={supabase} ctx={ctx} />
       </div>
     </main>
   )

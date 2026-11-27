@@ -8,6 +8,8 @@ export type PlannerContext = {
   planner: { id: string; name: string; plannerCode: string | null; role: PlannerRole; teamId: string }
   team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }
   lastProjectId: string | null
+  /** Set when this login is also a Vendor (a rental company manager): the company to switch to. */
+  vendor: { companyName: string } | null
 }
 
 /**
@@ -45,6 +47,13 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
     .limit(1)
     .maybeSingle()
 
+  const { data: vendorRow } = await supabase
+    .from('rental_managers')
+    .select('rental_companies(name)')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const vendorCompany = (vendorRow as { rental_companies: { name: string } | null } | null)?.rental_companies?.name
+
   return {
     userId: user.id,
     email: user.email ?? null,
@@ -57,6 +66,7 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
     },
     team,
     lastProjectId: lastVisit?.project_id ?? null,
+    vendor: vendorRow ? { companyName: vendorCompany ?? 'Vendor' } : null,
   }
 }
 

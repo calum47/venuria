@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-vendor-account',
+    date: '2026-11-27',
+    title: 'Planner and Vendor on one login',
+    roles: ['planner', 'rental'],
+    items: [
+      'If you are a planner and also run a vendor business (rentable tables and chairs, products you sell), your account can now do both. Use the Planner ⇄ Vendor switch at the top to move between them, with the same email and password.',
+      'On the Vendor side you manage what you can rent out and see your stock of products, which is the same stock as My stock on the planner side: a sale logged on one shows on the other.',
+      'Other planners can find your rentable tables and chairs when they plan. Your products and prices stay private to your team.',
+    ],
+  },
+  {
     id: '2026-11-27-projects-assignees-payments',
     date: '2026-11-27',
     title: 'Assign several people, and see every payment',

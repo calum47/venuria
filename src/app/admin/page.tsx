@@ -3,6 +3,7 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 import { CreateVenueForm } from './CreateVenueForm'
 import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
+import { AddVendorRoleForm } from './AddVendorRoleForm'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -26,11 +27,11 @@ export default async function AdminPage() {
         .order('created_at', { ascending: false }),
       supabase
         .from('rental_managers')
-        .select('id, name, email, rental_company_id, rental_companies(name)')
+        .select('id, name, email, user_id, rental_company_id, rental_companies(name)')
         .order('created_at', { ascending: false }),
       supabase
         .from('planners')
-        .select('id, name, email, planner_code, created_at')
+        .select('id, name, email, user_id, planner_code, created_at')
         .order('created_at', { ascending: false }),
     ])
 
@@ -48,6 +49,10 @@ export default async function AdminPage() {
         <CreateVenueForm />
         <CreateRentalCompanyForm />
         <CreateAccountForm venues={venues ?? []} rentalCompanies={rentalCompanies ?? []} />
+        <AddVendorRoleForm
+          planners={(planners ?? []).filter((p) => !(rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => ({ id: p.id, name: p.name, email: p.email }))}
+          vendorUserNames={(planners ?? []).filter((p) => (rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => p.name)}
+        />
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
