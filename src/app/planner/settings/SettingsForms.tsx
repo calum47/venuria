@@ -124,7 +124,7 @@ function PasswordForm() {
   return (
     <Card title="Change password">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col items-start gap-1 basis-full">
           <label className="text-xs text-gray-500">Current password</label>
           <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
         </div>
