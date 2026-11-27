@@ -122,7 +122,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
         rotationDeg: pos.rotationDeg,
         quantity: 1,
         isChairFor: object.id,
-        chairEdge: ROTATION_TO_EDGE[pos.rotationDeg] ?? 'top' as any,
+        chairEdge: ROTATION_TO_EDGE[pos.rotationDeg] ?? 'top',
       }))
 
       updateObject(object.id, {

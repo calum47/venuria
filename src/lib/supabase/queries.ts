@@ -233,9 +233,7 @@ export function buildSavePayload(
   objects: LayoutObject[],
   projectId: string,
   roomId: string,
-): Omit<DbLayoutObject, 'extra_data'> & { extra_data: Record<string, unknown> } extends infer T
-  ? T[]
-  : never {
+): Array<Omit<DbLayoutObject, 'extra_data'> & { extra_data: Record<string, unknown> }> {
   return objects.map((obj) => ({
     id: obj.id,
     project_id: projectId,
@@ -258,7 +256,7 @@ export function buildSavePayload(
       mirrorEnabled:      obj.mirrorEnabled,
       tableSetting:       obj.tableSetting,
     },
-  })) as any
+  }))
 }
 
 export async function getLayoutObjects(projectId: string, roomId: string): Promise<LayoutObject[]> {
@@ -401,9 +399,9 @@ export async function getSeatAssignments(projectId: string) {
     .eq('project_id', projectId)
   if (loError) throw loError
 
-  const roomById = new Map((layoutObjects ?? []).map((o: any) => [o.id, o.room_id]))
+  const roomById = new Map((layoutObjects ?? []).map((o) => [o.id, o.room_id] as [string, string]))
 
-  return assignments.map((a: any) => ({
+  return assignments.map((a) => ({
     id: a.id,
     projectId: a.project_id,
     roomId: roomById.get(a.layout_object_id) ?? '',
@@ -440,7 +438,7 @@ export async function assignSeat(
     .eq('room_id', roomId)
 
   if (roomObjects && roomObjects.length > 0) {
-    const roomObjectIds = roomObjects.map((o: any) => o.id)
+    const roomObjectIds = roomObjects.map((o) => o.id as string)
     await supabase
       .from('seat_assignments')
       .delete()

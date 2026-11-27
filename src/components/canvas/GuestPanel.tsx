@@ -19,7 +19,6 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
   const [isAdding, setIsAdding] = useState(false)
 
   const filtered = guests.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()))
-  const assignedCount = seatAssignments.length
   const totalCount = guests.length
 
   const handleAddGuest = async () => {
