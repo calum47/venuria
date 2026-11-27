@@ -497,7 +497,7 @@ export default function EditorPage() {
           <span className="text-xs text-gray-400 ml-auto">
             {zoom !== 1
               ? `${Math.round(zoom * 100)}%`
-              : 'Scroll to zoom · Right-click drag to pan'}
+              : 'Drag to pan · Ctrl+drag to select · Scroll or pinch to zoom'}
           </span>
 
           <button

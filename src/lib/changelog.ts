@@ -28,6 +28,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-27-editor-pan-select',
+    date: '2026-11-27',
+    title: 'Editor: easier to move around on a trackpad',
+    roles: ['planner'],
+    items: [
+      'Drag on an empty part of the floor plan to move around it — no right-click needed.',
+      'To select several tables or chairs, hold Ctrl (or ⌘ / Shift) and drag a box around them.',
+      'Pinch or scroll to zoom.',
+    ],
+  },
+  {
     id: '2026-11-27-stock-tiles',
     date: '2026-11-27',
     title: 'My stock: clearer numbers',

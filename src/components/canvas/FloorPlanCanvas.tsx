@@ -82,6 +82,11 @@ export default function FloorPlanCanvas({
   const transformerRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const isPanning = useRef(false)
+  // Left-drag pan only counts as a pan once the pointer moves past a small threshold;
+  // below it the gesture is still a plain click (deselect). didPan then suppresses
+  // the click that follows mouseup so a pan doesn't clear the selection.
+  const didPan = useRef(false)
+  const panOrigin = useRef({ x: 0, y: 0 })
   const lastPointerPos = useRef({ x: 0, y: 0 })
   const rawDragPosCm = useRef<{ x: number; y: number } | null>(null)
   const stagePosRef = useRef({ x: 0, y: 0 })
@@ -236,8 +241,18 @@ export default function FloorPlanCanvas({
     const oldZoom = zoomRef.current
     const pointer = stage.getPointerPosition()
     if (!pointer) return
-    const direction = e.evt.deltaY > 0 ? -1 : 1
-    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom + direction * 0.1))
+    // Trackpad pinch arrives as wheel events with ctrlKey set and small deltas; a
+    // two-finger trackpad scroll is also small deltas. Scale those proportionally so
+    // they don't zoom absurdly fast. A physical wheel notch (large delta, or line
+    // mode) keeps the fixed 10% step.
+    const dy = e.evt.deltaY
+    const isWheelNotch = e.evt.deltaMode !== 0 || Math.abs(dy) >= 40
+    const delta = e.evt.ctrlKey
+      ? -dy * 0.01
+      : isWheelNotch
+        ? (dy > 0 ? -0.1 : 0.1)
+        : -dy * 0.003
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, oldZoom + delta))
     const mousePointTo = { x: (pointer.x - stage.x()) / oldZoom, y: (pointer.y - stage.y()) / oldZoom }
     setZoom(newZoom)
     setStagePos({ x: pointer.x - mousePointTo.x * newZoom, y: pointer.y - mousePointTo.y * newZoom })
@@ -249,9 +264,11 @@ export default function FloorPlanCanvas({
   const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
 
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    didPan.current = false
     if (e.evt.button === 1 || e.evt.button === 2) {
       e.evt.preventDefault()
       isPanning.current = true
+      didPan.current = true
       lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
       stageRef.current?.container().style.setProperty('cursor', 'grabbing')
       return
@@ -266,10 +283,20 @@ export default function FloorPlanCanvas({
       setZoneDraft({ type: 'rect', startPx: p, currentPx: p })
       return
     }
-    if (e.evt.button === 0 && !isGuestMode) {
+    if (e.evt.button === 0) {
       const target = e.target
       const isOnObject = target.getType() === 'Group' || (target.getParent() !== null && target.getParent()?.getType() === 'Group')
       if (isOnObject) return
+      // Plain left-drag on empty canvas pans. Ctrl/⌘/Shift + left-drag draws the
+      // selection marquee (Ctrl+click is a right-click on macOS, so ⌘ and Shift are
+      // accepted too). Guest/seating mode has no marquee, so it only pans.
+      const wantsMarquee = e.evt.ctrlKey || e.evt.metaKey || e.evt.shiftKey
+      if (!wantsMarquee || isGuestMode) {
+        isPanning.current = true
+        panOrigin.current = { x: e.evt.clientX, y: e.evt.clientY }
+        lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
+        return
+      }
       const stage = stageRef.current
       if (!stage) return
       const pos = stage.getPointerPosition()
@@ -286,6 +313,13 @@ export default function FloorPlanCanvas({
 
   const handleMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (isPanning.current) {
+      if (!didPan.current) {
+        // Still within click tolerance: not a pan yet.
+        const moved = Math.hypot(e.evt.clientX - panOrigin.current.x, e.evt.clientY - panOrigin.current.y)
+        if (moved < 4) return
+        didPan.current = true
+        stageRef.current?.container().style.setProperty('cursor', 'grabbing')
+      }
       const dx = e.evt.clientX - lastPointerPos.current.x
       const dy = e.evt.clientY - lastPointerPos.current.y
       lastPointerPos.current = { x: e.evt.clientX, y: e.evt.clientY }
@@ -943,7 +977,7 @@ export default function FloorPlanCanvas({
   }
 
   const handleStageClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (isPanning.current) return
+    if (didPan.current) { didPan.current = false; return }
     setTooltip(null)
     if (zoneMode) {
       if (zoneTool === 'polygon') {
