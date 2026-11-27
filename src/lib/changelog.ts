@@ -450,12 +450,15 @@ export function unseenEntries(role: AuthRole, lastSeenId: string | null | undefi
 }
 
 /**
- * Pages where the "What's new" pop-up must never open, even for a signed-in
- * user: the guest RSVP page (also when a planner previews it, or tests the real
- * link while signed in). Skipping does not mark anything as seen, so the notes
- * still show on the next planner page.
+ * Pages where the "What's new" pop-up may open: only the signed-in app areas.
+ * It must never appear on the login page, the invite page, the home redirect or
+ * the guest RSVP pages — even when an old session is still stored in the browser
+ * — so it is an allow-list, not a deny-list. Skipping does not mark anything as
+ * seen, so the notes still show on the next signed-in page.
  */
+const WHATS_NEW_PREFIXES = ['/planner', '/venue', '/rental', '/admin', '/client', '/editor']
+
 export function whatsNewAllowedOn(pathname: string | null): boolean {
-  if (!pathname) return true
-  return !(pathname === '/rsvp' || pathname.startsWith('/rsvp/'))
+  if (!pathname) return false
+  return WHATS_NEW_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'))
 }

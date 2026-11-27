@@ -42,7 +42,13 @@ export default function WhatsNewModal() {
     }
 
     check().catch((err) => console.error('WhatsNewModal check failed:', err))
-    return () => { cancelled = true }
+
+    // This component lives in the root layout and is never unmounted, so drop any open notes
+    // the moment the user signs out instead of leaving them on screen over the login page.
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') setEntries([])
+    })
+    return () => { cancelled = true; sub.subscription.unsubscribe() }
   }, [allowed])
 
   if (!allowed || entries.length === 0) return null
