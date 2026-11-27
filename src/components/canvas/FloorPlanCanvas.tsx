@@ -404,6 +404,11 @@ export default function FloorPlanCanvas({
             w: Math.abs(canvasX - selectionStart.current.x),
             h: Math.abs(canvasY - selectionStart.current.y),
           }
+          // A dragged marquee is followed by a click on the empty floor under the
+          // cursor; without this the click-to-deselect handler would wipe the
+          // selection just made (only when released over empty floor — hence the
+          // "works every few tries" behaviour). didPan doubles as "swallow the next click".
+          if (rect.w > 5 || rect.h > 5) didPan.current = true
           if (rect.w > 5 && rect.h > 5) {
             const selected = layoutObjects.filter((obj) => {
               const ox = cmToPixels(obj.positionCm.x, BASE_SCALE) + roomOffsetX
