@@ -12,7 +12,33 @@ type Props = {
   ownerId: string
 }
 
+/** Which groups are collapsed is remembered per owner in this browser (localStorage), so a group closed stays closed. */
+const collapsedKey = (ownerType: string, ownerId: string) => `venuria:stock-collapsed:${ownerType}:${ownerId}`
+
+function readCollapsed(key: string): Record<string, boolean> {
+  try {
+    const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(key)
+    const parsed = raw ? JSON.parse(raw) : {}
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
 export default function StockManager({ ownerType, ownerId }: Props) {
+  const storageKey = collapsedKey(ownerType, ownerId)
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => readCollapsed(storageKey))
+  const toggleGroup = (category: string) => {
+    setCollapsed((prev) => {
+      const next = { ...prev, [category]: !prev[category] }
+      try {
+        window.localStorage.setItem(storageKey, JSON.stringify(next))
+      } catch {
+        // Storage can be blocked (private mode): the group still toggles, it just is not remembered.
+      }
+      return next
+    })
+  }
   const [items, setItems] = useState<DbCatalogItem[]>([])
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [savedQuantities, setSavedQuantities] = useState<Record<string, number>>({})
@@ -72,7 +98,19 @@ export default function StockManager({ ownerType, ownerId }: Props) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {byCategory.map(({ category, items: categoryItems }) => (
         <div key={category}>
-          <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">{category}</h4>
+          <button
+            type="button"
+            onClick={() => toggleGroup(category)}
+            aria-expanded={!collapsed[category]}
+            className="mb-1 flex w-full items-center gap-2 text-left text-xs font-semibold uppercase text-gray-500 hover:text-gray-800"
+          >
+            <span aria-hidden="true" className={`inline-block w-3 transition-transform ${collapsed[category] ? '' : 'rotate-90'}`}>▸</span>
+            {category}
+            <span className="font-normal normal-case text-gray-400">
+              {categoryItems.reduce((sum, i) => sum + (savedQuantities[i.id] ?? 0), 0)} in stock
+            </span>
+          </button>
+          {!collapsed[category] && (
           <ul className="divide-y divide-gray-100 bg-white rounded-lg border border-gray-100">
             {categoryItems.map((item) => {
               const dirty = quantities[item.id] !== savedQuantities[item.id]
@@ -108,6 +146,7 @@ export default function StockManager({ ownerType, ownerId }: Props) {
               )
             })}
           </ul>
+          )}
         </div>
       ))}
     </div>

@@ -45,7 +45,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
         </Link>
 
         {/* On phones the links drop to their own scrollable row under the logo. */}
-        <nav aria-label="Main" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto pb-1 md:pb-0">
+        <nav aria-label="Main" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {lastProjectId ? (
             item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
           ) : (
@@ -68,7 +68,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
             </Link>
           )}
           <NotificationBell />
-          <div className="hidden sm:block text-right leading-tight">
+          <div className="hidden xl:block text-right leading-tight">
             <p className="text-sm text-gray-900">{plannerName}</p>
             <p className="text-[11px] text-gray-400">{ROLE_LABEL[role]} · {teamName}</p>
           </div>
