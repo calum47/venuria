@@ -93,6 +93,7 @@ function NameForm({ initial, email, plannerCode }: { initial: string; email: str
 }
 
 function PasswordForm() {
+  const [current, setCurrent] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [isPending, setIsPending] = useState(false)
@@ -103,14 +104,18 @@ function PasswordForm() {
     e.preventDefault()
     setError(null)
     setSaved(false)
+    if (!current) return setError('Enter your current password.')
     const problem = passwordProblem(password)
     if (problem) return setError(problem)
     if (password !== confirm) return setError('Passwords don\u2019t match.')
+    if (password === current) return setError('The new password must be different from the current one.')
     setIsPending(true)
     // Runs against the browser session directly — no server round trip needed.
-    const { error: err } = await supabase.auth.updateUser({ password })
+    // Supabase checks current_password itself (Auth setting "Require current password when updating").
+    const { error: err } = await supabase.auth.updateUser({ password, current_password: current })
     setIsPending(false)
     if (err) return setError(err.message)
+    setCurrent('')
     setPassword('')
     setConfirm('')
     setSaved(true)
@@ -119,6 +124,10 @@ function PasswordForm() {
   return (
     <Card title="Change password">
       <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-gray-500">Current password</label>
+          <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} required autoComplete="current-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-gray-500">New password</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="new-password" className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
