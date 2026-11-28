@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { formatDate } from '@/lib/projectDates'
 import type { DbProjectDay, DbTeamVendor, DbTimetableBlock } from '@/types/db'
-import RundownApp from './RundownApp'
+import RundownApp, { type RequestedLine } from './RundownApp'
 import { getProjectAccess } from '@/lib/projectAccess'
 import ViewOnlyBanner from '@/components/ViewOnlyBanner'
 
@@ -45,6 +45,29 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
     supabase.from('team_vendors').select('*').eq('team_id', ctx.team.id).order('name'),
   ])
   const loadError = daysRes.error ?? blocksRes.error ?? vendorsRes.error
+  // What was requested from each Venuria vendor in the planner summary (pending or accepted), keyed by the team's vendor entry.
+  const teamVendors = (vendorsRes.data ?? []) as DbTeamVendor[]
+  const { data: sourceRows } = await supabase
+    .from('project_item_sources')
+    .select('catalog_item_id, rental_company_id, requested_quantity, quantity, status')
+    .eq('project_id', projectId)
+    .neq('status', 'declined')
+  const itemIds = [...new Set((sourceRows ?? []).map((r) => r.catalog_item_id))]
+  const { data: itemRows } = itemIds.length > 0 ? await supabase.from('catalog_items').select('id, name').in('id', itemIds) : { data: [] }
+  const itemName = new Map((itemRows ?? []).map((i) => [i.id as string, i.name as string]))
+  const tpdf = await getTranslations('Pdf')
+  const requested: Record<string, RequestedLine[]> = {}
+  for (const row of sourceRows ?? []) {
+    const tv = teamVendors.find((v) => v.rental_company_id === row.rental_company_id)
+    if (!tv) continue
+    ;(requested[tv.id] ??= []).push({
+      item: itemName.get(row.catalog_item_id) ?? tpdf('unknownItem'),
+      vendor: tv.name,
+      requested: row.requested_quantity,
+      granted: row.quantity,
+      status: row.status as 'pending' | 'accepted',
+    })
+  }
   const venueName = (project.venues as unknown as { name: string } | null)?.name ?? (await getTranslations('Common'))('unknownVenue')
   const title = projectTitle(project.couple_names, venueName)
 
@@ -73,7 +96,8 @@ export default async function RundownPage({ params }: { params: Promise<Params> 
           eventDate={project.event_date}
           days={(daysRes.data ?? []) as DbProjectDay[]}
           initialBlocks={(blocksRes.data ?? []) as DbTimetableBlock[]}
-          vendors={(vendorsRes.data ?? []) as DbTeamVendor[]}
+          vendors={teamVendors}
+          requested={requested}
         />
       </div>
     </main>

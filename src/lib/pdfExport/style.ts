@@ -58,8 +58,6 @@ export type PdfStyle = {
   /** Headings, table headers and the header rule. #rrggbb */
   accent: string
   spacing: PdfSpacing
-  /** Left of the page footer (centre when the team logo is bottom-left). Empty → nothing. */
-  footerText: string
   showLogo: boolean
   logoPosition: LogoPosition
   logoSize: LogoSize
@@ -71,7 +69,6 @@ export const DEFAULT_PDF_STYLE: PdfStyle = {
   baseSize: 9,
   accent: '#282828',
   spacing: 'normal',
-  footerText: '',
   showLogo: true,
   logoPosition: 'bottom-center',
   logoSize: 'medium',
@@ -79,7 +76,6 @@ export const DEFAULT_PDF_STYLE: PdfStyle = {
 
 export const TITLE_SIZE_RANGE = { min: 12, max: 24 } as const
 export const BASE_SIZE_RANGE = { min: 7, max: 12 } as const
-export const FOOTER_TEXT_MAX = 60
 
 /** Logo height in pt (PDF) — the footer band is 40 pt tall, so "large" still fits. */
 export const LOGO_HEIGHT_PT: Record<LogoSize, number> = { small: 16, medium: 24, large: 32 }
@@ -109,7 +105,6 @@ export function normalizePdfStyle(raw: unknown): PdfStyle {
     baseSize: clampNum(r.baseSize, BASE_SIZE_RANGE.min, BASE_SIZE_RANGE.max, d.baseSize),
     accent: typeof r.accent === 'string' && /^#[0-9a-fA-F]{6}$/.test(r.accent) ? r.accent.toLowerCase() : d.accent,
     spacing: typeof r.spacing === 'string' && SPACINGS.has(r.spacing) ? (r.spacing as PdfSpacing) : d.spacing,
-    footerText: typeof r.footerText === 'string' ? r.footerText.replace(/\s+/g, ' ').trim().slice(0, FOOTER_TEXT_MAX) : d.footerText,
     showLogo: typeof r.showLogo === 'boolean' ? r.showLogo : d.showLogo,
     logoPosition: typeof r.logoPosition === 'string' && POSITIONS.has(r.logoPosition) ? (r.logoPosition as LogoPosition) : d.logoPosition,
     logoSize: typeof r.logoSize === 'string' && SIZES.has(r.logoSize) ? (r.logoSize as LogoSize) : d.logoSize,

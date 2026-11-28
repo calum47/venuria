@@ -63,6 +63,8 @@ export type PdfExportData = {
 
 export type PdfSections = {
   plans: boolean
+  /** One card per table: its chairs numbered, with who sits where. */
+  tableViews: boolean
   items: boolean
   seating: boolean
   guests: boolean

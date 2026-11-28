@@ -18,7 +18,7 @@ export type DocSort = 'newest' | 'oldest' | 'name_asc' | 'name_desc'
 
 /** `t` is the "Pay" translator. */
 export function docSortLabel(sort: DocSort, t: Tr): string {
-  return t(`docSort.${sort}`)
+  return t(`docSort_${sort}`)
 }
 
 /** Sentinel for "documents with no vendor" in the vendor filter. Not a possible vendor name. */

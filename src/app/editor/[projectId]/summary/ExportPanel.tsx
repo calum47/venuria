@@ -7,7 +7,7 @@ import type { PdfExportData, PdfSections } from '@/lib/pdfExport/types'
 import { safeFilePart } from '@/lib/pdfExport/text'
 import { supabase } from '@/lib/supabase/client'
 
-const SECTION_KEYS = ['plans', 'items', 'seating', 'guests'] as const satisfies readonly (keyof PdfSections)[]
+const SECTION_KEYS = ['plans', 'tableViews', 'items', 'seating', 'guests'] as const satisfies readonly (keyof PdfSections)[]
 
 export default function ExportPanel({ data }: { data: PdfExportData }) {
   const t = useTranslations('Export')
@@ -15,16 +15,17 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
   const locale = useLocale() as Locale
   const sectionText = {
     plans: { label: t('secPlans'), hint: t('secPlansHint') },
+    tableViews: { label: t('secTableViews'), hint: t('secTableViewsHint') },
     items: { label: t('secItems'), hint: t('secItemsHint') },
     seating: { label: t('secSeating'), hint: t('secSeatingHint') },
     guests: { label: t('secGuests'), hint: t('secGuestsHint') },
   }
-  const [sections, setSections] = useState<PdfSections>({ plans: true, items: true, seating: true, guests: true })
+  const [sections, setSections] = useState<PdfSections>({ plans: true, tableViews: true, items: true, seating: true, guests: true })
   const [roomIds, setRoomIds] = useState<string[]>(data.rooms.map((r) => r.id))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const needsRooms = sections.plans || sections.seating
+  const needsRooms = sections.plans || sections.seating || sections.tableViews
   const anySection = Object.values(sections).some(Boolean)
   const canExport = anySection && (!needsRooms || roomIds.length > 0 || sections.items || sections.guests) && !busy
 

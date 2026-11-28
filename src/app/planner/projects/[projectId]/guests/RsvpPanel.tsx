@@ -172,9 +172,9 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
               <ol className="mt-1 space-y-1">
                 {order.map((k, i) => (
                   <li key={k} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900">
-                    <span className="flex-1">{tg(`section.${k}`)}</span>
-                    <button type="button" aria-label={t('moveUp', { name: tg(`section.${k}`) })} disabled={i === 0} onClick={() => setOrder(moveSection(order, k, -1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↑</button>
-                    <button type="button" aria-label={t('moveDown', { name: tg(`section.${k}`) })} disabled={i === order.length - 1} onClick={() => setOrder(moveSection(order, k, 1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↓</button>
+                    <span className="flex-1">{tg(`section_${k}`)}</span>
+                    <button type="button" aria-label={t('moveUp', { name: tg(`section_${k}`) })} disabled={i === 0} onClick={() => setOrder(moveSection(order, k, -1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label={t('moveDown', { name: tg(`section_${k}`) })} disabled={i === order.length - 1} onClick={() => setOrder(moveSection(order, k, 1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↓</button>
                   </li>
                 ))}
               </ol>

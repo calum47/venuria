@@ -9,7 +9,12 @@ import { updateBlock } from '@/lib/supabase/timetableQueries'
 import { durationLabel, formatRange, readableText, rundownRows } from '@/lib/timetable'
 import { formatDate } from '@/lib/projectDates'
 
+/** What was requested from a Venuria vendor for this project (planner summary), shown under the Materials of the blocks that vendor is tagged on. */
+export type RequestedLine = { item: string; vendor: string; requested: number; granted: number; status: 'pending' | 'accepted' }
+
 type Props = {
+  /** team_vendors.id -> lines requested from that vendor. */
+  requested?: Record<string, RequestedLine[]>
   projectId: string
   title: string
   eventDate: string | null
@@ -28,7 +33,7 @@ function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
-export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors, readOnly = false, timetableHref }: Props) {
+export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors, readOnly = false, timetableHref, requested }: Props) {
   const t = useTranslations('Timetable')
   const locale = useLocale() as Locale
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
@@ -128,7 +133,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
             ) : (
               <ul className="divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white print:border-0">
                 {rows.map((r) => (
-                  <RundownEntry key={r.block.id} row={r} vendor={r.block.vendor_id ? vendorById.get(r.block.vendor_id) : undefined} onPatch={patch} readOnly={readOnly} />
+                  <RundownEntry key={r.block.id} row={r} vendor={r.block.vendor_id ? vendorById.get(r.block.vendor_id) : undefined} onPatch={patch} readOnly={readOnly} requested={r.block.vendor_id ? requested?.[r.block.vendor_id] : undefined} />
                 ))}
               </ul>
             )}
@@ -144,7 +149,9 @@ function RundownEntry({
   vendor,
   onPatch,
   readOnly,
+  requested,
 }: {
+  requested?: RequestedLine[]
   row: ReturnType<typeof rundownRows<DbTimetableBlock>>[number]
   vendor: DbTeamVendor | undefined
   onPatch: (b: DbTimetableBlock, f: Parameters<typeof updateBlock>[1]) => Promise<void>
@@ -185,10 +192,22 @@ function RundownEntry({
         )}
         {b.person && <p className="text-gray-700">{t('inCharge', { person: b.person })}</p>}
         {b.notes && <p className="whitespace-pre-line text-gray-600">{b.notes}</p>}
-        {b.materials.length > 0 && !editMaterials && (
+        {((requested?.length ?? 0) > 0 || b.materials.length > 0) && !editMaterials && (
           <div>
             <p className="text-xs font-medium text-gray-500">{t('materials')}</p>
-            <ul className="list-inside list-disc text-gray-700">{b.materials.map((m, i) => <li key={i}>{m}</li>)}</ul>
+            <ul className="list-inside list-disc text-gray-700">
+              {/* Filled in from the planner summary: what was requested from this vendor for the project. */}
+              {requested?.map((r, i) => (
+                <li key={`req-${i}`}>
+                  {r.status === 'pending'
+                    ? t('materialPending', { count: r.requested, item: r.item, vendor: r.vendor })
+                    : r.granted < r.requested
+                      ? t('materialPartial', { count: r.granted, item: r.item, asked: r.requested })
+                      : t('materialConfirmed', { count: r.granted, item: r.item })}
+                </li>
+              ))}
+              {b.materials.map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
           </div>
         )}
         {editMaterials && (

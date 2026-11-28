@@ -125,7 +125,7 @@ export function UploadForm({
           <Labelled label={t('type')}>
             <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
               {PROJECT_DOC_KINDS.map((k) => (
-                <option key={k} value={k}>{t(`docKind.${k}`)}</option>
+                <option key={k} value={k}>{t(`docKind_${k}`)}</option>
               ))}
             </select>
           </Labelled>

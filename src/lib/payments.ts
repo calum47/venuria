@@ -16,7 +16,7 @@ export const MAX_AMOUNT = 9_999_999_999.99
 
 /** `t` is the "Pay" translator. */
 export function docKindLabel(kind: DbDocumentKind, t: Tr): string {
-  return t(`docKind.${kind}`)
+  return t(`docKind_${kind}`)
 }
 
 /** Types offered for project-level documents. 'receipt' is reserved for PDFs attached to a payment. */

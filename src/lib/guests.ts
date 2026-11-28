@@ -19,7 +19,7 @@ export const MAX_STAY_RANGE_NIGHTS = 31
 export type AgeGroup = 'adult' | 'child' | 'baby'
 /** `t` is the "Guests" translator. */
 export function ageLabel(group: AgeGroup, t: Tr): string {
-  return t(`age.${group}`)
+  return t(`age_${group}`)
 }
 
 // ── Small display helpers ────────────────────────────────────────────────────

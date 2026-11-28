@@ -193,3 +193,85 @@ export function drawPlan(
   doc.setFontSize(7)
   doc.text(`${barCm / 100} m`, box.x + barPt + 4, barY + 2.5)
 }
+
+/** Chairs of one table, numbered clockwise starting from the top (12 o'clock) so the numbers read naturally round the table. */
+export function chairsClockwise(table: PdfObject, objects: PdfObject[]): PdfObject[] {
+  const angle = (o: PdfObject) => {
+    const a = Math.atan2(o.positionCm.y - table.positionCm.y, o.positionCm.x - table.positionCm.x) + Math.PI / 2 // 0 = straight up
+    return ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+  }
+  return objects.filter((o) => o.isChairFor === table.id).sort((a, b) => angle(a) - angle(b))
+}
+
+/**
+ * Draws one table with its chairs, zoomed to fill `box`. Chair `i` carries the number i + 1; `filled[i]` says whether
+ * somebody is assigned (filled chairs get the accent tint, empty ones stay white). The numbers match the list the
+ * caller prints under the drawing.
+ */
+export function drawTableCloseup(
+  doc: jsPDF,
+  table: PdfObject,
+  chairs: PdfObject[],
+  filled: boolean[],
+  catalog: Record<string, PdfCatalogItem>,
+  box: Box,
+  label: string,
+  accent: [number, number, number],
+  font = 'helvetica',
+) {
+  const item = catalog[table.catalogItemId]
+  const w = item?.widthCm ?? 100
+  const d = item?.depthCm ?? 100
+  const round = /round/i.test(item?.name ?? '')
+  const tableShape = round ? null : rotatedRect(table.positionCm, w, d, table.rotationDeg)
+  const chairShapes = chairs.map((c) => {
+    const ci = catalog[c.catalogItemId]
+    return rotatedRect(c.positionCm, ci?.widthCm ?? 45, ci?.depthCm ?? 45, c.rotationDeg)
+  })
+  const pts: Point2D[] = [...chairShapes.flat(), ...(tableShape ?? [])]
+  if (round) pts.push({ x: table.positionCm.x - w / 2, y: table.positionCm.y - w / 2 }, { x: table.positionCm.x + w / 2, y: table.positionCm.y + w / 2 })
+  const xs = pts.map((p) => p.x)
+  const ys = pts.map((p) => p.y)
+  const minX = Math.min(...xs)
+  const minY = Math.min(...ys)
+  const bw = Math.max(1, Math.max(...xs) - minX)
+  const bh = Math.max(1, Math.max(...ys) - minY)
+  const s = Math.min(box.w / bw, box.h / bh)
+  const ox = box.x + (box.w - bw * s) / 2
+  const oy = box.y + (box.h - bh * s) / 2
+  const tx = (x: number) => ox + (x - minX) * s
+  const ty = (y: number) => oy + (y - minY) * s
+  const poly = (shape: Point2D[], style: string) => {
+    const p = shape.map((q) => [tx(q.x), ty(q.y)] as [number, number])
+    const rel: [number, number][] = []
+    for (let i = 1; i < p.length; i++) rel.push([p[i][0] - p[i - 1][0], p[i][1] - p[i - 1][1]])
+    doc.lines(rel, p[0][0], p[0][1], [1, 1], style, true)
+  }
+
+  doc.setLineWidth(0.5)
+  doc.setDrawColor(40, 40, 40)
+  doc.setFillColor(255, 255, 255)
+  if (round) doc.circle(tx(table.positionCm.x), ty(table.positionCm.y), (w / 2) * s, 'FD')
+  else if (tableShape) poly(tableShape, 'FD')
+  doc.setFont(font, 'bold')
+  doc.setFontSize(Math.min(14, Math.max(7, (Math.min(w, d) * s) / 3)))
+  doc.setTextColor(30, 30, 30)
+  doc.text(pdfText(label), tx(table.positionCm.x), ty(table.positionCm.y), { align: 'center', baseline: 'middle' })
+
+  const tint: [number, number, number] = [Math.round(accent[0] + (255 - accent[0]) * 0.8), Math.round(accent[1] + (255 - accent[1]) * 0.8), Math.round(accent[2] + (255 - accent[2]) * 0.8)]
+  chairShapes.forEach((shape, i) => {
+    doc.setLineWidth(0.5)
+    doc.setDrawColor(90, 105, 140)
+    if (filled[i]) doc.setFillColor(...tint)
+    else doc.setFillColor(255, 255, 255)
+    poly(shape, 'FD')
+    const cx = chairs[i].positionCm.x
+    const cy = chairs[i].positionCm.y
+    doc.setFont(font, 'bold')
+    doc.setFontSize(Math.min(9, Math.max(5.5, 45 * s * 0.5)))
+    doc.setTextColor(30, 30, 30)
+    doc.text(String(i + 1), tx(cx), ty(cy), { align: 'center', baseline: 'middle' })
+  })
+  doc.setTextColor(0, 0, 0)
+  doc.setDrawColor(0, 0, 0)
+}

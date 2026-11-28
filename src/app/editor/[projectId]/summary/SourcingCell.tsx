@@ -36,8 +36,10 @@ export default function SourcingCell({
     return o.granted
   }
   const rented = options.reduce((a, o) => a + effective(o), 0)
-  const fromVenue = Math.max(0, used - rented)
-  const stillShort = Math.max(0, fromVenue - venueStock)
+  // Whatever is not rented should come from the venue, but only as far as the venue's own stock reaches.
+  const remaining = Math.max(0, used - rented)
+  const fromVenue = Math.min(remaining, venueStock)
+  const stillShort = remaining - fromVenue
 
   const save = (o: SourceOption, raw: string) => {
     const qty = Math.max(0, Math.floor(Number(raw) || 0))
@@ -57,7 +59,7 @@ export default function SourcingCell({
     <div className="space-y-1.5">
       <p className="text-xs text-gray-600">
         {t('fromVenue', { count: fromVenue })}
-        {stillShort > 0 && <span className="ml-1 font-medium text-amber-700">{t('short', { count: stillShort })}</span>}
+        {stillShort > 0 && <span className="ml-2 font-medium text-amber-700">{t('notCoveredYet', { count: stillShort })}</span>}
       </p>
       {options.length === 0 ? (
         stillShort > 0 && <p className="text-xs text-red-500">{t('noRentalStock')}</p>

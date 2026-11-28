@@ -293,7 +293,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         {doc.label}
       </button>
       <span className="text-gray-400">
-        {t(`docKind.${doc.kind}`)}
+        {t(`docKind_${doc.kind}`)}
         {doc.vendor_name ? ` · ${doc.vendor_name}` : ''} · {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at.slice(0, 10), locale)}
       </span>
       <button onClick={() => removeDocument(doc)} disabled={busy === doc.id} className="ml-auto text-gray-400 hover:text-red-600" aria-label={t('removeLabel', { label: doc.label })}>

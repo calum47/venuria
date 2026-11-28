@@ -264,7 +264,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         </select>
         <select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value as typeof rsvpFilter)} className={input} aria-label={t('filterByRsvp')}>
           <option value="">{t('allAnswers')}</option>
-          {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp.${st}`)}</option>)}
+          {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp_${st}`)}</option>)}
           <option value="pending">{t('pending')}</option>
           <option value="review">{t('toReviewViaLink')}</option>
         </select>
@@ -399,7 +399,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                       {g.age_group !== 'adult' && <span className="ml-1.5"><Pill tone="gray">{ageLabel(g.age_group, t)}</Pill></span>}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {g.rsvp_status ? <Pill tone={g.rsvp_status === 'attending' ? 'green' : g.rsvp_status === 'maybe' ? 'amber' : 'gray'}>{t(`rsvp.${g.rsvp_status}`)}</Pill> : <span className="text-gray-400">{t('pending')}</span>}
+                      {g.rsvp_status ? <Pill tone={g.rsvp_status === 'attending' ? 'green' : g.rsvp_status === 'maybe' ? 'amber' : 'gray'}>{t(`rsvp_${g.rsvp_status}`)}</Pill> : <span className="text-gray-400">{t('pending')}</span>}
                       {g.rsvp_needs_review && <span className="ml-1.5"><Pill tone="blue">{t('toReview')}</Pill></span>}
                     </td>
                     <td className="hidden max-w-[14rem] px-3 py-2 text-gray-700 md:table-cell">
@@ -841,7 +841,7 @@ function GuestPanel(p: PanelProps) {
             <div className="flex flex-wrap items-center gap-2">
               <select value={guest.rsvp_status ?? ''} onChange={(e) => changeRsvp(e.target.value)} disabled={busy !== null} className={input} aria-label={t('rsvpAnswer')}>
                 <option value="">{t('pending')}</option>
-                {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp.${st}`)}</option>)}
+                {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp_${st}`)}</option>)}
               </select>
               <span className="text-xs text-gray-500">
                 {guest.rsvp_at

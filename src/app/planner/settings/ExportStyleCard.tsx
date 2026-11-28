@@ -7,7 +7,6 @@ import { supabase } from '@/lib/supabase/client'
 import {
   BASE_SIZE_RANGE,
   DEFAULT_PDF_STYLE,
-  FOOTER_TEXT_MAX,
   PDF_FONTS,
   TITLE_SIZE_RANGE,
   normalizePdfStyle,
@@ -119,7 +118,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
         const [{ buildProjectPdf }, fonts] = await Promise.all([import('@/lib/pdfExport/build'), loadFontData(style.font)])
         if (cancelled) return
         const doc = buildProjectPdf(data, {
-          sections: { plans: true, items: true, seating: true, guests: true },
+          sections: { plans: true, tableViews: true, items: true, seating: true, guests: true },
           roomIds: data.rooms.map((r) => r.id),
           style,
           fonts,
@@ -295,19 +294,6 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           <div>
             <label className={label}>{t('spacing')}</label>
             <div className="flex gap-4">{SPACINGS.map((o) => radio('spacing', o.value, style.spacing, o.label, () => patch({ spacing: o.value })))}</div>
-          </div>
-
-          <div>
-            <label className={label}>{t('footerText')}</label>
-            <input
-              type="text"
-              value={style.footerText}
-              maxLength={FOOTER_TEXT_MAX}
-              onChange={(e) => setStyle((s) => ({ ...s, footerText: e.target.value.slice(0, FOOTER_TEXT_MAX) }))}
-              onBlur={() => patch({})}
-              placeholder={t('footerPlaceholder')}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
-            />
           </div>
 
           <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-3">

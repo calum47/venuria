@@ -138,7 +138,7 @@ export default function PdfImportReview({
           <span>{t('keepPdfAs')}</span>
           <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label={t('pdfType')} className={input}>
             {[...PROJECT_DOC_KINDS, 'receipt' as const].map((k) => (
-              <option key={k} value={k}>{t(`docKind.${k}`)}</option>
+              <option key={k} value={k}>{t(`docKind_${k}`)}</option>
             ))}
           </select>
           <input value={label} onChange={(e) => setLabel(e.target.value)} aria-label={t('pdfName')} placeholder={t('pdfName')} maxLength={150} className={`${input} min-w-48 flex-1`} />

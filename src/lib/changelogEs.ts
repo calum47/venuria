@@ -11,6 +11,16 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-table-closeups': {
+    title: 'Exportación PDF: mesas en detalle y otras mejoras',
+    items: [
+      'La exportación a PDF incluye la nueva sección «Vista detallada de mesas»: cada mesa ampliada con sus sillas numeradas y el invitado sentado en cada una, cuatro mesas por página. El plano completo de la sala sigue incluido.',
+      'El resumen indica cuántos artículos puede cubrir realmente el local y muestra «Sin cubrir todavía» para el resto, en lugar de contar el local como ilimitado.',
+      'La lista de materiales del cronograma muestra ahora lo que has solicitado a proveedores vinculados, con su estado de confirmación.',
+      'Las listas de proyectos dicen «Creado por: Nombre (Tú)» y «Asignado a: …», y los desplegables de edad y confirmación de la lista de invitados vuelven a mostrar sus etiquetas.',
+      'Se ha quitado la opción de texto de pie de página de los ajustes de estilo de exportación.',
+    ],
+  },
   '2026-11-28-item-requests-planner': {
     title: 'Lo que alquilas a un proveedor ahora es una solicitud que el proveedor responde',
     items: [

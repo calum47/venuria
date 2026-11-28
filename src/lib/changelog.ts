@@ -30,6 +30,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-table-closeups',
+    date: '2026-11-28',
+    title: 'PDF export: table close-ups, plus smaller fixes',
+    roles: ['planner'],
+    items: [
+      'The PDF export has a new "Table close-ups" section: each table zoomed in with its chairs numbered and the guest sitting in each one, four tables per page. The full room plan is still included.',
+      'The summary now says how many items the venue can really cover and shows "Not covered yet" for the rest, instead of counting the venue as unlimited.',
+      'The timetable materials list now shows the items you requested from linked vendors, with their confirmation status.',
+      'Project lists read "Created by: Name (You)" and "Assigned to: …", and the age and RSVP dropdowns in the guest list show proper labels again.',
+      'The footer text option was removed from the export look settings.',
+    ],
+  },
+  {
     id: '2026-11-28-item-requests-planner',
     date: '2026-11-28',
     title: 'Items you rent from a vendor are now requests the vendor answers',

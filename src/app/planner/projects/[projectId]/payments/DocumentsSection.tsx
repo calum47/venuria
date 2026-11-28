@@ -184,7 +184,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
             </span>
           )}
           <span className="text-gray-400">
-            {t(`docKind.${d.kind}`)}
+            {t(`docKind_${d.kind}`)}
             {d.vendor_name ? ` · ${d.vendor_name}` : ''} · {formatBytes(d.size_bytes)} · {day(d)}
           </span>
           <span className="ml-auto flex items-center gap-3">
@@ -463,7 +463,7 @@ function EditForm({
         <Labelled label={t('type')}>
           <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
             {kinds.map((k) => (
-              <option key={k} value={k}>{t(`docKind.${k}`)}</option>
+              <option key={k} value={k}>{t(`docKind_${k}`)}</option>
             ))}
           </select>
         </Labelled>

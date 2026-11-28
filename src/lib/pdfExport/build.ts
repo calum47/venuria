@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { zoneAreaM2 } from '@/lib/zones'
 import { INTL_TAG } from '@/i18n/config'
-import { drawPlan, tableHeading, tablesOfRoom } from './plan'
+import { chairsClockwise, drawPlan, drawTableCloseup, tableHeading, tablesOfRoom } from './plan'
 import { formatDateLong, pdfText } from './text'
 import type { PdfExportData, PdfGuest, PdfOptions } from './types'
 import { BRAND_HEIGHT_PT, DEFAULT_PDF_STYLE, LOGO_HEIGHT_PT, LOGO_MAX_ASPECT, SPACING_FACTOR, fontOption, hexToRgb } from './style'
@@ -167,6 +167,98 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
           y += lines.length * LH(11) + 3
         }
       }
+    }
+  }
+
+  // ── 1b. Table close-ups: each table zoomed in, chairs numbered, with who sits where ─────
+  if (opts.sections.tableViews) {
+    const guestAtSeat = new Map<string, PdfGuest>()
+    for (const a of data.assignments) {
+      const g = guestById.get(a.guestId)
+      if (g) guestAtSeat.set(a.layoutObjectId, g)
+    }
+    const COLS = 2
+    const ROWS = 2
+    const gx = 16
+    const gy = 14
+    const top = TOP + 24 + TG
+    const cardW = (842 - 2 * M - gx * (COLS - 1)) / COLS
+    const cardH = (595 - 50 - top - gy * (ROWS - 1)) / ROWS
+    let any = false
+    for (const room of rooms) {
+      const tables = tablesOfRoom(room.id, data.objects, catalog)
+      if (tables.length === 0) continue
+      any = true
+      const perPage = COLS * ROWS
+      for (let start = 0; start < tables.length; start += perPage) {
+        newPage('l')
+        doc.setFont(F, 'bold')
+        doc.setFontSize(T(15))
+        doc.setTextColor(...accent)
+        doc.text(pdfText(start === 0 ? t('tableViewsTitle', { room: room.name }) : t('tableViewsContinued', { room: room.name })), M, TOP + 8)
+        tables.slice(start, start + perPage).forEach((tb, j) => {
+          const idx = start + j
+          const cx = M + (j % COLS) * (cardW + gx)
+          const cy = top + Math.floor(j / COLS) * (cardH + gy)
+          doc.setDrawColor(200, 200, 200)
+          doc.setLineWidth(0.5)
+          doc.roundedRect(cx, cy, cardW, cardH, 4, 4, 'S')
+          const heading = tableHeading(tb, idx, t)
+          doc.setFont(F, 'bold')
+          doc.setFontSize(T(11))
+          doc.setTextColor(...accent)
+          doc.text(pdfText(heading), cx + 10, cy + 16)
+
+          const chairs = chairsClockwise(tb, data.objects)
+          const filled = chairs.map((c) => guestAtSeat.has(c.id))
+          const drawW = cardW * 0.42
+          drawTableCloseup(doc, tb, chairs, filled, catalog, { x: cx + 10, y: cy + 26, w: drawW - 10, h: cardH - 36 }, pdfText(heading), accent, F)
+
+          const lx = cx + drawW + 14
+          const lw = cardW - drawW - 24
+          const extra = [...guestAtSeat.entries()].filter(([seat]) => seat === tb.id).map(([, g]) => g)
+          const lines = chairs.length + extra.length + (extra.length > 0 ? 1 : 0)
+          const avail = cardH - 36
+          const pitch = Math.min(LH(15), avail / Math.max(1, lines))
+          const fs = Math.max(6, Math.min(B(9), pitch * 0.72))
+          let ly = cy + 32
+          doc.setFontSize(fs)
+          chairs.forEach((c, i) => {
+            const g = guestAtSeat.get(c.id)
+            doc.setFont(F, 'bold')
+            doc.setTextColor(90, 90, 90)
+            doc.text(`${i + 1}`, lx + 12, ly, { align: 'right' })
+            doc.setFont(F, 'normal')
+            if (g) {
+              doc.setTextColor(20, 20, 20)
+              doc.text((doc.splitTextToSize(pdfText(g.name), lw - 20)[0] as string) ?? '', lx + 18, ly)
+            } else {
+              doc.setTextColor(160, 160, 160)
+              doc.text(t('chairFree'), lx + 18, ly)
+            }
+            ly += pitch
+          })
+          if (extra.length > 0) {
+            doc.setFont(F, 'bold')
+            doc.setTextColor(90, 90, 90)
+            doc.text(t('atTableNoChair'), lx, ly)
+            ly += pitch
+            doc.setFont(F, 'normal')
+            doc.setTextColor(20, 20, 20)
+            for (const g of extra) {
+              doc.text((doc.splitTextToSize(pdfText(g.name), lw - 10)[0] as string) ?? '', lx + 8, ly)
+              ly += pitch
+            }
+          }
+        })
+      }
+    }
+    if (!any) {
+      newPage('l')
+      doc.setFont(F, 'normal')
+      doc.setFontSize(B(10))
+      doc.setTextColor(60, 60, 60)
+      doc.text(t('tableViewsEmpty'), M, TOP + 32 + TG)
     }
   }
 
@@ -376,8 +468,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.line(M, 33, w - M, 33)
 
     // Footer. The Venuria mark is fixed at the bottom right and cannot be turned off; the page
-    // number sits just left of it. The team logo takes the bottom left or centre (their choice)
-    // and the footer text uses whichever of those two it leaves free.
+    // number sits just left of it. The team logo takes the bottom left or centre (their choice).
     const brandH = BRAND_HEIGHT_PT
     let brandLeft: number
     if (opts.brandMark) {
@@ -399,9 +490,6 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.text(t('pageOf', { page: p, total }), brandLeft - 12, h - 20, { align: 'right' })
 
     const logoSlot = logo ? (style.logoPosition === 'bottom-left' ? 'left' : 'center') : null
-    const textSlot = logoSlot === 'left' ? 'center' : 'left'
-    const footerText = pdfText(style.footerText)
-    if (footerText) doc.text(footerText, textSlot === 'left' ? M : w / 2, h - 20, { align: textSlot })
 
     if (logo && logoSlot) {
       const aspect = Math.min(logo.widthPx / logo.heightPx, LOGO_MAX_ASPECT)

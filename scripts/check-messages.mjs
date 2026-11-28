@@ -3,6 +3,12 @@ import { readFileSync } from 'node:fs'
 const load = (l) => JSON.parse(readFileSync(new URL(`../src/messages/${l}.json`, import.meta.url), 'utf8'))
 const flat = (o, p = '') => Object.entries(o).flatMap(([k, v]) => typeof v === 'object' ? flat(v, `${p}${k}.`) : [[`${p}${k}`, v]])
 const en = Object.fromEntries(flat(load('en'))), es = Object.fromEntries(flat(load('es')))
+// next-intl reads a dot in a key as nesting, so a flat key like "age.adult" is never found at runtime
+// (the screen shows "Guests.age.adult"). Keys must not contain dots.
+const dotted = []
+const walkKeys = (o, p = '') => { for (const [k, v] of Object.entries(o)) { if (k.includes('.')) dotted.push(`${p}${k}`); if (v && typeof v === 'object') walkKeys(v, `${p}${k}.`) } }
+walkKeys(load('en')); walkKeys(load('es'))
+if (dotted.length) { console.error('Message keys must not contain dots:', [...new Set(dotted)].join(', ')); process.exit(1) }
 // ICU-aware: variables are the argument names, plus any variable used inside plural/select branches.
 // Branch labels (one/other/=0 …) and the literal words in branches are not variables.
 const vars = (s) => {

@@ -56,14 +56,11 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
     })
   }
 
-  const who =
-    project.creatorId === meId
-      ? tx('createdByYou')
-      : tx('createdByName', { name: project.creatorName })
+  const who = tx('createdByName', { name: project.creatorId === meId ? tx('nameYou', { name: project.creatorName }) : project.creatorName })
   const assignee =
     project.assignees.length === 0
       ? null
-      : tx('assignedTo', { names: project.assignees.map((a) => (a.id === meId ? tx('you') : a.name)).join(', ') })
+      : tx('assignedTo', { names: project.assignees.map((a) => (a.id === meId ? tx('nameYou', { name: a.name }) : a.name)).join(', ') })
   const viewOnly = project.access === 'view'
 
   return (

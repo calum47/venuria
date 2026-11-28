@@ -179,7 +179,7 @@ export default function PaymentForm({
                 <span>{t('attachPdfAs')}</span>
                 <select value={pdfKind} onChange={(e) => setPdfKind(e.target.value as DbDocumentKind)} aria-label={t('pdfType')} className={input}>
                   {[...PROJECT_DOC_KINDS, 'receipt' as const].map((k) => (
-                    <option key={k} value={k}>{t(`docKind.${k}`)}</option>
+                    <option key={k} value={k}>{t(`docKind_${k}`)}</option>
                   ))}
                 </select>
                 <input value={pdfLabel} onChange={(e) => setPdfLabel(e.target.value)} aria-label={t('pdfName')} placeholder={t('pdfName')} maxLength={150} className={`${input} min-w-48 flex-1`} />
