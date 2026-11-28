@@ -9,7 +9,7 @@ import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import { formatDate } from '@/lib/projectDates'
 import { GUEST_PHOTOS_BUCKET, buildSeatIndex } from '@/lib/guests'
 import { RSVP_MEDIA_BUCKET } from '@/lib/rsvpContent'
-import type { DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import type { DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import GuestsApp from './GuestsApp'
 import { getProjectAccess } from '@/lib/projectAccess'
 import ViewOnlyBanner from '@/components/ViewOnlyBanner'
@@ -55,7 +55,7 @@ export default async function GuestsPage({
   if (!project) notFound()
   const access = await getProjectAccess(supabase, projectId)
 
-  const [guestsRes, familiesRes, staysRes, assignRes, objectsRes, roomsRes, rsvpRes, rsvpPhotosRes, rsvpHotelsRes] = await Promise.all([
+  const [guestsRes, familiesRes, staysRes, assignRes, objectsRes, roomsRes, rsvpRes, rsvpPhotosRes, rsvpHotelsRes, rsvpEventsRes] = await Promise.all([
     supabase.from('guests').select('*').eq('project_id', projectId).order('name'),
     supabase.from('guest_families').select('*').eq('project_id', projectId).order('name'),
     supabase.from('guest_stays').select('*').eq('project_id', projectId).order('night'),
@@ -67,6 +67,7 @@ export default async function GuestsPage({
     supabase.from('project_rsvp').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('project_rsvp_photos').select('*').eq('project_id', projectId).order('position').order('created_at'),
     supabase.from('project_rsvp_hotels').select('*').eq('project_id', projectId).order('position').order('created_at'),
+    supabase.from('project_rsvp_events').select('*').eq('project_id', projectId).order('event_date', { nullsFirst: false }).order('starts_at', { nullsFirst: false }).order('position'),
   ])
 
   const objects = objectsRes.data ?? []
@@ -88,10 +89,11 @@ export default async function GuestsPage({
   }
 
   const loadError =
-    guestsRes.error ?? familiesRes.error ?? staysRes.error ?? assignRes.error ?? objectsRes.error ?? roomsRes.error ?? rsvpRes.error ?? rsvpPhotosRes.error ?? rsvpHotelsRes.error ?? catalogRes.error
+    guestsRes.error ?? familiesRes.error ?? staysRes.error ?? assignRes.error ?? objectsRes.error ?? roomsRes.error ?? rsvpRes.error ?? rsvpPhotosRes.error ?? rsvpHotelsRes.error ?? rsvpEventsRes.error ?? catalogRes.error
   const rsvpCfg = (rsvpRes.data ?? null) as DbProjectRsvp | null
   const rsvpPhotos = (rsvpPhotosRes.data ?? []) as DbRsvpPhoto[]
   const rsvpHotels = (rsvpHotelsRes.data ?? []) as DbRsvpHotel[]
+  const rsvpEvents = (rsvpEventsRes.data ?? []) as DbRsvpEvent[]
   const rsvpPaths = [rsvpCfg?.cover_path, ...rsvpPhotos.map((p) => p.path), ...rsvpHotels.map((x) => x.image_path)].filter((p): p is string => !!p)
   const rsvpUrls: Record<string, string> = {}
   if (rsvpPaths.length > 0) {
@@ -139,6 +141,7 @@ export default async function GuestsPage({
           initialRsvp={rsvpCfg}
           initialRsvpPhotos={rsvpPhotos}
           initialRsvpHotels={rsvpHotels}
+          initialRsvpEvents={rsvpEvents}
           initialRsvpUrls={rsvpUrls}
           origin={origin}
           hasContactEmail={!!ctx.team.contactEmail}

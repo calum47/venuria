@@ -30,6 +30,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-day-by-day',
+    date: '2026-11-28',
+    title: 'RSVP page: a day-by-day programme and a wedding-day schedule',
+    roles: ['planner'],
+    items: [
+      'The details block of the RSVP page is now a "Day by day" programme. Add an entry for each moment of the weekend with its day, time frame, title, place, a short description and a label (for example the dress code). Guests see them ordered by day and time.',
+      'The wedding-day schedule is now its own section, with its own switch and its own place in the section order. Pages that already had a schedule keep showing it.',
+      'Text you wrote before translations existed is translated as soon as you open the RSVP page content, and there is a "Translate now" button. Guests who switch language then see your text in that language too.',
+    ],
+  },
+  {
     id: '2026-11-28-rsvp-translations',
     date: '2026-11-28',
     title: 'RSVP page: your text now changes language too',

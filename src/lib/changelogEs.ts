@@ -11,6 +11,14 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-day-by-day': {
+    title: 'Página de confirmación: programa día a día y programa del día de la boda',
+    items: [
+      'El bloque de detalles de la página de confirmación ahora es un programa «Día a día». Añade una entrada por cada momento del fin de semana con su día, horario, título, lugar, una breve descripción y una etiqueta (por ejemplo, el código de vestimenta). Los invitados las ven ordenadas por día y hora.',
+      'El programa del día de la boda es ahora una sección propia, con su propio interruptor y su lugar en el orden de secciones. Las páginas que ya tenían un programa lo siguen mostrando.',
+      'El texto que escribiste antes de que existieran las traducciones se traduce en cuanto abres el contenido de la página de confirmación, y hay un botón «Traducir ahora». Así, los invitados que cambian de idioma ven tu texto en ese idioma.',
+    ],
+  },
   '2026-11-28-rsvp-translations': {
     title: 'Página de confirmación: tu texto también cambia de idioma',
     items: [

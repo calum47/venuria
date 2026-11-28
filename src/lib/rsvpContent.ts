@@ -12,6 +12,7 @@ import { pickText, type TranslationLang } from './rsvpTranslations'
 export const RSVP_MEDIA_BUCKET = 'rsvp-media'
 export const MAX_AREA_PHOTOS = 6
 export const MAX_HOTELS = 8
+export const MAX_EVENTS = 14
 /** Longest edge, in pixels, after the browser shrinks a photo before upload. */
 export const RSVP_COVER_EDGE = 1600
 export const RSVP_PHOTO_EDGE = 1200
@@ -61,9 +62,23 @@ export type PublicHotel = {
   position: { lat: number; lng: number } | null
 }
 
+export type PublicEvent = {
+  id: string
+  date: string | null
+  startsAt: string | null
+  endsAt: string | null
+  title: string
+  location: string | null
+  description: string | null
+  tag: string | null
+}
+
 export type PublicContent = {
   coverUrl: string | null
-  details: { lines: string[]; dressCode: string | null; mapUrl: string | null } | null
+  /** The day-by-day programme, plus the dress code and the venue map link. */
+  details: { events: PublicEvent[]; dressCode: string | null; mapUrl: string | null } | null
+  /** The wedding-day schedule, one line per row. */
+  schedule: { lines: string[] } | null
   area: { text: string | null; photos: { url: string; caption: string | null }[] } | null
   /** Empty (and no map) = the hotels section is not shown. */
   hotels: PublicHotel[]
@@ -78,6 +93,7 @@ type CfgLike = {
   map_url: string | null
   area_text: string | null
   show_details: boolean
+  show_schedule: boolean
   show_area: boolean
   show_hotels: boolean
   show_map: boolean
@@ -96,8 +112,21 @@ export function buildPublicContent(
   hotels: { id: string; name: string; address: string | null; url: string | null; booking_note: string | null; description: string | null; image_path: string | null; maps_url: string | null; lat: number | null; lng: number | null; translations: unknown }[],
   urls: Record<string, string>,
   lang: TranslationLang,
+  eventRows: { id: string; position: number; event_date: string | null; starts_at: string | null; ends_at: string | null; title: string; location: string | null; description: string | null; tag: string | null; translations: unknown }[] = [],
 ): PublicContent {
   // The planner's own wording, in the guest's language when a translation is stored for it (migration 055).
+  const events: PublicEvent[] = [...eventRows]
+    .sort((a, b) => (a.event_date ?? '9999').localeCompare(b.event_date ?? '9999') || (a.starts_at ?? '99').localeCompare(b.starts_at ?? '99') || a.position - b.position)
+    .map((e) => ({
+      id: e.id,
+      date: e.event_date,
+      startsAt: e.starts_at,
+      endsAt: e.ends_at,
+      title: pickText(e.translations, lang, 'title', e.title)?.trim() || e.title,
+      location: pickText(e.translations, lang, 'location', e.location)?.trim() || null,
+      description: pickText(e.translations, lang, 'description', e.description)?.trim() || null,
+      tag: pickText(e.translations, lang, 'tag', e.tag)?.trim() || null,
+    }))
   const lines = scheduleLines(pickText(cfg.translations, lang, 'schedule', cfg.schedule))
   const dressCode = pickText(cfg.translations, lang, 'dress_code', cfg.dress_code)?.trim() || null
   const mapUrl = cfg.map_url?.trim() || null
@@ -123,7 +152,8 @@ export function buildPublicContent(
 
   return {
     coverUrl: cfg.cover_path ? urls[cfg.cover_path] ?? null : null,
-    details: cfg.show_details && (lines.length > 0 || dressCode || mapUrl) ? { lines, dressCode, mapUrl } : null,
+    details: cfg.show_details && (events.length > 0 || dressCode || mapUrl) ? { events, dressCode, mapUrl } : null,
+    schedule: cfg.show_schedule && lines.length > 0 ? { lines } : null,
     area: cfg.show_area && (areaText || areaPhotos.length > 0) ? { text: areaText, photos: areaPhotos } : null,
     hotels: hotelList,
     map,

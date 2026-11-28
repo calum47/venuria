@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import type { Locale } from '@/i18n/config'
 
-import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import {
   createFamily,
   createGuest,
@@ -64,6 +64,7 @@ type Props = {
   /** RSVP page content (migration 026): area photos, hotels, and signed URLs for their images. */
   initialRsvpPhotos: DbRsvpPhoto[]
   initialRsvpHotels: DbRsvpHotel[]
+  initialRsvpEvents: DbRsvpEvent[]
   initialRsvpUrls: Record<string, string>
   /** From ?guest=ID (the editor's "Edit details" link): open this guest's panel on load. */
   initialSelectedId?: string | null
@@ -80,7 +81,7 @@ function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
-export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null, readOnly = false }: Props) {
+export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpEvents, initialRsvpUrls, initialSelectedId = null, readOnly = false }: Props) {
   const t = useTranslations('Guests')
   const locale = useLocale() as Locale
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
@@ -209,6 +210,8 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         teamId={teamId}
         initialPhotos={initialRsvpPhotos}
         initialHotels={initialRsvpHotels}
+        initialEvents={initialRsvpEvents}
+        eventDate={eventDate}
         initialUrls={initialRsvpUrls}
         hasContactEmail={hasContactEmail}
       />

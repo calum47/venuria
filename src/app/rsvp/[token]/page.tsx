@@ -5,7 +5,7 @@ import { isPlausibleToken, rsvpOpen } from '@/lib/rsvp'
 import { RSVP_MEDIA_BUCKET, buildPublicContent, type PublicContent } from '@/lib/rsvpContent'
 import { LANGS, TEXT, pickLang, type Lang } from '@/lib/rsvpText'
 import { pickText } from '@/lib/rsvpTranslations'
-import type { DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import type { DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import RsvpForm from './RsvpForm'
 
 export const dynamic = 'force-dynamic'
@@ -56,10 +56,11 @@ export default async function RsvpPage({ params, searchParams }: Props) {
     )
   }
 
-  const [{ data: project }, { data: photoRows }, { data: hotelRows }] = await Promise.all([
+  const [{ data: project }, { data: photoRows }, { data: hotelRows }, { data: eventRows }] = await Promise.all([
     admin.from('projects').select('event_date, couple_names, team_id, venues(name)').eq('id', cfg.project_id).maybeSingle(),
     admin.from('project_rsvp_photos').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
     admin.from('project_rsvp_hotels').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
+    admin.from('project_rsvp_events').select('*').eq('project_id', cfg.project_id).order('position').order('created_at'),
   ])
   const photos = (photoRows ?? []) as DbRsvpPhoto[]
   const hotels = (hotelRows ?? []) as DbRsvpHotel[]
@@ -92,7 +93,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
           allowPlusOne={cfg.allow_plus_one}
           venueName={venueName}
           eventDate={project?.event_date ?? null}
-          contents={Object.fromEntries(LANGS.map((l) => [l, buildPublicContent(cfg, photos, hotels, urls, l)])) as Record<Lang, PublicContent>}
+          contents={Object.fromEntries(LANGS.map((l) => [l, buildPublicContent(cfg, photos, hotels, urls, l, (eventRows ?? []) as DbRsvpEvent[])])) as Record<Lang, PublicContent>}
           preview={previewOk ? (live ? 'live' : 'off') : null}
           sectionOrder={normalizeSectionOrder(cfg.section_order)}
           controllerName={controllerName}

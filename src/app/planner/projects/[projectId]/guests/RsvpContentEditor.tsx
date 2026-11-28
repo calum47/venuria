@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import type { DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import { useEffect, useState } from 'react'
+import type { DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import {
   addAreaPhoto,
+  createEvent,
   createHotel,
   deleteAreaPhoto,
+  deleteEvent,
   deleteHotel,
   removeCoverPhoto,
   removeHotelImage,
@@ -14,13 +16,15 @@ import {
   setHotelImage,
   updateAreaPhotoCaption,
   translateRsvpText,
+  updateEvent,
   updateHotel,
+  type EventInput,
   type HotelInput,
   type RsvpContentPatch,
 } from '@/lib/supabase/rsvpQueries'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
 import { useTranslations } from 'next-intl'
-import { MAX_AREA_PHOTOS, MAX_HOTELS, RSVP_COVER_EDGE, RSVP_PHOTO_EDGE, normalizeWebUrl } from '@/lib/rsvpContent'
+import { MAX_AREA_PHOTOS, MAX_EVENTS, MAX_HOTELS, RSVP_COVER_EDGE, RSVP_PHOTO_EDGE, normalizeWebUrl } from '@/lib/rsvpContent'
 import { rsvpPath } from '@/lib/rsvp'
 
 const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900'
@@ -58,6 +62,9 @@ type Props = {
   onCfg: (c: DbProjectRsvp) => void
   initialPhotos: DbRsvpPhoto[]
   initialHotels: DbRsvpHotel[]
+  initialEvents: DbRsvpEvent[]
+  /** The wedding date, used as the day of a new day-by-day entry. */
+  eventDate: string | null
   /** Signed URLs (path → URL) for the images already saved. */
   initialUrls: Record<string, string>
 }
@@ -95,12 +102,16 @@ function Thumb({ url, alt, className }: { url: string | undefined; alt: string; 
  * section can be switched off without losing what was typed. Hotels here are a
  * list on the page only; a guest's own hotel per night stays free text.
  */
-export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCfg, initialPhotos, initialHotels, initialUrls }: Props) {
+export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCfg, initialPhotos, initialHotels, initialEvents, eventDate, initialUrls }: Props) {
   const t = useTranslations('Rsvp')
   const tg = useTranslations('Guests')
   const [urls, setUrls] = useState<Record<string, string>>(initialUrls)
   const [photos, setPhotos] = useState<DbRsvpPhoto[]>(initialPhotos)
   const [hotels, setHotels] = useState<DbRsvpHotel[]>(initialHotels)
+  const [events, setEvents] = useState<DbRsvpEvent[]>(initialEvents)
+  const [addingEvent, setAddingEvent] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<string | null>(null)
+  const [translating, setTranslating] = useState(false)
   const [schedule, setSchedule] = useState(cfg?.schedule ?? '')
   const [dress, setDress] = useState(cfg?.dress_code ?? '')
   const [mapUrl, setMapUrl] = useState(cfg?.map_url ?? '')
@@ -114,12 +125,13 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const showDetails = cfg?.show_details ?? true
   const showArea = cfg?.show_area ?? true
+  const showSchedule = cfg?.show_schedule ?? true
   const showHotels = cfg?.show_hotels ?? true
   const showMap = cfg?.show_map ?? false
   const mapAddressDirty = (mapAddress.trim() || null) !== (cfg?.map_address ?? null)
 
-  const detailsDirty =
-    (schedule.trim() || null) !== (cfg?.schedule ?? null) || (dress.trim() || null) !== (cfg?.dress_code ?? null) || (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
+  const detailsDirty = (dress.trim() || null) !== (cfg?.dress_code ?? null) || (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
+  const scheduleDirty = (schedule.trim() || null) !== (cfg?.schedule ?? null)
   const areaDirty = (areaText.trim() || null) !== (cfg?.area_text ?? null)
 
   const run = async (key: string, fn: () => Promise<void>) => {
@@ -155,7 +167,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         position = { map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null }
         if (!r.point && (link.url || cfg?.map_address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapVenueMissing'))
       }
-      await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url, ...position })
+      await save({ dress_code: dress.trim() || null, map_url: link.url, ...position })
       setMapUrl(link.url ?? '')
       await translateAfter()
     })
@@ -193,13 +205,19 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       if (unreachable) setNotice(t('mapLookupUnreachable'))
     })
 
+  const saveSchedule = () =>
+    run('schedule', async () => {
+      await save({ schedule: schedule.trim() || null })
+      await translateAfter()
+    })
+
   const saveArea = () =>
     run('area', async () => {
       await save({ area_text: areaText.trim() || null })
       await translateAfter()
     })
 
-  const toggle = (key: 'show_details' | 'show_area' | 'show_hotels', value: boolean) => run(`toggle-${key}`, () => save({ [key]: value }))
+  const toggle = (key: 'show_details' | 'show_schedule' | 'show_area' | 'show_hotels', value: boolean) => run(`toggle-${key}`, () => save({ [key]: value }))
 
   const pickCover = (file: File) =>
     run('cover', async () => {
@@ -265,6 +283,46 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       await translateAfter()
     })
 
+  const saveEvent = (id: string | null, data: EventInput) =>
+    run('event', async () => {
+      if (id) {
+        const u = await updateEvent(id, data)
+        setEvents((prev) => prev.map((x) => (x.id === u.id ? u : x)))
+        setEditingEvent(null)
+      } else {
+        const position = events.reduce((m, e) => Math.max(m, e.position), 0) + 1
+        const c = await createEvent(projectId, data, position)
+        setEvents((prev) => [...prev, c])
+        setAddingEvent(false)
+      }
+      await translateAfter()
+    })
+
+  const dropEvent = (e: DbRsvpEvent) =>
+    run(`event-${e.id}`, async () => {
+      await deleteEvent(e.id)
+      setEvents((prev) => prev.filter((x) => x.id !== e.id))
+    })
+
+  /** Translates whatever has no translation yet, and says so: this is also how older text gets translated. */
+  const translateNow = async () => {
+    setError(null)
+    setNotice(null)
+    setTranslating(true)
+    const r = await translateRsvpText(projectId)
+    setTranslating(false)
+    setNotice(r === 'ok' ? t('translateDone') : r === 'not_configured' ? t('translateNotConfigured') : t('translateFailed'))
+  }
+
+  // Text written before translations existed has none yet: translate it as soon as the planner opens this page.
+  useEffect(() => {
+    void (async () => {
+      const r = await translateRsvpText(projectId)
+      if (r === 'failed') setNotice(t('translateFailed'))
+    })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on opening
+  }, [])
+
   const dropHotel = (h: DbRsvpHotel) =>
     run(`hotel-${h.id}`, async () => {
       await deleteHotel(h)
@@ -286,7 +344,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       setHotels((prev) => prev.map((x) => (x.id === u.id ? u : x)))
     })
 
-  const showToggle = (key: 'show_details' | 'show_area' | 'show_hotels', on: boolean, label: string) => (
+  const showToggle = (key: 'show_details' | 'show_schedule' | 'show_area' | 'show_hotels', on: boolean, label: string) => (
     <label className="flex items-center gap-2 text-xs text-gray-700">
       <input type="checkbox" checked={on} disabled={busy !== null} onChange={(e) => toggle(key, e.target.checked)} />
       {label}
@@ -306,7 +364,10 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       <p className="text-xs text-gray-500">
         {t('sectionsIntro')}
       </p>
-      <p className="text-xs text-gray-500">{t('translateIntro')}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="min-w-0 flex-1 text-xs text-gray-500">{t('translateIntro')}</p>
+        <button type="button" className={btn} disabled={busy !== null || translating} onClick={translateNow}>{translating ? t('translating') : t('translateNow')}</button>
+      </div>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
       {notice && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">{notice}</p>}
@@ -325,17 +386,43 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         <p className="text-xs text-gray-500">{t('coverHelp')}</p>
       </div>
 
-      {/* Details */}
+      {/* Day by day */}
       <div className={section}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900">{t('details')}</p>
+          <p className="text-sm font-medium text-gray-900">{t('dayByDayCount', { count: events.length, max: MAX_EVENTS })}</p>
           {showToggle('show_details', showDetails, t('showOnPage'))}
         </div>
-        <label className="block text-xs text-gray-600">
-          {t('schedule')}
-          <textarea value={schedule} onChange={(e) => setSchedule(e.target.value)} maxLength={1000} rows={4} className={input + ' mt-1 block w-full'} />
-        </label>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <p className="text-xs text-gray-500">{t('dayByDayHelp')}</p>
+
+        {events.map((e) =>
+          editingEvent === e.id ? (
+            <EventForm key={e.id} initial={e} defaultDate={eventDate} busy={busy === 'event'} onSave={(d) => saveEvent(e.id, d)} onCancel={() => setEditingEvent(null)} />
+          ) : (
+            <div key={e.id} className="flex flex-wrap items-start gap-3 rounded-lg border border-gray-200 p-2">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-xs text-gray-500">
+                  {[e.event_date, e.starts_at && e.ends_at ? `${e.starts_at}–${e.ends_at}` : e.starts_at ?? e.ends_at].filter(Boolean).join(' · ')}
+                </p>
+                <p className="text-sm font-medium text-gray-900">{e.title}</p>
+                {e.location && <p className="text-xs text-gray-500">{e.location}</p>}
+                {e.description && <p className="text-xs text-gray-700">{e.description}</p>}
+                {e.tag && <p className="text-xs uppercase tracking-wide text-gray-500">{e.tag}</p>}
+              </div>
+              <div className="flex gap-1.5">
+                <button type="button" className={btn} disabled={busy !== null} onClick={() => { setEditingEvent(e.id); setAddingEvent(false) }}>{t('edit')}</button>
+                <button type="button" className={btn} disabled={busy !== null} onClick={() => dropEvent(e)}>{t('deleteEvent')}</button>
+              </div>
+            </div>
+          ),
+        )}
+
+        {addingEvent ? (
+          <EventForm initial={null} defaultDate={eventDate} busy={busy === 'event'} onSave={(d) => saveEvent(null, d)} onCancel={() => setAddingEvent(false)} />
+        ) : (
+          <button type="button" className={btn} disabled={busy !== null || events.length >= MAX_EVENTS} onClick={() => { setAddingEvent(true); setEditingEvent(null) }}>{t('addEventBtn')}</button>
+        )}
+
+        <div className="grid gap-2 pt-2 sm:grid-cols-2">
           <label className="block text-xs text-gray-600">
             {t('dressCode')}
             <input value={dress} onChange={(e) => setDress(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} />
@@ -346,6 +433,19 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           </label>
         </div>
         <button type="button" onClick={saveDetails} disabled={!detailsDirty || busy !== null} className={btnPrimary}>{busy === 'details' ? tg('saving') : t('saveDetails')}</button>
+      </div>
+
+      {/* Wedding-day schedule */}
+      <div className={section}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-gray-900">{t('weddingDaySchedule')}</p>
+          {showToggle('show_schedule', showSchedule, t('showOnPage'))}
+        </div>
+        <label className="block text-xs text-gray-600">
+          {t('schedule')}
+          <textarea value={schedule} onChange={(e) => setSchedule(e.target.value)} maxLength={1000} rows={6} className={input + ' mt-1 block w-full'} />
+        </label>
+        <button type="button" onClick={saveSchedule} disabled={!scheduleDirty || busy !== null} className={btnPrimary}>{busy === 'schedule' ? tg('saving') : t('saveSchedule')}</button>
       </div>
 
       {/* Area */}
@@ -490,6 +590,48 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
         <button type="button" onClick={onCancel} className={btn}>{tg('cancel')}</button>
       </div>
       {!initial && <p className="text-xs text-gray-500">{t('hotelPhotoLater')}</p>}
+    </form>
+  )
+}
+
+function EventForm({ initial, defaultDate, busy, onSave, onCancel }: { initial: DbRsvpEvent | null; defaultDate: string | null; busy: boolean; onSave: (d: EventInput) => void; onCancel: () => void }) {
+  const t = useTranslations('Rsvp')
+  const tg = useTranslations('Guests')
+  const [date, setDate] = useState(initial ? initial.event_date ?? '' : defaultDate ?? '')
+  const [from, setFrom] = useState(initial?.starts_at ?? '')
+  const [to, setTo] = useState(initial?.ends_at ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [location, setLocation] = useState(initial?.location ?? '')
+  const [desc, setDesc] = useState(initial?.description ?? '')
+  const [tag, setTag] = useState(initial?.tag ?? '')
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return setErr(t('eventNeedsTitle'))
+    if (from && to && to < from) return setErr(t('eventTimesOrder'))
+    setErr(null)
+    onSave({ event_date: date || null, starts_at: from || null, ends_at: to || null, title: title.trim(), location: location.trim() || null, description: desc.trim() || null, tag: tag.trim() || null })
+  }
+
+  return (
+    <form onSubmit={submit} className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 p-3">
+      {err && <p className="text-xs text-red-700" role="alert">{err}</p>}
+      <div className="grid gap-2 sm:grid-cols-3">
+        <label className="block text-xs text-gray-600">{t('eventDate')}<input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('eventFrom')}<input type="time" value={from} onChange={(e) => setFrom(e.target.value)} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('eventTo')}<input type="time" value={to} onChange={(e) => setTo(e.target.value)} className={input + ' mt-1 block w-full'} /></label>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="block text-xs text-gray-600">{t('eventTitle')}<input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('eventLocation')}<input value={location} onChange={(e) => setLocation(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>
+      </div>
+      <label className="block text-xs text-gray-600">{t('eventDescription')}<textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={400} rows={2} className={input + ' mt-1 block w-full'} /></label>
+      <label className="block text-xs text-gray-600">{t('eventTag')}<input value={tag} onChange={(e) => setTag(e.target.value)} maxLength={60} className={input + ' mt-1 block w-full'} /></label>
+      <div className="flex gap-2">
+        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? tg('saving') : initial ? t('saveEvent') : t('addEvent')}</button>
+        <button type="button" onClick={onCancel} className={btn}>{tg('cancel')}</button>
+      </div>
     </form>
   )
 }

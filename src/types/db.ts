@@ -132,6 +132,27 @@ export type DbProjectRsvp = {
   map_lng: number | null
   // Migration 055: translations of the text above (see rsvpTranslations.ts)
   translations: unknown
+  // Migration 056: the wedding-day schedule has its own switch
+  show_schedule: boolean
+}
+
+/** One day-by-day entry (migration 056). */
+export type DbRsvpEvent = {
+  id: string
+  project_id: string
+  position: number
+  /** yyyy-mm-dd */
+  event_date: string | null
+  /** HH:MM */
+  starts_at: string | null
+  ends_at: string | null
+  title: string
+  location: string | null
+  description: string | null
+  /** Short label, e.g. the dress code of that event. */
+  tag: string | null
+  translations: unknown
+  created_at: string
 }
 
 export type DbRsvpPhoto = {

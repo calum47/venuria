@@ -4,7 +4,7 @@ import { LANGS, LANG_NAME, type Lang } from '@/lib/rsvpText'
 import { moveSection, normalizeSectionOrder, type RsvpSectionKey } from '@/lib/rsvpSections'
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
-import type { DbGuest, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import type { DbGuest, DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import { regenerateRsvpToken, saveRsvpSettings, translateRsvpText } from '@/lib/supabase/rsvpQueries'
 import { madridToday, rsvpPath, rsvpSummary } from '@/lib/rsvp'
 import RsvpContentEditor from './RsvpContentEditor'
@@ -26,6 +26,8 @@ type Props = {
   teamId: string
   initialPhotos: DbRsvpPhoto[]
   initialHotels: DbRsvpHotel[]
+  initialEvents: DbRsvpEvent[]
+  eventDate: string | null
   /** Signed URLs (path → URL) for the page's saved images. */
   initialUrls: Record<string, string>
   /** Whether the team has a contact email for guests' data requests (Settings). */
@@ -37,7 +39,7 @@ type Props = {
  * running counts. One link per project; anyone holding it can answer, so a
  * guest's FIRST answer is the only one the link accepts (changes are made here).
  */
-export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialUrls, hasContactEmail }: Props) {
+export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialEvents, eventDate, initialUrls, hasContactEmail }: Props) {
   const t = useTranslations('Rsvp')
   const tg = useTranslations('Guests')
   const [cfg, setCfg] = useState<DbProjectRsvp | null>(initial)
@@ -220,6 +222,8 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
             onCfg={setCfg}
             initialPhotos={initialPhotos}
             initialHotels={initialHotels}
+            initialEvents={initialEvents}
+            eventDate={eventDate}
             initialUrls={initialUrls}
           />
         </div>

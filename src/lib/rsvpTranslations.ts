@@ -14,6 +14,7 @@ export const TRANSLATED_FIELDS = {
   project_rsvp: ['welcome_message', 'schedule', 'dress_code', 'area_text'],
   project_rsvp_photos: ['caption'],
   project_rsvp_hotels: ['description', 'booking_note'],
+  project_rsvp_events: ['title', 'location', 'description', 'tag'],
 } as const
 
 /** FNV-1a, 32 bit. Only used to notice that a text changed, not for security. */

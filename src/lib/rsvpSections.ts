@@ -1,9 +1,19 @@
-/** The four movable blocks of the public RSVP page (the cover, names and welcome note always stay on top). */
-export const RSVP_SECTIONS = ['details', 'form', 'area', 'hotels'] as const
+/**
+ * The movable blocks of the public RSVP page (the cover, names and welcome note always stay on top):
+ * details = the day-by-day programme, schedule = the wedding-day schedule.
+ */
+export const RSVP_SECTIONS = ['details', 'schedule', 'form', 'area', 'hotels'] as const
 export type RsvpSectionKey = (typeof RSVP_SECTIONS)[number]
 
-/** Same rule as the database: a permutation of the four keys. Anything else falls back to the default order. */
+/**
+ * Same rule as the database: a permutation of the five keys. An older four-key order (before the schedule became
+ * its own block) keeps its order, with the schedule right after the details. Anything else falls back to the default.
+ */
 export function normalizeSectionOrder(value: unknown): RsvpSectionKey[] {
+  const legacy = ['details', 'form', 'area', 'hotels']
+  if (Array.isArray(value) && value.length === legacy.length && legacy.every((k) => value.includes(k))) {
+    return (value as string[]).flatMap((k) => (k === 'details' ? ['details', 'schedule'] : [k])) as RsvpSectionKey[]
+  }
   if (Array.isArray(value) && value.length === RSVP_SECTIONS.length && RSVP_SECTIONS.every((k) => value.includes(k))) {
     return value as RsvpSectionKey[]
   }

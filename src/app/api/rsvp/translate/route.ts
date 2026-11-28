@@ -27,10 +27,11 @@ export async function POST(request: Request) {
   const projectId = typeof body?.projectId === 'string' ? body.projectId : ''
   if (!/^[0-9a-f-]{36}$/i.test(projectId)) return NextResponse.json({ ok: false, reason: 'bad_request' }, { status: 400 })
 
-  const [cfgQ, photosQ, hotelsQ] = await Promise.all([
+  const [cfgQ, photosQ, hotelsQ, eventsQ] = await Promise.all([
     supabase.from('project_rsvp').select('*').eq('project_id', projectId).maybeSingle(),
     supabase.from('project_rsvp_photos').select('*').eq('project_id', projectId),
     supabase.from('project_rsvp_hotels').select('*').eq('project_id', projectId),
+    supabase.from('project_rsvp_events').select('*').eq('project_id', projectId),
   ])
   const cfg = cfgQ.data as Row | null
   if (!cfg) return NextResponse.json({ ok: true, translated: 0 })
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
     { table: 'project_rsvp', key: { project_id: projectId }, row: cfg },
     ...((photosQ.data ?? []) as Row[]).map((row) => ({ table: 'project_rsvp_photos' as const, key: { id: String(row.id) }, row })),
     ...((hotelsQ.data ?? []) as Row[]).map((row) => ({ table: 'project_rsvp_hotels' as const, key: { id: String(row.id) }, row })),
+    ...((eventsQ.data ?? []) as Row[]).map((row) => ({ table: 'project_rsvp_events' as const, key: { id: String(row.id) }, row })),
   ]
 
   // One request for everything that is out of date.

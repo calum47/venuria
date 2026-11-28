@@ -34,6 +34,13 @@ const field = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 tex
 const primary = 'w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50'
 const secondary = 'w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-700 hover:bg-gray-50'
 
+/** "THURSDAY · 17 JUNE" for a day-by-day entry, in the guest's language. Upper-casing is done in CSS. */
+function dayLabel(iso: string, lang: Lang): string {
+  const locale = lang === 'en' ? 'en-GB' : lang === 'fr' ? 'fr-FR' : 'es-ES'
+  const d = new Date(`${iso}T12:00:00`)
+  return `${d.toLocaleDateString(locale, { weekday: 'long' })} · ${d.toLocaleDateString(locale, { day: 'numeric', month: 'long' })}`
+}
+
 function longDate(iso: string, lang: Lang): string {
   // en-GB, not plain 'en' (US order), for guests of an event in Spain.
   const locale = lang === 'en' ? 'en-GB' : lang === 'fr' ? 'fr-FR' : 'es-ES'
@@ -184,26 +191,59 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
   )
 
   const details = content.details && (
-    <section className="space-y-5 rounded-2xl bg-brand-50/60 p-5 text-center">
-      {content.details.lines.length > 0 && (
-        <div className="space-y-1.5">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.scheduleTitle}</h2>
-          <ul className="space-y-1 text-sm text-gray-800">
-            {content.details.lines.map((l, i) => <li key={i}>{l}</li>)}
-          </ul>
+    <section className="space-y-6">
+      {content.details.events.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-center text-3xl font-medium text-gray-900">{t.dayByDayTitle}</h2>
+          <div className="mx-auto h-px w-12 bg-brand-300" />
+          <ol className="pt-3">
+            {content.details.events.map((e) => (
+              <li key={e.id} className="grid gap-x-6 gap-y-2 border-t border-gray-200 py-5 text-left first:border-t-0 sm:grid-cols-[9rem_1fr_1fr]">
+                <div className="space-y-1">
+                  {e.date && <p className="text-[11px] font-medium uppercase tracking-wide text-brand-700">{dayLabel(e.date, lang)}</p>}
+                  {(e.startsAt || e.endsAt) && (
+                    <p className="text-sm text-gray-800">{e.startsAt && e.endsAt ? `${e.startsAt} – ${e.endsAt}` : e.startsAt ? `${t.fromTime} ${e.startsAt}` : `${t.untilTime} ${e.endsAt}`}</p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <h3 className="font-serif text-2xl leading-tight text-gray-900">{e.title}</h3>
+                  {e.location && <p className="text-sm text-gray-600">{e.location}</p>}
+                </div>
+                {(e.description || e.tag) && (
+                  <div className="space-y-2">
+                    {e.description && <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{e.description}</p>}
+                    {e.tag && <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{e.tag}</p>}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
         </div>
       )}
-      {content.details.dressCode && (
-        <div className="space-y-1.5">
-          <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.dressCodeTitle}</h2>
-          <p className="whitespace-pre-line text-sm text-gray-800">{content.details.dressCode}</p>
+      {(content.details.dressCode || content.details.mapUrl) && (
+        <div className="space-y-5 rounded-2xl bg-brand-50/60 p-5 text-center">
+          {content.details.dressCode && (
+            <div className="space-y-1.5">
+              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.dressCodeTitle}</h2>
+              <p className="whitespace-pre-line text-sm text-gray-800">{content.details.dressCode}</p>
+            </div>
+          )}
+          {content.details.mapUrl && (
+            <a href={content.details.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-block rounded-full border border-brand-300 bg-white px-4 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-50">
+              {t.openMap} ↗
+            </a>
+          )}
         </div>
       )}
-      {content.details.mapUrl && (
-        <a href={content.details.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-block rounded-full border border-brand-300 bg-white px-4 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-50">
-          {t.openMap} ↗
-        </a>
-      )}
+    </section>
+  )
+
+  const schedule = content.schedule && (
+    <section className="space-y-3 rounded-2xl bg-brand-50/60 p-5 text-center">
+      <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.weddingDayTitle}</h2>
+      <ul className="space-y-1 text-sm text-gray-800">
+        {content.schedule.lines.map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
     </section>
   )
 
@@ -403,7 +443,7 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
           </div>
         )
 
-  const sections: Record<RsvpSectionKey, React.ReactNode> = { details, form: formBlock, area, hotels }
+  const sections: Record<RsvpSectionKey, React.ReactNode> = { details, schedule, form: formBlock, area, hotels }
 
   return (
     <article className="overflow-hidden rounded-3xl bg-white shadow-lg">

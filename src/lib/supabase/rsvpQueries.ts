@@ -83,6 +83,7 @@ export type RsvpContentPatch = Partial<{
   show_details: boolean
   show_area: boolean
   show_hotels: boolean
+  show_schedule: boolean
   cover_path: string | null
   show_map: boolean
   map_address: string | null
@@ -237,4 +238,39 @@ export async function translateRsvpText(projectId: string): Promise<TranslateOut
   } catch {
     return 'failed'
   }
+}
+
+// ── Day by day (migration 056) ──────────────────────────────────────────────
+
+import type { DbRsvpEvent } from '@/types/db'
+
+export type EventInput = {
+  event_date: string | null
+  starts_at: string | null
+  ends_at: string | null
+  title: string
+  location: string | null
+  description: string | null
+  tag: string | null
+}
+
+export async function createEvent(projectId: string, input: EventInput, position: number): Promise<DbRsvpEvent> {
+  const { data, error } = await supabase
+    .from('project_rsvp_events')
+    .insert({ project_id: projectId, ...input, title: input.title.trim(), position })
+    .select('*')
+    .single()
+  if (error) throw error
+  return data as DbRsvpEvent
+}
+
+export async function updateEvent(id: string, input: EventInput): Promise<DbRsvpEvent> {
+  const { data, error } = await supabase.from('project_rsvp_events').update({ ...input, title: input.title.trim() }).eq('id', id).select('*').single()
+  if (error) throw error
+  return data as DbRsvpEvent
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  const { error } = await supabase.from('project_rsvp_events').delete().eq('id', id)
+  if (error) throw error
 }
