@@ -57,6 +57,16 @@ export async function getOrCreateTourProject(): Promise<Result> {
     .single()
   if (error || !project) return { error: error?.message ?? 'Could not create the sample project.' }
 
+  // Pre-answer "seated or standing" for every room, so the editor doesn't open with that dialog on top of the
+  // tour's first editor step. Not critical: if it fails, the dialog just appears and the tour waits for the answer.
+  const { data: rooms } = await supabase.from('rooms').select('id').eq('venue_id', venue.id)
+  if (rooms && rooms.length > 0) {
+    const { error: settingError } = await supabase
+      .from('project_room_settings')
+      .insert(rooms.map((r) => ({ project_id: project.id, room_id: r.id as string, mode: 'seated' })))
+    if (settingError) console.error('Tour: could not preset room modes:', settingError.message)
+  }
+
   revalidatePath('/planner')
   return { projectId: project.id, sample: true }
 }

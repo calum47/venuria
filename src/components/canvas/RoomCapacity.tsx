@@ -107,7 +107,7 @@ export function RoomCapacityBody({
   if (!setting) {
     if (!canEdit) return null
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Seated or standing">
+      <div data-tour="room-mode-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Seated or standing">
         <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl space-y-3">
           <h2 className="text-base font-semibold text-gray-900">How is “{room.name}” used in this project?</h2>
           <div className="grid grid-cols-2 gap-3">

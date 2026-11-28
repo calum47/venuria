@@ -152,6 +152,14 @@ export default function TourGuide() {
     const began = Date.now()
     const tick = () => {
       if (cancelled) return
+      // The editor asks "seated or standing?" the first time a room is opened. Don't talk over it:
+      // wait (without using up the step's time limit) until the planner has answered.
+      if (findTarget('room-mode-dialog')) {
+        setNotice('Choose seated or standing to continue the tour.')
+        timer = window.setTimeout(tick, 400)
+        return
+      }
+      setNotice(null)
       if (names.length === 0) { setReady(true); return }
       const found = names.map(findTarget).filter((el): el is HTMLElement => !!el && isShown(el))
       const timedOut = Date.now() - began > 6000

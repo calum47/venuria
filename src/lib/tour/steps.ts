@@ -73,7 +73,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'sample-note', path: project(), sampleOnly: true,
     title: 'Your practice project',
-    body: 'We created “Alex & Sam (sample)” so you can try things out without touching real work. Delete it any time from the bottom of its project page.',
+    body: 'We created “Alex & Sam (sample)” so you can try things out without touching real work. Its rooms are set to seated. Delete it any time from the bottom of its project page.',
   },
   {
     id: 'hub', path: project(), target: 'hub',
@@ -88,17 +88,17 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'place-table', path: editor(), target: ['catalog', 'canvas'],
     title: 'Place a table',
-    body: 'Drag a table from the catalogue onto the floor plan, then choose how many chairs it gets. Sizes and availability come from the venue and rental catalogues.',
+    body: 'Drag a table from the catalogue onto the floor plan, then choose how many chairs it gets. Drag empty space to move around the map; scroll or pinch to zoom.',
     action: {
       until: 'object-placed',
-      instruction: 'Your turn: drag a table from the Tables section of the catalogue onto the floor plan, then choose how many chairs it gets.',
+      instruction: 'Your turn: drag a table from the Tables section onto the floor plan, then choose how many chairs it gets. Drag empty space to move around the map; scroll or pinch to zoom.',
       done: 'That’s how a layout is built. You can change the chair count later.',
     },
   },
   {
     id: 'canvas', path: editor(), target: 'canvas',
     title: 'Move around the floor plan',
-    body: 'Click a table to select it: a panel on the right shows its size, rotation and chairs. Drag to move things, drag empty space to pan, scroll or pinch to zoom, Ctrl+drag to select several.',
+    body: 'Click a table to select it: a panel on the right shows its size, rotation and chairs. Drag a table to move it; Ctrl+drag to select several. Sizes and availability come from the venue and rental catalogues.',
   },
   {
     id: 'snap', path: editor(), target: 'snap',
