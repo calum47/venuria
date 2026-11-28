@@ -39,8 +39,8 @@ export default async function RentalPage() {
 
   // A login that is also a planner is a Vendor: same page, plus the team's retail stock (shared with My stock) and a switch back.
   const plannerCtx = await getPlannerContext(supabase)
-  // A planner whose Vendor tag was switched off has no Vendor page: back to the planner side.
-  if (rentalCompanyId && !isVendor && plannerCtx) redirect('/planner')
+  // A planner without Vendor stock has no Vendor page (and no switch to it): back to the planner side.
+  if (rentalCompanyId && !hasVendorStock && plannerCtx) redirect('/planner')
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
@@ -66,9 +66,9 @@ export default async function RentalPage() {
           <p className="text-sm text-red-600">
             {t('noRentalCompanyIsLinked')}
           </p>
-        ) : !isVendor ? (
+        ) : !hasVendorStock ? (
           <p className="text-sm text-gray-500">{t('vendorAccessOff')}</p>
-        ) : hasVendorStock ? (
+        ) : (
           <section>
             <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockTablesChairs')}</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -76,7 +76,7 @@ export default async function RentalPage() {
             </p>
             <StockManager ownerType="rental_company" ownerId={rentalCompanyId} />
           </section>
-        ) : null}
+        )}
 
         {plannerCtx && (
           <section className="mt-10">

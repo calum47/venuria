@@ -456,7 +456,7 @@
     "contactEmailOptional": "Contact email (optional)",
     "alreadyVendors": "Already vendors: {names}",
     "vendorAccess": "Vendor access",
-    "vendorAccessHelp": "Per vendor or rental company. “Vendor” = the Vendor tag (the Planner ⇄ Vendor switch and the Vendor page). “Vendor stock” = the tables & chairs it rents out, not the team’s regular stock (My stock). Switching off only hides; nothing is deleted, and ticking again restores it.",
+    "vendorAccessHelp": "Per vendor or rental company. “Vendor” = the Vendor tag. “Vendor stock” = the tables & chairs it rents out (not the team’s regular stock, My stock); only with it on does the login get the Planner ⇄ Vendor switch and the Vendor page. A vendor with just the tag is a plain planner in the app. Switching off only hides; nothing is deleted, and ticking again restores it.",
     "noLoginLinked": "No login linked",
     "vendorTag": "Vendor",
     "vendorStock": "Vendor stock",
@@ -526,7 +526,7 @@
     "stockTablesChairs": "Stock — tables & chairs",
     "stockProductsYouSell": "Stock — products you sell",
     "myStock": "My stock",
-    "vendorAccessOff": "Vendor access is switched off for this account. Contact an admin.",
+    "vendorAccessOff": "Vendor stock is switched off for this account. Contact an admin.",
     "stockTablesChairsHelp": "How many of each standard item you can rent out. Planners use the venue’s own stock first; yours covers the rest.",
     "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round."
   },
