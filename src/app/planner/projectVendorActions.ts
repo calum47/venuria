@@ -12,7 +12,15 @@ import { createClient } from '@/lib/supabase/server'
 export async function addProjectVendor(projectId: string, rentalCompanyId: string) {
   const t = await getTranslations('Errors')
   const supabase = await createClient()
-  const { data: planner } = await supabase.from('planners').select('id, team_id').maybeSingle()
+  // Not an unfiltered planners query: with several teammates (or an admin) visible it returns many rows,
+  // maybeSingle() then returns nothing and the vendor was silently never added to the timetable list.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const [{ data: planner }, { data: projectRow }] = await Promise.all([
+    user ? supabase.from('planners').select('id').eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.from('projects').select('team_id').eq('id', projectId).maybeSingle(),
+  ])
   const { error } = await supabase
     .from('project_vendors')
     .insert({ project_id: projectId, rental_company_id: rentalCompanyId, added_by: planner?.id ?? null })
@@ -23,9 +31,9 @@ export async function addProjectVendor(projectId: string, rentalCompanyId: strin
   // The vendor also becomes an option in the team's vendor list (timetable / run-down), with the contact
   // details the vendor entered (a database trigger fills and refreshes them). An existing free-text vendor
   // with the same name is linked rather than duplicated. Failing here must not undo adding the vendor.
-  if (planner?.team_id) {
+  if (projectRow?.team_id) {
     try {
-      await ensureTeamVendor(supabase, planner.team_id as string, rentalCompanyId)
+      await ensureTeamVendor(supabase, projectRow.team_id as string, rentalCompanyId)
     } catch (e) {
       console.error('Could not add the vendor to the team vendor list:', e)
     }

@@ -4,6 +4,7 @@ import { CreateVenueForm } from './CreateVenueForm'
 import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
 import { AddVendorRoleForm } from './AddVendorRoleForm'
+import { AddPlannerRoleForm } from './AddPlannerRoleForm'
 import { VendorAccessList, type VendorAccessRow } from './VendorAccessList'
 import { ResetPasswordForm, type ResettableAccount } from './ResetPasswordForm'
 import { getTranslations } from 'next-intl/server'
@@ -81,6 +82,18 @@ export default async function AdminPage() {
         <AddVendorRoleForm
           planners={(planners ?? []).filter((p) => !(rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => ({ id: p.id, name: p.name, email: p.email }))}
           vendorUserNames={(planners ?? []).filter((p) => (rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => p.name)}
+        />
+
+        <AddPlannerRoleForm
+          vendors={(rentalManagers ?? [])
+            .filter((m) => !(planners ?? []).some((p) => p.user_id === m.user_id))
+            .map((m) => ({
+              id: m.id as string,
+              name: m.name as string,
+              email: m.email as string | null,
+              company: (m.rental_companies as unknown as { name: string } | null)?.name ?? '',
+            }))}
+          plannerNames={(rentalManagers ?? []).filter((m) => (planners ?? []).some((p) => p.user_id === m.user_id)).map((m) => m.name as string)}
         />
 
         <VendorAccessList key={vendorRows.map((r) => `${r.id}${r.isVendor}${r.hasVendorStock}`).join()} rows={vendorRows} />

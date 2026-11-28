@@ -123,3 +123,47 @@ export async function setVendorAccess(companyId: string, isVendor: boolean, hasV
   revalidatePath('/planner')
   return { success: true }
 }
+
+/**
+ * Makes an existing vendor login also a Planner: creates a team of one for it (as its manager), like a newly created
+ * planner account, and a planner row on the vendor's own login, so one login has both roles and can switch.
+ * Admin only, by the admin_manage_planners / admin_manage_teams RLS policies.
+ */
+export async function addPlannerRole(formData: FormData) {
+  const t = await getTranslations('Errors')
+  const supabase = await createClient()
+
+  const managerId = formData.get('rentalManagerId') as string
+  if (!managerId) return { error: t('chooseTheVendorLogin') }
+
+  const { data: manager } = await supabase.from('rental_managers').select('id, user_id, name, email').eq('id', managerId).maybeSingle()
+  if (!manager) return { error: t('thatVendorLoginWasNotFound') }
+
+  const { data: existing } = await supabase.from('planners').select('id').eq('user_id', manager.user_id).maybeSingle()
+  if (existing) return { error: t('nameIsAlreadyAPlanner', { name: manager.name }) }
+
+  const { data: team, error: teamError } = await supabase
+    .from('teams')
+    .insert({ name: t('nameSTeam', { name: String(manager.name).trim() }) })
+    .select('id')
+    .single()
+  if (teamError || !team) return { error: teamError?.message ?? t('failedToCreateTheTeam') }
+
+  const { error: pErr } = await supabase.from('planners').insert({
+    user_id: manager.user_id,
+    name: manager.name,
+    email: manager.email,
+    planner_code: Math.random().toString(36).slice(2, 8).toUpperCase(),
+    team_id: team.id,
+    role: 'manager',
+  })
+  if (pErr) {
+    await supabase.from('teams').delete().eq('id', team.id)
+    return { error: pErr.message }
+  }
+
+  revalidatePath('/admin')
+  revalidatePath('/planner')
+  revalidatePath('/rental')
+  return { success: true }
+}
