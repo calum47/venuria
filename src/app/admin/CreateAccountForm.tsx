@@ -2,12 +2,16 @@
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { PASSWORD_HINT } from '@/lib/passwordPolicy'
+
+import { useTranslations } from 'next-intl'
 
 type Venue = { id: string; name: string }
 type RentalCompany = { id: string; name: string }
 
 export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]; rentalCompanies: RentalCompany[] }) {
+  const t = useTranslations('Admin')
+  const tc = useTranslations('Common')
+  const tp = useTranslations('Password')
   const router = useRouter()
   const [targetRole, setTargetRole] = useState<'venue_manager' | 'rental_manager' | 'planner'>('venue_manager')
   const [venueId, setVenueId] = useState('')
@@ -20,7 +24,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
   const [isLoading, setIsLoading] = useState(false)
 
   const roleLabel =
-    targetRole === 'venue_manager' ? 'Venue manager' : targetRole === 'rental_manager' ? 'Rental manager' : 'Planner'
+    targetRole === 'venue_manager' ? t('venueManager2') : targetRole === 'rental_manager' ? t('rentalManager') : t('planner2')
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -45,11 +49,11 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
     setIsLoading(false)
 
     if (!res.ok) {
-      setError(data.error ?? 'Something went wrong.')
+      setError(data.error ?? t('somethingWentWrong'))
       return
     }
 
-    setSuccess(`${roleLabel} account created — share the email/password with them directly.`)
+    setSuccess(t('roleAccountCreatedShareThe', { role: roleLabel }))
     setName('')
     setEmail('')
     setPassword('')
@@ -60,7 +64,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-900">Create login account</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t('createLoginAccount')}</h2>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-600">{success}</p>}
@@ -75,7 +79,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
               : 'border-gray-200 text-gray-600'
           }`}
         >
-          Venue Manager
+          {t('venueManager3')}
         </button>
         <button
           type="button"
@@ -86,7 +90,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
               : 'border-gray-200 text-gray-600'
           }`}
         >
-          Rental Manager
+          {t('rentalManager2')}
         </button>
         <button
           type="button"
@@ -97,13 +101,13 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
               : 'border-gray-200 text-gray-600'
           }`}
         >
-          Planner
+          {t('planner2')}
         </button>
       </div>
 
       {targetRole === 'venue_manager' && (
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">Venue</label>
+          <label className="text-xs text-gray-500">{tc('venue')}</label>
           <select
             required
             value={venueId}
@@ -111,7 +115,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
           >
             <option value="" disabled>
-              Select a venue...
+              {t('selectAVenue')}
             </option>
             {venues.map((v) => (
               <option key={v.id} value={v.id}>
@@ -120,14 +124,14 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
             ))}
           </select>
           {venues.length === 0 && (
-            <p className="text-xs text-amber-600">No venues created yet — create one above first.</p>
+            <p className="text-xs text-amber-600">{t('noVenuesCreatedYetCreate')}</p>
           )}
         </div>
       )}
 
       {targetRole === 'rental_manager' && (
         <div className="space-y-1">
-          <label className="text-xs text-gray-500">Rental company</label>
+          <label className="text-xs text-gray-500">{t('rentalCompany')}</label>
           <select
             required
             value={rentalCompanyId}
@@ -135,7 +139,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white"
           >
             <option value="" disabled>
-              Select a rental company...
+              {t('selectARentalCompany')}
             </option>
             {rentalCompanies.map((rc) => (
               <option key={rc.id} value={rc.id}>
@@ -144,14 +148,14 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
             ))}
           </select>
           {rentalCompanies.length === 0 && (
-            <p className="text-xs text-amber-600">No rental companies created yet — create one above first.</p>
+            <p className="text-xs text-amber-600">{t('noRentalCompaniesCreatedYet')}</p>
           )}
         </div>
       )}
 
       <div className="space-y-1">
         <label className="text-xs text-gray-500">
-          {targetRole === 'planner' ? 'Name' : "Manager's name"}
+          {targetRole === 'planner' ? tc('name') : t('managerSName')}
         </label>
         <input
           required
@@ -162,7 +166,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-gray-500">Login email</label>
+        <label className="text-xs text-gray-500">{t('loginEmail')}</label>
         <input
           type="email"
           required
@@ -173,7 +177,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-gray-500">Temporary password</label>
+        <label className="text-xs text-gray-500">{t('temporaryPassword')}</label>
         {/* Plain text on purpose — you need to actually read this back to hand it to them */}
         <input
           type="text"
@@ -182,7 +186,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
           onChange={(e) => setPassword(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 font-mono"
         />
-        <p className="text-xs text-gray-400">{PASSWORD_HINT}</p>
+        <p className="text-xs text-gray-400">{tp('hint')}</p>
       </div>
 
       <button
@@ -190,7 +194,7 @@ export function CreateAccountForm({ venues, rentalCompanies }: { venues: Venue[]
         disabled={isLoading}
         className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Creating...' : `Create ${roleLabel.toLowerCase()}`}
+        {isLoading ? tc('creating') : t('createRole', { role: roleLabel.toLowerCase() })}
       </button>
     </form>
   )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useGuestStore } from '@/stores/guestStore'
 import { assignSeat, unassignSeat, addGuest } from '@/lib/supabase/queries'
 
@@ -13,6 +14,7 @@ type Props = {
 }
 
 export default function ChairAssignmentPopover({ chairId, projectId, roomId, chairLabel, onClose }: Props) {
+  const t = useTranslations('ChairAssign')
   const {
     guests,
     getGuestForChair,
@@ -101,7 +103,7 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-800">Seat {chairLabel}</h3>
+          <h3 className="text-sm font-semibold text-gray-800">{t('seat', { label: chairLabel })}</h3>
           <button onClick={onClose} className="text-gray-300 hover:text-gray-500 text-lg leading-none">✕</button>
         </div>
 
@@ -119,17 +121,17 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
               disabled={isWorking}
               className="text-[10px] text-red-400 hover:text-red-600 transition-colors"
             >
-              Remove
+              {t('remove')}
             </button>
           </div>
         ) : (
-          <p className="text-xs text-gray-400 mb-3">No guest assigned</p>
+          <p className="text-xs text-gray-400 mb-3">{t('noGuest')}</p>
         )}
 
         {/* Search */}
         <input
           type="text"
-          placeholder="Search guests..."
+          placeholder={t('search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           autoFocus
@@ -141,8 +143,8 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
           {filtered.length === 0 && (
             <p className="text-xs text-gray-400 text-center py-3">
               {guests.length === 0
-                ? 'No guests in list yet'
-                : 'All guests already have a seat in this room'}
+                ? t('noGuestsYet')
+                : t('allSeated')}
             </p>
           )}
           {filtered.map((guest) => (
@@ -160,11 +162,11 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
 
         {/* Add new & assign */}
         <div className="border-t border-gray-100 pt-3">
-          <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-wide">Add new & assign</p>
+          <p className="text-[10px] text-gray-400 mb-2 uppercase tracking-wide">{t('addAssign')}</p>
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Guest name..."
+              placeholder={t('guestName')}
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleAddAndAssign() }}
@@ -175,7 +177,7 @@ export default function ChairAssignmentPopover({ chairId, projectId, roomId, cha
               disabled={isWorking || !newName.trim()}
               className="text-xs bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 disabled:opacity-40"
             >
-              Add
+              {t('add')}
             </button>
           </div>
         </div>

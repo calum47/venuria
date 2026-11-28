@@ -1,8 +1,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import type { DbDocumentKind } from '@/types/db'
-import { DOC_KIND_LABEL, PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
+import { PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
 import {
   EMPTY_DRAFT,
   currencyMismatch,
@@ -49,14 +51,17 @@ export default function PdfImportReview({
   onSave: (payments: PaymentInput[], pdf: { kind: DbDocumentKind; label: string }) => void
   onCancel: () => void
 }) {
+  const t = useTranslations('Pay')
+  const tDates = useTranslations('Dates')
+  const locale = useLocale() as Locale
   const initial = useMemo<Row[]>(() => {
     const found = staged.result?.payments ?? []
     if (found.length === 0) return [{ key: 0, include: true, draft: EMPTY_DRAFT, from: {}, dueText: null, dueCalc: null, notFound: new Set(REQUIRED) }]
     return found.map((p, i) => {
-      const { draft, from, dueCalc } = draftFromExtracted(p, eventDate)
+      const { draft, from, dueCalc } = draftFromExtracted(p, eventDate, { t, tDates, locale })
       return { key: i, include: true, draft, from, dueText: p.dueText, dueCalc, notFound: new Set(REQUIRED.filter((f) => draft[f] === '')) }
     })
-  }, [staged, eventDate])
+  }, [staged, eventDate, t, tDates, locale])
 
   const [rows, setRows] = useState<Row[]>(initial)
   const [kind, setKind] = useState<DbDocumentKind>('invoice')
@@ -83,12 +88,12 @@ export default function PdfImportReview({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (included.length === 0) return setFormError('Tick at least one payment to save.')
+    if (included.length === 0) return setFormError(t('tickOne'))
     const inputs: PaymentInput[] = []
     for (const r of rows) {
       if (!r.include) continue
-      const v = validateDraft(r.draft)
-      if ('error' in v) return setFormError(`Payment ${rows.indexOf(r) + 1}: ${v.error}`)
+      const v = validateDraft(r.draft, t)
+      if ('error' in v) return setFormError(t('paymentRowError', { n: rows.indexOf(r) + 1, error: v.error }))
       inputs.push(v.input)
     }
     setFormError(null)
@@ -99,19 +104,19 @@ export default function PdfImportReview({
     <form onSubmit={submit} className="space-y-3 border-b border-gray-100 bg-gray-50 px-4 py-3">
       <div>
         <p className="text-sm font-medium text-gray-900">
-          Review before saving <span className="font-normal text-gray-500">— {staged.fileName} · {formatBytes(staged.size)}</span>
+          {t('reviewBefore')} <span className="font-normal text-gray-500">— {staged.fileName} · {formatBytes(staged.size)}</span>
         </p>
         {staged.readError ? (
-          <p className="mt-1 text-xs text-amber-700">Could not read the PDF: {staged.readError} Fill the payment in by hand; the PDF will still be attached when you save.</p>
+          <p className="mt-1 text-xs text-amber-700">{t('couldNotReadReview', { error: staged.readError })}</p>
         ) : foundCount === 0 ? (
-          <p className="mt-1 text-xs text-amber-700">No payment details found in this PDF. Fill the payment in by hand; the PDF will still be attached when you save.</p>
+          <p className="mt-1 text-xs text-amber-700">{t('noneFoundReview')}</p>
         ) : (
           <p className="mt-1 text-xs text-gray-600">
-            Found {foundCount} payment{foundCount === 1 ? '' : 's'}. Blue fields were read from the PDF — check every one against the document before saving. Nothing is saved yet.
+            {t('foundPayments', { count: foundCount })}
           </p>
         )}
         {staged.result && currencyMismatch(staged.result.currency, currency) && (
-          <p className="mt-1 text-xs text-amber-700">The PDF seems to be in {staged.result.currency}, but this project uses {currency}. Check the amounts.</p>
+          <p className="mt-1 text-xs text-amber-700">{t('currencyMismatchReview', { pdf: staged.result.currency ?? '', project: currency })}</p>
         )}
       </div>
 
@@ -120,37 +125,37 @@ export default function PdfImportReview({
           <li key={r.key} className={`rounded-lg border bg-white p-3 ${r.include ? 'border-gray-200' : 'border-gray-100 opacity-60'}`}>
             <label className="mb-2 flex items-center gap-2 text-xs font-medium text-gray-700">
               <input type="checkbox" checked={r.include} onChange={(e) => update(r.key, (x) => ({ ...x, include: e.target.checked }))} />
-              Payment {i + 1}{r.include ? '' : ' (will not be saved)'}
+              {t('paymentN', { n: i + 1 })}{r.include ? '' : t('willNotBeSaved')}
             </label>
             <PaymentFields value={r.draft} onChange={(f, v) => edit(r.key, f, v)} from={r.from} notFound={r.notFound} dueText={r.dueText} dueCalc={r.dueCalc} />
           </li>
         ))}
       </ul>
-      <button type="button" onClick={addRow} className="text-xs text-gray-500 hover:text-gray-900">+ Add another payment</button>
+      <button type="button" onClick={addRow} className="text-xs text-gray-500 hover:text-gray-900">{t('addAnotherPayment')}</button>
 
       <div className="space-y-1.5 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600">
         <div className="flex flex-wrap items-center gap-2">
-          <span>Keep the PDF as</span>
-          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label="PDF type" className={input}>
+          <span>{t('keepPdfAs')}</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} aria-label={t('pdfType')} className={input}>
             {[...PROJECT_DOC_KINDS, 'receipt' as const].map((k) => (
-              <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+              <option key={k} value={k}>{t(`docKind.${k}`)}</option>
             ))}
           </select>
-          <input value={label} onChange={(e) => setLabel(e.target.value)} aria-label="PDF name" placeholder="PDF name" maxLength={150} className={`${input} min-w-48 flex-1`} />
+          <input value={label} onChange={(e) => setLabel(e.target.value)} aria-label={t('pdfName')} placeholder={t('pdfName')} maxLength={150} className={`${input} min-w-48 flex-1`} />
         </div>
         <p className="text-gray-500">
           {included.length > 1
-            ? `The PDF is attached to each of the ${included.length} payments, as a separate copy on each — removing it from one does not affect the others.`
-            : 'The PDF is attached to the payment.'}
+            ? t('pdfAttachedEach', { count: included.length })
+            : t('pdfAttachedOne')}
         </p>
       </div>
 
       {formError && <p role="alert" className="text-xs text-red-600">{formError}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={busy} className={btnPrimary}>
-          {busy ? 'Saving…' : included.length > 1 ? `Save ${included.length} payments` : 'Save payment'}
+          {busy ? t('saving') : included.length > 1 ? t('saveNPayments', { count: included.length }) : t('savePayment')}
         </button>
-        <button type="button" onClick={onCancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+        <button type="button" onClick={onCancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>{t('cancel')}</button>
       </div>
     </form>
   )

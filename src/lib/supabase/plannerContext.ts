@@ -81,8 +81,5 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
   }
 }
 
-export const ROLE_LABEL: Record<PlannerRole, string> = {
-  manager: 'Manager',
-  lead: 'Lead',
-  member: 'Member',
-}
+// The role names themselves are translated: use t(role) with the "Roles" messages.
+export const PLANNER_ROLES: PlannerRole[] = ['manager', 'lead', 'member']

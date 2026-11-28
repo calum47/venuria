@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
+import { useTranslations } from 'next-intl'
 
 type Props = {
   imageUrl: string
@@ -9,6 +10,7 @@ type Props = {
 }
 
 export default function ThreeSixtyViewer({ imageUrl, onClose }: Props) {
+  const t = useTranslations('Viewer3d')
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -132,9 +134,9 @@ export default function ThreeSixtyViewer({ imageUrl, onClose }: Props) {
       {/* Toolbar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-white text-sm font-semibold">3D View</h2>
+          <h2 className="text-white text-sm font-semibold">{t('title')}</h2>
           <span className="text-white/40 text-xs">
-            Drag to look around · Scroll to zoom
+            {t('hint')}
           </span>
         </div>
         <button
@@ -142,7 +144,7 @@ export default function ThreeSixtyViewer({ imageUrl, onClose }: Props) {
           className="text-white/70 hover:text-white text-sm bg-white/10
                      hover:bg-white/20 px-4 py-2 rounded-lg transition-colors"
         >
-          Back to Floor Plan
+          {t('back')}
         </button>
       </div>
 

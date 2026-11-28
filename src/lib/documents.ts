@@ -4,7 +4,8 @@
  * no React — so the rules live in one place and can be checked on their own.
  */
 import type { DbProjectDocument } from '@/types/db'
-import { DOC_KIND_LABEL } from '@/lib/payments'
+import { docKindLabel } from '@/lib/payments'
+import type { Tr } from '@/i18n/types'
 
 /** One document = all its versions. `current` is the highest version; `previous` is newest-first. */
 export type DocGroup = {
@@ -15,11 +16,9 @@ export type DocGroup = {
 
 export type DocSort = 'newest' | 'oldest' | 'name_asc' | 'name_desc'
 
-export const DOC_SORT_LABEL: Record<DocSort, string> = {
-  newest: 'Newest first',
-  oldest: 'Oldest first',
-  name_asc: 'Name A–Z',
-  name_desc: 'Name Z–A',
+/** `t` is the "Pay" translator. */
+export function docSortLabel(sort: DocSort, t: Tr): string {
+  return t(`docSort.${sort}`)
 }
 
 /** Sentinel for "documents with no vendor" in the vendor filter. Not a possible vendor name. */
@@ -79,17 +78,17 @@ export function vendorOptions(groups: readonly DocGroup[]): { vendors: VendorOpt
   return { vendors, hasNoVendor }
 }
 
-function haystack(g: DocGroup): string {
+function haystack(g: DocGroup, t: Tr): string {
   const d = g.current
-  return normalise(`${d.label} ${d.vendor_name ?? ''} ${DOC_KIND_LABEL[d.kind]}`)
+  return normalise(`${d.label} ${d.vendor_name ?? ''} ${docKindLabel(d.kind, t)}`)
 }
 
-export function filterAndSort(groups: readonly DocGroup[], f: DocFilters): DocGroup[] {
+export function filterAndSort(groups: readonly DocGroup[], f: DocFilters, t: Tr): DocGroup[] {
   const terms = normalise(f.query).split(/\s+/).filter(Boolean)
   const out = groups.filter((g) => {
     if (f.vendors.size > 0 && !f.vendors.has(vendorKey(g.current.vendor_name))) return false
     if (terms.length === 0) return true
-    const h = haystack(g)
+    const h = haystack(g, t)
     return terms.every((t) => h.includes(t))
   })
   const name = (g: DocGroup) => g.current.label

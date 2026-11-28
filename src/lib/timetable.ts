@@ -5,6 +5,7 @@
  * Times are minutes from midnight of the block's day. A block may run past
  * midnight (end up to 1800 = 06:00 next day).
  */
+import type { Tr } from '@/i18n/types'
 
 export const MIN_PER_DAY = 1440
 export const MAX_END_MIN = 1800
@@ -67,16 +68,17 @@ export function snap(min: number, step = DRAG_SNAP_MIN): number {
 export function resolveTimes(
   startText: string,
   endText: string,
+  t: Tr,
 ): { ok: true; start: number; end: number } | { ok: false; error: string } {
   const start = parseTime(startText)
   const endClock = parseTime(endText)
-  if (start === null) return { ok: false, error: 'Start time is not a time (try 18:30).' }
-  if (endClock === null) return { ok: false, error: 'End time is not a time (try 19:30).' }
-  if (endClock === start) return { ok: false, error: 'End must be after start.' }
+  if (start === null) return { ok: false, error: t('startInvalid') }
+  if (endClock === null) return { ok: false, error: t('endInvalid') }
+  if (endClock === start) return { ok: false, error: t('endAfterStart') }
   // An end before the start can only mean "after midnight".
   const end = endClock > start ? endClock : endClock + MIN_PER_DAY
-  if (end > MAX_END_MIN) return { ok: false, error: 'A block can run until 06:00 the next day at most.' }
-  if (end - start < 1) return { ok: false, error: 'End must be after start.' }
+  if (end > MAX_END_MIN) return { ok: false, error: t('maxEnd') }
+  if (end - start < 1) return { ok: false, error: t('endAfterStart') }
   return { ok: true, start, end }
 }
 

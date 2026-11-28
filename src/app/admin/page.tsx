@@ -5,8 +5,10 @@ import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
 import { AddVendorRoleForm } from './AddVendorRoleForm'
 import { ResetPasswordForm, type ResettableAccount } from './ResetPasswordForm'
+import { getTranslations } from 'next-intl/server'
 
 export default async function AdminPage() {
+  const t = await getTranslations('Admin')
   const supabase = await createClient()
   const {
     data: { user },
@@ -44,9 +46,9 @@ export default async function AdminPage() {
     if (!e.roles.includes(roleLabel)) e.roles.push(roleLabel)
     byUser.set(userId, e)
   }
-  for (const p of planners ?? []) addLogin(p.user_id, p.name, p.email, 'planner')
-  for (const m of venueManagers ?? []) addLogin(m.user_id, m.name, m.email, 'venue manager')
-  for (const m of rentalManagers ?? []) addLogin(m.user_id, m.name, m.email, 'rental manager / vendor')
+  for (const p of planners ?? []) addLogin(p.user_id, p.name, p.email, t('planner'))
+  for (const m of venueManagers ?? []) addLogin(m.user_id, m.name, m.email, t('venueManager'))
+  for (const m of rentalManagers ?? []) addLogin(m.user_id, m.name, m.email, t('rentalManagerVendor'))
   const resettable: ResettableAccount[] = [...byUser.entries()]
     .map(([userId, e]) => ({ userId, label: `${e.name} — ${e.email} (${e.roles.join(' + ')})` }))
     .sort((a, b) => a.label.localeCompare(b.label))
@@ -55,11 +57,11 @@ export default async function AdminPage() {
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto space-y-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-semibold text-gray-900">Admin</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('administration')}</h1>
           <SignOutButton />
         </div>
         <p className="text-sm text-gray-500">
-          Logged in as <span className="font-medium text-gray-900">{user?.email}</span>.
+          {t.rich('loggedInAs', { email: user?.email ?? '', b: (c) => <span className="font-medium text-gray-900">{c}</span> })}
         </p>
 
         <CreateVenueForm />
@@ -73,24 +75,24 @@ export default async function AdminPage() {
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
-            Venues ({venues?.length ?? 0})
+            {t('venuesCount', { count: venues?.length ?? 0 })}
           </h2>
           <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
             {venues?.map((v) => (
               <li key={v.id} className="px-4 py-2.5 text-sm flex justify-between">
                 <span className="text-gray-900">{v.name}</span>
-                <span className="text-gray-400">{v.max_capacity_persons ?? '—'} max</span>
+                <span className="text-gray-400">{v.max_capacity_persons != null ? t('maxSuffix', { count: v.max_capacity_persons }) : '—'}</span>
               </li>
             ))}
             {venues?.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">No venues yet.</li>
+              <li className="px-4 py-2.5 text-sm text-gray-400">{t('noVenuesYet')}</li>
             )}
           </ul>
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
-            Venue Managers ({venueManagers?.length ?? 0})
+            {t('venueManagersCount', { count: venueManagers?.length ?? 0 })}
           </h2>
           <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
             {venueManagers?.map((vm) => (
@@ -104,14 +106,14 @@ export default async function AdminPage() {
               </li>
             ))}
             {venueManagers?.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">No venue managers yet.</li>
+              <li className="px-4 py-2.5 text-sm text-gray-400">{t('noVenueManagersYet')}</li>
             )}
           </ul>
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
-            Rental Companies ({rentalCompanies?.length ?? 0})
+            {t('rentalCompaniesCount', { count: rentalCompanies?.length ?? 0 })}
           </h2>
           <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
             {rentalCompanies?.map((rc) => (
@@ -121,14 +123,14 @@ export default async function AdminPage() {
               </li>
             ))}
             {rentalCompanies?.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">No rental companies yet.</li>
+              <li className="px-4 py-2.5 text-sm text-gray-400">{t('noRentalCompaniesYet')}</li>
             )}
           </ul>
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
-            Rental Managers ({rentalManagers?.length ?? 0})
+            {t('rentalManagersCount', { count: rentalManagers?.length ?? 0 })}
           </h2>
           <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
             {rentalManagers?.map((rm) => (
@@ -142,14 +144,14 @@ export default async function AdminPage() {
               </li>
             ))}
             {rentalManagers?.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">No rental managers yet.</li>
+              <li className="px-4 py-2.5 text-sm text-gray-400">{t('noRentalManagersYet')}</li>
             )}
           </ul>
         </section>
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">
-            Planners ({planners?.length ?? 0})
+            {t('plannersCount', { count: planners?.length ?? 0 })}
           </h2>
           <ul className="divide-y divide-gray-100 bg-white rounded-xl border border-gray-100">
             {planners?.map((p) => (
@@ -161,7 +163,7 @@ export default async function AdminPage() {
               </li>
             ))}
             {planners?.length === 0 && (
-              <li className="px-4 py-2.5 text-sm text-gray-400">No planners yet.</li>
+              <li className="px-4 py-2.5 text-sm text-gray-400">{t('noPlannersYet')}</li>
             )}
           </ul>
         </section>

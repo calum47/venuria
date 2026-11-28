@@ -3,12 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { resolveUserRole } from '@/lib/supabase/role'
 import { passwordProblem } from '@/lib/passwordPolicy'
+import { getTranslations } from 'next-intl/server'
 
 function generatePlannerCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
 }
 
 export async function POST(request: Request) {
+  const t = await getTranslations('Errors')
   // Check the CALLER's own session/role first — the service-role client
   // used below bypasses RLS, so this check is the only thing standing
   // between "any authenticated user" and "create arbitrary accounts".
@@ -18,12 +20,12 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+    return NextResponse.json({ error: t('notAuthenticated') }, { status: 401 })
   }
 
   const { role } = await resolveUserRole(supabase, user.id)
   if (role !== 'admin') {
-    return NextResponse.json({ error: 'Admin access required.' }, { status: 403 })
+    return NextResponse.json({ error: t('adminAccessRequired') }, { status: 403 })
   }
 
   const body = await request.json()
@@ -38,26 +40,26 @@ export async function POST(request: Request) {
 
   if (targetRole !== 'venue_manager' && targetRole !== 'rental_manager' && targetRole !== 'planner') {
     return NextResponse.json(
-      { error: 'targetRole must be "venue_manager", "rental_manager", or "planner".' },
+      { error: t('targetroleMustBeVenueManager') },
       { status: 400 },
     )
   }
   if (!name || !email || !password) {
-    return NextResponse.json({ error: 'name, email, and password are required.' }, { status: 400 })
+    return NextResponse.json({ error: t('nameEmailAndPasswordAre') }, { status: 400 })
   }
-  const passwordIssue = passwordProblem(password)
+  const passwordIssue = passwordProblem(password, await getTranslations('Password'))
   if (passwordIssue) {
     return NextResponse.json({ error: passwordIssue }, { status: 400 })
   }
   if (targetRole === 'venue_manager' && !venueId) {
     return NextResponse.json(
-      { error: 'A venue must be selected for a venue manager account.' },
+      { error: t('aVenueMustBeSelected') },
       { status: 400 },
     )
   }
   if (targetRole === 'rental_manager' && !rentalCompanyId) {
     return NextResponse.json(
-      { error: 'A rental company must be selected for a rental manager account.' },
+      { error: t('aRentalCompanyMustBe') },
       { status: 400 },
     )
   }
@@ -72,7 +74,7 @@ export async function POST(request: Request) {
 
   if (createUserError || !created.user) {
     return NextResponse.json(
-      { error: createUserError?.message ?? 'Failed to create the login.' },
+      { error: createUserError?.message ?? t('failedToCreateTheLogin') },
       { status: 400 },
     )
   }
@@ -84,12 +86,12 @@ export async function POST(request: Request) {
   if (targetRole === 'planner') {
     const { data: team, error: teamError } = await adminClient
       .from('teams')
-      .insert({ name: `${name.trim()}'s team` })
+      .insert({ name: t('nameSTeam', { name: name.trim() }) })
       .select('id')
       .single()
     if (teamError || !team) {
       await adminClient.auth.admin.deleteUser(created.user.id)
-      return NextResponse.json({ error: teamError?.message ?? 'Failed to create the team.' }, { status: 400 })
+      return NextResponse.json({ error: teamError?.message ?? t('failedToCreateTheTeam') }, { status: 400 })
     }
     teamId = team.id
   }
@@ -129,9 +131,9 @@ export async function POST(request: Request) {
     // friendlier messages than the raw Postgres constraint errors when someone
     // tries to double-assign a venue or rental company.
     const message = insertResult.error.message.includes('venue_managers_venue_id_key')
-      ? 'That venue already has a manager account assigned.'
+      ? t('thatVenueAlreadyHasA')
       : insertResult.error.message.includes('rental_managers_rental_company_id_key')
-        ? 'That rental company already has a manager account assigned.'
+        ? t('thatRentalCompanyAlreadyHas')
         : insertResult.error.message
 
     return NextResponse.json({ error: message }, { status: 400 })

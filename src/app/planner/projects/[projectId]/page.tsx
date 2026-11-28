@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { getLocale, getTranslations } from 'next-intl/server'
+import type { Locale } from '@/i18n/config'
 import { needsSeat } from '@/lib/guests'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -32,12 +34,18 @@ type Params = { projectId: string }
  */
 export default async function ProjectHubPage({ params }: { params: Promise<Params> }) {
   const { projectId } = await params
+  const th = await getTranslations('Hub')
+  const ta = await getTranslations('Areas')
+  const tcap = await getTranslations('Capacity')
+  const tdates = await getTranslations('Dates')
+  const tc = await getTranslations('Common')
+  const locale = (await getLocale()) as Locale
   const supabase = await createClient()
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
     return (
       <main className="p-8">
-        <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
+        <p className="text-sm text-red-600">{(await getTranslations('Planner'))('noPlannerAccountLinkedTo')}</p>
       </main>
     )
   }
@@ -71,15 +79,15 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
   const vipCount = (guestRows ?? []).filter((g) => g.is_vip).length
   const guestsHint =
     (guestRows?.length ?? 0) === 0
-      ? 'No guests yet — photos, families, dietary needs, hotel per night'
-      : `${guestCount} ${guestCount === 1 ? 'guest' : 'guests'}${vipCount > 0 ? ` · ${vipCount} VIP` : ''}${declined > 0 ? ` · ${declined} declined` : ''}${needSeat > 0 ? ` · ${needSeat} still ${needSeat === 1 ? 'needs' : 'need'} a seat` : ''}`
+      ? th('noGuestsYet')
+      : `${th('guestsSummary', { count: guestCount })}${vipCount > 0 ? th('vipPart', { count: vipCount }) : ''}${declined > 0 ? th('declinedPart', { count: declined }) : ''}${needSeat > 0 ? th('needSeatPart', { count: needSeat }) : ''}`
 
   const { count: blockCount } = await supabase
     .from('timetable_blocks')
     .select('id', { count: 'exact', head: true })
     .eq('project_id', projectId)
   const timetableHint =
-    !blockCount ? 'Hourly schedule per event day, tagged by vendor' : `${blockCount} ${blockCount === 1 ? 'block' : 'blocks'} scheduled`
+    !blockCount ? th('timetableEmpty') : th('blocksScheduled', { count: blockCount })
 
   // Areas: every room of the venue, with what this project has placed in it.
   const [{ data: roomRows }, { data: objectRows }, { data: assignRows }, { data: orderRows }, { data: itemRows }, { data: settingRows }, { count: guestTotal }] = await Promise.all([
@@ -104,28 +112,28 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     assignRows ?? [],
   )
 
-  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? tc('unknownVenue')
   const all = payments ?? []
   const overdue = all.filter((p) => paymentStatus(p).kind === 'overdue').length
   const unpaid = all.filter((p) => !p.paid_at).length
   const paymentsHint =
     all.length === 0
-      ? 'No payments added yet'
+      ? th('noPaymentsAdded')
       : overdue > 0
-        ? `${overdue} overdue · ${unpaid} unpaid of ${all.length}`
+        ? th('overdueUnpaid', { overdue, unpaid, total: all.length })
         : unpaid > 0
-          ? `${unpaid} unpaid of ${all.length}`
-          : `All ${all.length} paid`
+          ? th('unpaidOf', { unpaid, total: all.length })
+          : th('allPaid', { total: all.length })
 
   return (
     <main className="px-4 sm:px-6 py-10">
       <div className="max-w-5xl mx-auto space-y-8">
         <div>
-          <Link href="/planner" className="text-sm text-gray-500 hover:text-gray-900">← My projects</Link>
+          <Link href="/planner" className="text-sm text-gray-500 hover:text-gray-900">{th('backToProjects')}</Link>
           <h1 className="mt-3 text-4xl font-semibold text-gray-900">{projectTitle(project.couple_names, venueName)}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {project.couple_names?.trim() ? `${venueName} · ` : ''}{project.event_date ? `${formatDate(project.event_date)} · ${countdownLabel(project.event_date)}` : 'No event date set'}
-            {project.status ? ` · ${project.status}` : ''}
+            {project.couple_names?.trim() ? `${venueName} · ` : ''}{project.event_date ? `${formatDate(project.event_date, locale)} · ${countdownLabel(project.event_date, tdates)}` : th('noEventDate')}
+            {project.status ? ` · ${(await getTranslations('Planner'))(`statuses.${project.status as 'in_progress'}`)}` : ''}
           </p>
           {!viewOnly && <ProjectNameEditor projectId={projectId} coupleNames={project.couple_names} />}
         </div>
@@ -133,35 +141,35 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
         {viewOnly && <ViewOnlyBanner />}
 
         <div data-tour="hub" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan and seating" />
-          <HubCard href={`/editor/${projectId}/summary`} icon="summary" title="Layout summary" hint="Everything placed, stock shortfalls and zones" />
-          {!viewOnly && <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />}
-          <HubCard href={`/planner/projects/${projectId}/timetable`} icon="timetable" title="Timetable" hint={timetableHint} />
-          <HubCard href={`/planner/projects/${projectId}/rundown`} icon="rundown" title="Run-down list" hint="Day-of list for the team and vendors — print or save as PDF" />
-          <HubCard href={`/planner/projects/${projectId}/guests`} icon="guests" title="Guest list details" hint={guestsHint} hintClass={needSeat > 0 ? 'text-amber-700' : 'text-gray-500'} />
+          <HubCard href={`/editor/${projectId}`} icon="editor" title={th('projectEditor')} hint={th('projectEditorHint')} />
+          <HubCard href={`/editor/${projectId}/summary`} icon="summary" title={th('layoutSummary')} hint={th('layoutSummaryHint')} />
+          {!viewOnly && <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title={th('paymentsDocs')} hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />}
+          <HubCard href={`/planner/projects/${projectId}/timetable`} icon="timetable" title={th('timetable')} hint={timetableHint} />
+          <HubCard href={`/planner/projects/${projectId}/rundown`} icon="rundown" title={th('rundown')} hint={th('rundownHint')} />
+          <HubCard href={`/planner/projects/${projectId}/guests`} icon="guests" title={th('guestDetails')} hint={guestsHint} hintClass={needSeat > 0 ? 'text-amber-700' : 'text-gray-500'} />
         </div>
 
         <section data-tour="areas" className="space-y-2" aria-labelledby="areas-h">
-          <h2 id="areas-h" className="text-xl font-medium text-gray-900">Areas of the venue</h2>
+          <h2 id="areas-h" className="text-xl font-medium text-gray-900">{th('areasTitle')}</h2>
           {areas.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
+            <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">{th('noAreas')}</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {areas.map((a) => (
                 <Link key={a.id} href={`/editor/${projectId}?room=${a.id}`} className={card}>
                   <p className="font-medium text-gray-900">{a.name}</p>
-                  <p className="mt-1 text-sm text-gray-500">{areaHint(a)}</p>
+                  <p className="mt-1 text-sm text-gray-500">{areaHint(a, ta)}</p>
                   {(() => {
                     const room = roomById.get(a.id)
                     const setting = settingByRoom.get(a.id)
                     const line = room
-                      ? capacityLine(room, setting?.mode ?? null, a.chairs, guestTotal ?? 0, setting?.override_load ?? null)
+                      ? capacityLine(room, setting?.mode ?? null, a.chairs, guestTotal ?? 0, setting?.override_load ?? null, tcap)
                       : null
                     if (!line) return null
                     const tone = line.state === 'over' ? 'text-red-600' : line.state === 'acknowledged' || line.state === 'near' ? 'text-amber-700' : 'text-gray-500'
                     return <p className={`mt-1 text-xs ${tone}`}>{line.text}</p>
                   })()}
-                  <p className="mt-2 text-xs text-gray-400">Open in the editor →</p>
+                  <p className="mt-2 text-xs text-gray-400">{th('openInEditor')}</p>
                 </Link>
               ))}
             </div>

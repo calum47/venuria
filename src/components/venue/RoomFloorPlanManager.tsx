@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { DbRoom } from '@/types/db'
 import { createRoom } from '@/lib/supabase/queries'
 import FloorPlanEditor from './FloorPlanEditor'
@@ -13,6 +14,8 @@ type Props = {
 }
 
 export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: Props) {
+  const t = useTranslations('Venue')
+  const tc = useTranslations('Common')
   const [rooms, setRooms] = useState(initialRooms)
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(initialRooms[0]?.id ?? null)
   const [showNewRoomForm, setShowNewRoomForm] = useState(initialRooms.length === 0)
@@ -39,7 +42,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
       setNewRoomName('')
       setShowNewRoomForm(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create room.')
+      setError(err instanceof Error ? err.message : t('createRoomFailed'))
     } finally {
       setCreating(false)
     }
@@ -49,7 +52,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
     <div className="flex flex-col gap-4">
       {rooms.length > 0 && (
         <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Room:</label>
+          <label className="text-sm text-gray-600">{t('roomLabel')}</label>
           <select
             value={selectedRoomId ?? ''}
             onChange={(e) => setSelectedRoomId(e.target.value)}
@@ -65,36 +68,36 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
             onClick={() => setShowNewRoomForm((v) => !v)}
             className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
           >
-            + New room
+            {t('newRoom')}
           </button>
         </div>
       )}
 
       {rooms.length === 0 && (
-        <p className="text-sm text-gray-500">No rooms yet.</p>
+        <p className="text-sm text-gray-500">{t('noRooms')}</p>
       )}
 
       {showNewRoomForm && (
         <form onSubmit={handleCreateRoom} className="flex items-end gap-2 rounded-lg border bg-gray-50 p-3">
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Room name</label>
+            <label className="text-xs text-gray-500">{t('roomName')}</label>
             <input
               value={newRoomName}
               onChange={(e) => setNewRoomName(e.target.value)}
-              placeholder="e.g. Main Hall"
+              placeholder={t('roomNamePlaceholder')}
               className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900"
               autoFocus
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-500">Type</label>
+            <label className="text-xs text-gray-500">{t('type')}</label>
             <select
               value={newRoomType}
               onChange={(e) => setNewRoomType(e.target.value as 'indoor' | 'outdoor')}
               className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900"
             >
-              <option value="indoor">Indoor</option>
-              <option value="outdoor">Outdoor</option>
+              <option value="indoor">{t('indoor')}</option>
+              <option value="outdoor">{t('outdoor')}</option>
             </select>
           </div>
           <button
@@ -102,7 +105,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
             disabled={creating || !newRoomName.trim()}
             className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
-            {creating ? 'Creating…' : 'Create room'}
+            {creating ? tc('creating') : t('createRoom')}
           </button>
           {rooms.length > 0 && (
             <button
@@ -110,7 +113,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
               onClick={() => setShowNewRoomForm(false)}
               className="rounded-lg bg-gray-100 px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-200"
             >
-              Cancel
+              {tc('cancel')}
             </button>
           )}
         </form>
@@ -127,9 +130,9 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
       )}
 
       <div className="border-t pt-4 mt-2">
-        <h3 className="text-sm font-medium text-gray-900 mb-2">Stock — tables &amp; chairs</h3>
+        <h3 className="text-sm font-medium text-gray-900 mb-2">{t('stockTitle')}</h3>
         <p className="text-xs text-gray-500 mb-3">
-          How many of each standard item this venue owns. Not a hard limit: anything beyond it is shown to planners as needing rental.
+          {t('stockHelp')}
         </p>
         <StockManager ownerType="venue" ownerId={venueId} />
       </div>

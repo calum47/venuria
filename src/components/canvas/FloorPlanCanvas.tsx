@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import { Stage, Layer, Rect, Circle, Text, Line, Group, Transformer, Image as KonvaImage } from 'react-konva'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { useGuestStore } from '@/stores/guestStore'
@@ -76,6 +77,7 @@ export default function FloorPlanCanvas({
   draggingGuestId,
   viewOnly = false,
 }: Props) {
+  const t = useTranslations('Canvas')
   const stageRef = useRef<Konva.Stage>(null)
   // While true the canvas draws without editing chrome (grid, selection, handles) for the JPG export.
   const [exporting, setExporting] = useState(false)
@@ -124,7 +126,7 @@ export default function FloorPlanCanvas({
   // Room dimensions come from the DB via props; fall back to sensible defaults while loading
   const roomWidthCm = currentRoom?.bounding_box_width_cm ?? 1500
   const roomDepthCm = currentRoom?.bounding_box_depth_cm ?? 1000
-  const roomName = currentRoom ? `${currentRoom.name}  (${roomWidthCm / 100}m × ${roomDepthCm / 100}m)` : 'Loading…'
+  const roomName = currentRoom ? `${currentRoom.name}  (${roomWidthCm / 100}m × ${roomDepthCm / 100}m)` : t('loading')
 
   // Traced wall boundary + obstacles set by the venue manager (Phase 3 floor
   // plan tool). Empty floor_polygon means this room hasn't been traced yet.
@@ -1123,14 +1125,14 @@ export default function FloorPlanCanvas({
       {/* Zone mode banner */}
       {zoneMode && (
         <div className="absolute top-3 left-3 z-10 bg-indigo-50 border border-indigo-200 rounded-lg px-3 py-1.5">
-          <p className="text-xs text-indigo-700 font-medium">🎨 Zones — {zoneTool === 'rect' ? 'drag to draw a rectangle' : zoneTool === 'polygon' ? 'click corners, double-click to finish' : 'click a zone to select, drag to move'}</p>
+          <p className="text-xs text-indigo-700 font-medium">{t('zoneBanner', { hint: zoneTool === 'rect' ? t('zoneRect') : zoneTool === 'polygon' ? t('zonePoly') : t('zoneSelect') })}</p>
         </div>
       )}
 
       {/* Guest mode banner */}
       {isGuestMode && (
         <div className="absolute top-3 left-3 z-10 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-          <p className="text-xs text-amber-700 font-medium">👥 Seating plan — click a chair to assign, or drag from the guest list</p>
+          <p className="text-xs text-amber-700 font-medium">{t('guestBanner')}</p>
         </div>
       )}
 

@@ -8,12 +8,14 @@ export function projectTitle(coupleNames: string | null | undefined, venueName: 
   return coupleNames?.trim() || venueName
 }
 
+import type { Tr } from '@/i18n/types'
+
 export type CoupleNamesResult = { ok: true; value: string | null } | { ok: false; error: string }
 
 /** Tidies what was typed (trim, collapse spaces). `required` rejects an empty value. */
-export function parseCoupleNames(raw: string, required: boolean): CoupleNamesResult {
+export function parseCoupleNames(raw: string, required: boolean, t: Tr): CoupleNamesResult {
   const v = raw.trim().replace(/\s+/g, ' ')
-  if (!v) return required ? { ok: false, error: "Enter the couple's names." } : { ok: true, value: null }
-  if (v.length > MAX_COUPLE_NAMES) return { ok: false, error: `The names can be at most ${MAX_COUPLE_NAMES} characters.` }
+  if (!v) return required ? { ok: false, error: t('required') } : { ok: true, value: null }
+  if (v.length > MAX_COUPLE_NAMES) return { ok: false, error: t('tooLong', { max: MAX_COUPLE_NAMES }) }
   return { ok: true, value: v }
 }

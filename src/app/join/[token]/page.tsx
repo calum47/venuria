@@ -1,8 +1,9 @@
 import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
-import { ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
+import type { PlannerRole } from '@/lib/supabase/plannerContext'
 import JoinForm from './JoinForm'
+import { getTranslations } from 'next-intl/server'
 
 type Params = { token: string }
 
@@ -14,6 +15,7 @@ type Params = { token: string }
  * already holds.
  */
 export default async function JoinPage({ params }: { params: Promise<Params> }) {
+  const t = await getTranslations('Join')
   const { token } = await params
 
   const admin = createAdminClient()
@@ -35,26 +37,25 @@ export default async function JoinPage({ params }: { params: Promise<Params> }) 
   return (
     <main className="flex h-screen w-screen items-center justify-center bg-gray-50">
       {!valid ? (
-        <Shell title="This invite isn't valid">
+        <Shell title={t('thisInviteIsnTValid')}>
           <p className="text-sm text-gray-500">
             {invite?.used_at
-              ? 'It has already been used.'
+              ? t('itHasAlreadyBeenUsed')
               : invite
-                ? 'It has expired.'
-                : 'The link is incomplete or was revoked.'}
-            {' '}Ask your team manager for a new one.
+                ? t('itHasExpired')
+                : t('theLinkIsIncompleteOr')}
+            {' '}{t('askNew')}
           </p>
         </Shell>
       ) : user ? (
-        <Shell title={`Join ${teamName}`}>
+        <Shell title={t('title', { team: teamName ?? t('theTeam') })}>
           <p className="text-sm text-gray-500">
-            You&apos;re already signed in as <span className="text-gray-900">{user.email}</span>. Invite links create a new
-            account — sign out first if this invite is for a different login.
+            {t.rich('alreadySignedIn', { email: user.email ?? '', b: (c) => <span className="text-gray-900">{c}</span> })}
           </p>
-          <Link href="/planner" className="text-sm text-blue-600 hover:underline">Go to my projects →</Link>
+          <Link href="/planner" className="text-sm text-blue-600 hover:underline">{t('goToMyProjects')}</Link>
         </Shell>
       ) : (
-        <JoinForm token={token} teamName={teamName ?? 'the team'} roleLabel={ROLE_LABEL[invite!.role as PlannerRole]} />
+        <JoinForm token={token} teamName={teamName ?? t('theTeam')} roleLabel={(await getTranslations('Roles'))(invite!.role as PlannerRole)} />
       )}
     </main>
   )

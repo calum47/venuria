@@ -3,6 +3,8 @@
  * per-project selection). Pure so it can be tested without a database.
  */
 
+import type { Tr } from '@/i18n/types'
+
 export type HubRoom = { id: string; name: string; type: string | null }
 export type HubObject = { id: string; room_id: string | null; catalog_item_id: string | null }
 export type HubAssignment = { layout_object_id: string }
@@ -51,12 +53,12 @@ export function summariseAreas(
 }
 
 /** One-line description of an area card, e.g. "12 tables · 96 chairs · 80 seated". */
-export function areaHint(a: AreaSummary): string {
-  if (a.empty) return 'Nothing placed yet'
+export function areaHint(a: AreaSummary, t: Tr): string {
+  if (a.empty) return t('nothingPlaced')
   const parts: string[] = []
-  if (a.tables) parts.push(`${a.tables} ${a.tables === 1 ? 'table' : 'tables'}`)
-  if (a.chairs) parts.push(`${a.chairs} ${a.chairs === 1 ? 'chair' : 'chairs'}`)
-  if (a.other) parts.push(`${a.other} other ${a.other === 1 ? 'item' : 'items'}`)
-  if (a.chairs) parts.push(`${a.seated} seated`)
+  if (a.tables) parts.push(t('tables', { count: a.tables }))
+  if (a.chairs) parts.push(t('chairs', { count: a.chairs }))
+  if (a.other) parts.push(t('other', { count: a.other }))
+  if (a.chairs) parts.push(t('seated', { count: a.seated }))
   return parts.join(' · ')
 }

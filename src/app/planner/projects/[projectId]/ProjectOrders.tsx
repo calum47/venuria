@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { DbStockOrder } from '@/types/db'
 import { addStockOrder, getProjectStockOrders } from '@/lib/supabase/stockQueries'
+import { useTranslations } from 'next-intl'
 
 type Item = { id: string; name: string }
 
@@ -26,6 +27,7 @@ export default function ProjectOrders({
   items: Item[]
   initialOrders: DbStockOrder[]
 }) {
+  const t = useTranslations('Hub')
   const [orders, setOrders] = useState(initialOrders)
   const [itemId, setItemId] = useState('')
   const [qty, setQty] = useState('1')
@@ -37,8 +39,8 @@ export default function ProjectOrders({
     e.preventDefault()
     setError(null)
     const q = Number(qty)
-    if (!itemId) return setError('Pick a product.')
-    if (!Number.isInteger(q) || q <= 0) return setError('Quantity must be a whole number above zero.')
+    if (!itemId) return setError(t('pickAProduct'))
+    if (!Number.isInteger(q) || q <= 0) return setError(t('quantityMustBeAWhole'))
     setBusy(true)
     try {
       await addStockOrder({ teamId, itemId, projectId, qty: q })
@@ -46,7 +48,7 @@ export default function ProjectOrders({
       setItemId('')
       setQty('1')
     } catch (err) {
-      setError(err instanceof Error ? err.message : typeof err === 'object' && err && 'message' in err ? String((err as { message: unknown }).message) : 'Could not add the order.')
+      setError(err instanceof Error ? err.message : typeof err === 'object' && err && 'message' in err ? String((err as { message: unknown }).message) : t('couldNotAddTheOrder'))
     } finally {
       setBusy(false)
     }
@@ -55,36 +57,36 @@ export default function ProjectOrders({
   return (
     <section className="space-y-2" aria-labelledby="orders-h">
       <div className="flex items-baseline justify-between">
-        <h2 id="orders-h" className="text-xl font-medium text-gray-900">Stock orders for this project</h2>
-        <Link href="/planner/stock" className="text-xs text-gray-500 underline hover:text-gray-900">Open My Stock</Link>
+        <h2 id="orders-h" className="text-xl font-medium text-gray-900">{t('stockOrdersForThisProject')}</h2>
+        <Link href="/planner/stock" className="text-xs text-gray-500 underline hover:text-gray-900">{t('openMyStock')}</Link>
       </div>
 
       <form onSubmit={add} className="flex flex-wrap items-center gap-2">
-        <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={input} aria-label="Product">
-          <option value="">{items.length ? 'Product…' : 'No products in My Stock yet'}</option>
+        <select value={itemId} onChange={(e) => setItemId(e.target.value)} className={input} aria-label={t('product')}>
+          <option value="">{items.length ? t('product2') : t('noProductsInMyStock')}</option>
           {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
         </select>
-        <input type="number" min={1} step={1} value={qty} onChange={(e) => setQty(e.target.value)} className={input + ' w-20'} aria-label="Quantity" />
+        <input type="number" min={1} step={1} value={qty} onChange={(e) => setQty(e.target.value)} className={input + ' w-20'} aria-label={t('quantity')} />
         <button type="submit" disabled={busy || !itemId} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50">
-          {busy ? 'Adding…' : 'Add order'}
+          {busy ? t('adding') : t('addOrder')}
         </button>
       </form>
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
       {orders.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">No stock orders yet.</p>
+        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">{t('noStockOrdersYet')}</p>
       ) : (
         <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
           {orders.map((o) => (
             <li key={o.id} className="flex items-center justify-between gap-3 px-4 py-2 text-sm">
               <span className="min-w-0 truncate text-gray-900">
-                {o.item_id ? nameById.get(o.item_id) ?? 'Deleted product' : 'One-off order'}
+                {o.item_id ? nameById.get(o.item_id) ?? t('deletedProduct') : t('oneOffOrder')}
                 <span className="ml-2 text-gray-400">×{o.qty}</span>
               </span>
               <span className="flex shrink-0 items-center gap-2">
                 <span className="text-xs text-gray-400">{new Date(o.ordered_at).toLocaleDateString()}</span>
                 <span className={`rounded-full px-2 py-0.5 text-xs ${o.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                  {o.status === 'received' ? 'Received' : 'Pending'}
+                  {o.status === 'received' ? t('received') : t('pending')}
                 </span>
               </span>
             </li>

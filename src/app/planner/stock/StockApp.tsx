@@ -15,6 +15,7 @@ import CatalogueTab from './CatalogueTab'
 import PurchasesTab from './PurchasesTab'
 import SalesTab from './SalesTab'
 import OrdersTab from './OrdersTab'
+import { useTranslations } from 'next-intl'
 
 export type ProjectOption = { id: string; label: string }
 
@@ -36,6 +37,7 @@ type Tab = 'catalogue' | 'purchases' | 'sales' | 'orders'
  * times as the planner switches tabs.
  */
 export default function StockApp({ teamId, currency, canManage, projects }: Props) {
+  const tx = useTranslations('Stock')
   const [tab, setTab] = useState<Tab>('catalogue')
   const [groups, setGroups] = useState<DbStockGroup[]>([])
   const [items, setItems] = useState<DbStockItem[]>([])
@@ -69,10 +71,10 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
         setOrders(o)
         setTotals(t)
       })
-      .catch((err) => !cancelled && setError(err.message ?? 'Failed to load stock.'))
+      .catch((err) => !cancelled && setError(err.message ?? tx('failedToLoadStock')))
       .finally(() => !cancelled && setIsLoading(false))
     return () => { cancelled = true }
-  }, [])
+  }, [tx])
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items])
   const outByItem = useMemo(() => new Map(totals.filter((t) => t.units_out > 0).map((t) => [t.item_id, t.units_out])), [totals])
@@ -89,28 +91,28 @@ export default function StockApp({ teamId, currency, canManage, projects }: Prop
 
   const pendingOrders = orders.filter((o) => o.status === 'pending').length
 
-  if (isLoading) return <p className="text-sm text-gray-400">Loading stock…</p>
+  if (isLoading) return <p className="text-sm text-gray-400">{tx('loadingStock')}</p>
   if (error) return <p className="text-sm text-red-600">{error}</p>
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {canManage && <StatTile label="Stock cost" hint="What the stock you own cost, at average cost" value={money(stats.costValue, currency)} />}
-        {canManage && <StatTile label="Profit to date" hint="Everything sold, all time" value={money(stats.profit, currency)} />}
+        {canManage && <StatTile label={tx('stockCost')} hint={tx('whatTheStockYouOwn')} value={money(stats.costValue, currency)} />}
+        {canManage && <StatTile label={tx('profitToDate')} hint={tx('everythingSoldAllTime')} value={money(stats.profit, currency)} />}
         <StatTile
-          label="Low stock"
+          label={tx('lowStock')}
           value={String(stats.lowStockCount)}
           tone={stats.lowStockCount > 0 ? 'warn' : undefined}
         />
-        {stats.hasReusable && <StatTile label="Out with clients" hint="Reusable units not yet returned" value={String(stats.outTotal)} />}
+        {stats.hasReusable && <StatTile label={tx('outWithClients')} hint={tx('reusableUnitsNotYetReturned')} value={String(stats.outTotal)} />}
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">
         {(
           [
-            ['catalogue', 'Catalogue'],
-            ['purchases', 'Purchases'],
-            ['sales', 'Sales'],
+            ['catalogue', tx('catalogue')],
+            ['purchases', tx('purchases')],
+            ['sales', tx('sales')],
             ['orders', `Orders${pendingOrders > 0 ? ` (${pendingOrders})` : ''}`],
           ] as [Tab, string][]
         )

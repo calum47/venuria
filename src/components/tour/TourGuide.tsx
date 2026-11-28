@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase/client'
 import type { PlannerRole } from '@/lib/supabase/plannerContext'
-import { START_TOUR_EVENT, TOUR_STEPS, type TourCtx, type TourStep } from '@/lib/tour/steps'
+import { START_TOUR_EVENT, TOUR_STEPS, tourText, type TourCtx, type TourStep } from '@/lib/tour/steps'
 import { getOrCreateTourProject } from '@/app/planner/tourActions'
 import { useLayoutStore } from '@/stores/layoutStore'
 
@@ -47,6 +48,7 @@ function unionBox(names: string[]): Box | null {
  *   steps just explain, so a real project is never changed by the tour.
  */
 export default function TourGuide() {
+  const t = useTranslations('Tour')
   const pathname = usePathname()
   const router = useRouter()
   const [offer, setOffer] = useState(false)
@@ -104,7 +106,7 @@ export default function TourGuide() {
     }
     if ('error' in target) {
       console.error('Tour project unavailable:', target.error)
-      setNotice('Couldn’t set up a practice project, so the tour skips the project pages.')
+      setNotice(t('notice'))
       window.setTimeout(() => setNotice(null), 6000)
     }
     const steps = TOUR_STEPS.filter((s) =>
@@ -116,7 +118,7 @@ export default function TourGuide() {
     setReady(false)
     setActionDone(false)
     setRun({ steps, ctx, index: 0 })
-  }, [])
+  }, [t])
 
   // Offer the tour once, on the planner home, to a planner who hasn't answered yet.
   useEffect(() => {
@@ -155,7 +157,7 @@ export default function TourGuide() {
       // The editor asks "seated or standing?" the first time a room is opened. Don't talk over it:
       // wait (without using up the step's time limit) until the planner has answered.
       if (findTarget('room-mode-dialog')) {
-        setNotice('Choose seated or standing to continue the tour.')
+        setNotice(t('chooseMode'))
         timer = window.setTimeout(tick, 400)
         return
       }
@@ -177,7 +179,7 @@ export default function TourGuide() {
     }
     timer = window.setTimeout(tick, 250)
     return () => { cancelled = true; window.clearTimeout(timer) }
-  }, [run, step, pathname, router])
+  }, [run, step, pathname, router, t])
 
   // Keep the spotlight on its target(s) while the page scrolls or resizes.
   useEffect(() => {
@@ -234,12 +236,12 @@ export default function TourGuide() {
 
   if (offer && !run) {
     return (
-      <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-4 shadow-xl" role="dialog" aria-label="Take the tour">
-        <p className="text-sm font-semibold text-gray-900">New to Venuria?</p>
-        <p className="mt-1 text-sm text-gray-600">Take a short guided tour of the main pages. You can replay it any time from Settings.</p>
+      <div className="fixed bottom-4 right-4 z-40 w-80 max-w-[calc(100vw-2rem)] rounded-xl border border-gray-200 bg-white p-4 shadow-xl" role="dialog" aria-label={t('offerAria')}>
+        <p className="text-sm font-semibold text-gray-900">{t('offerTitle')}</p>
+        <p className="mt-1 text-sm text-gray-600">{t('offerBody')}</p>
         <div className="mt-3 flex items-center justify-end gap-2">
-          <button type="button" onClick={() => finish('skipped')} className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100">No thanks</button>
-          <button type="button" onClick={() => { start().catch(() => {}) }} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Start the tour</button>
+          <button type="button" onClick={() => finish('skipped')} className="rounded-lg px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100">{t('noThanks')}</button>
+          <button type="button" onClick={() => { start().catch(() => {}) }} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">{t('start')}</button>
         </div>
       </div>
     )
@@ -276,9 +278,7 @@ export default function TourGuide() {
 
   const last = run.index === run.steps.length - 1
   const waiting = interactive && !actionDone
-  const text = interactive && step.action
-    ? (actionDone ? step.action.done : step.action.instruction)
-    : run.ctx.sample && step.sampleBody ? step.sampleBody : step.body
+  const { title, text } = tourText(t, step, { sample: run.ctx.sample, interactive, actionDone })
   // Interactive steps keep the page clickable and sit under the app's own dialogs (z-50), e.g. the chair-count popup.
   const dimZ = interactive ? 'z-[45]' : 'z-[70]'
 
@@ -295,18 +295,18 @@ export default function TourGuide() {
       ) : (
         <div className={`pointer-events-none fixed inset-0 ${dimZ} bg-slate-900/55`} aria-hidden="true" />
       )}
-      <div className="fixed z-[71] rounded-xl bg-white p-4 shadow-2xl" style={cardStyle} role="dialog" aria-live="polite" aria-label={step.title}>
-        <p className="text-[11px] uppercase tracking-wide text-gray-400">Step {run.index + 1} of {run.steps.length}</p>
-        <h3 className="mt-1 text-base font-semibold text-gray-900">{step.title}</h3>
+      <div className="fixed z-[71] rounded-xl bg-white p-4 shadow-2xl" style={cardStyle} role="dialog" aria-live="polite" aria-label={title}>
+        <p className="text-[11px] uppercase tracking-wide text-gray-400">{t('stepOf', { n: run.index + 1, total: run.steps.length })}</p>
+        <h3 className="mt-1 text-base font-semibold text-gray-900">{title}</h3>
         <p className={`mt-1 text-sm ${interactive && actionDone ? 'text-green-700' : 'text-gray-600'}`}>{text}</p>
         <div className="mt-4 flex items-center gap-2">
-          <button type="button" onClick={() => finish('skipped')} className="rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100">Skip tour</button>
+          <button type="button" onClick={() => finish('skipped')} className="rounded-lg px-2 py-1.5 text-sm text-gray-500 hover:bg-gray-100">{t('skipTour')}</button>
           <div className="ml-auto flex items-center gap-2">
             {run.index > 0 && (
-              <button type="button" onClick={() => go(-1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Back</button>
+              <button type="button" onClick={() => go(-1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">{t('back')}</button>
             )}
             {waiting && (
-              <button type="button" onClick={() => go(1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">Skip step</button>
+              <button type="button" onClick={() => go(1)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">{t('skipStep')}</button>
             )}
             <button
               type="button"
@@ -315,7 +315,7 @@ export default function TourGuide() {
               autoFocus={!interactive}
               className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-40"
             >
-              {last ? 'Finish' : 'Next'}
+              {last ? t('finish') : t('next')}
             </button>
           </div>
         </div>

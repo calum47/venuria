@@ -1,18 +1,24 @@
 'use client'
 
 import { useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import type { PdfExportData, PdfSections } from '@/lib/pdfExport/types'
 import { safeFilePart } from '@/lib/pdfExport/text'
 import { supabase } from '@/lib/supabase/client'
 
-const SECTION_LABELS: { key: keyof PdfSections; label: string; hint: string }[] = [
-  { key: 'plans', label: 'Floor plans', hint: 'One page per ticked room, with zones, table numbers and notes' },
-  { key: 'items', label: 'Item list', hint: 'Whole project: venue stock vs. what to rent' },
-  { key: 'seating', label: 'Seating chart', hint: 'Guests per table, for the ticked rooms' },
-  { key: 'guests', label: 'Guest list', hint: 'All guests with VIP, speeches, dietary needs and table' },
-]
+const SECTION_KEYS = ['plans', 'items', 'seating', 'guests'] as const satisfies readonly (keyof PdfSections)[]
 
 export default function ExportPanel({ data }: { data: PdfExportData }) {
+  const t = useTranslations('Export')
+  const tp = useTranslations('Pdf')
+  const locale = useLocale() as Locale
+  const sectionText = {
+    plans: { label: t('secPlans'), hint: t('secPlansHint') },
+    items: { label: t('secItems'), hint: t('secItemsHint') },
+    seating: { label: t('secSeating'), hint: t('secSeatingHint') },
+    guests: { label: t('secGuests'), hint: t('secGuestsHint') },
+  }
   const [sections, setSections] = useState<PdfSections>({ plans: true, items: true, seating: true, guests: true })
   const [roomIds, setRoomIds] = useState<string[]>(data.rooms.map((r) => r.id))
   const [busy, setBusy] = useState(false)
@@ -38,11 +44,11 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
         style.showLogo && data.logoPath ? loadLogo(supabase, data.logoPath) : Promise.resolve(null),
         loadBrandMark(),
       ])
-      const doc = buildProjectPdf(data, { sections, roomIds, style, fonts, logo, brandMark })
+      const doc = buildProjectPdf(data, { sections, roomIds, style, fonts, logo, brandMark, t: tp, locale })
       doc.save(`venuria-${safeFilePart(data.projectTitle)}-${data.eventDate ?? 'plan'}.pdf`)
     } catch (e) {
       console.error('PDF export failed', e)
-      setError('Could not create the PDF. Try again, or tick fewer sections.')
+      setError(t('failed'))
     } finally {
       setBusy(false)
     }
@@ -50,19 +56,19 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
 
   return (
     <section className="mb-8 rounded-xl border border-gray-100 bg-white p-4">
-      <h2 className="text-sm font-semibold text-gray-900 mb-3">Export PDF</h2>
+      <h2 className="text-sm font-semibold text-gray-900 mb-3">{t('title')}</h2>
       <div className="space-y-2">
-        {SECTION_LABELS.map((s) => (
-          <label key={s.key} className="flex items-start gap-2 text-sm">
+        {SECTION_KEYS.map((key) => (
+          <label key={key} className="flex items-start gap-2 text-sm">
             <input
               type="checkbox"
               className="mt-0.5"
-              checked={sections[s.key]}
-              onChange={(e) => setSections({ ...sections, [s.key]: e.target.checked })}
+              checked={sections[key]}
+              onChange={(e) => setSections({ ...sections, [key]: e.target.checked })}
             />
             <span>
-              <span className="text-gray-900">{s.label}</span>
-              <span className="block text-xs text-gray-400">{s.hint}</span>
+              <span className="text-gray-900">{sectionText[key].label}</span>
+              <span className="block text-xs text-gray-400">{sectionText[key].hint}</span>
             </span>
           </label>
         ))}
@@ -70,7 +76,7 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
 
       {needsRooms && (
         <div className="mt-4">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Rooms (floor plans and seating chart)</p>
+          <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{t('rooms')}</p>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {data.rooms.map((r) => (
               <label key={r.id} className="flex items-center gap-1.5 text-sm text-gray-700">
@@ -83,7 +89,7 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
               </label>
             ))}
           </div>
-          {roomIds.length === 0 && <p className="mt-1 text-xs text-amber-700">Tick at least one room for plans and seating.</p>}
+          {roomIds.length === 0 && <p className="mt-1 text-xs text-amber-700">{t('tickRoom')}</p>}
         </div>
       )}
 
@@ -94,12 +100,12 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
           disabled={!canExport}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
         >
-          {busy ? 'Creating PDF…' : 'Download PDF'}
+          {busy ? t('creating') : t('download')}
         </button>
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
       <p className="mt-2 text-xs text-gray-400">
-        English only; characters outside Western European alphabets print as “?”. Style and logo follow Settings → Exports.
+        {t('note')}
       </p>
     </section>
   )

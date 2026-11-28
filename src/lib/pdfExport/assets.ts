@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { fontOption, normalizePdfStyle, type PdfFontKey } from './style'
 import type { ExportBranding } from './jpgLogo'
 import type { PdfFontData, PdfLogo } from './types'
+import type { Tr } from '@/i18n/types'
 
 /** Browser-only helpers: fetch the font files and the team logo that the PDF/JPG exports embed. */
 
@@ -47,16 +48,16 @@ export function loadFontData(key: PdfFontKey): Promise<PdfFontData | null> {
   return p
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function loadImage(src: string, t?: Tr): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
-    img.onerror = () => reject(new Error('This file could not be read as an image.'))
+    img.onerror = () => reject(new Error(t ? t('errFileRead') : 'This file could not be read as an image.'))
     img.src = src
   })
 }
 
-function drawScaled(img: HTMLImageElement, whiteBackground: boolean): HTMLCanvasElement {
+function drawScaled(img: HTMLImageElement, whiteBackground: boolean, t?: Tr): HTMLCanvasElement {
   const w0 = img.naturalWidth
   const h0 = img.naturalHeight
   const scale = Math.min(1, MAX_LOGO_SIDE / Math.max(w0, h0))
@@ -64,7 +65,7 @@ function drawScaled(img: HTMLImageElement, whiteBackground: boolean): HTMLCanvas
   canvas.width = Math.max(1, Math.round(w0 * scale))
   canvas.height = Math.max(1, Math.round(h0 * scale))
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('This browser cannot process images.')
+  if (!ctx) throw new Error(t ? t('errNoCanvas') : 'This browser cannot process images.')
   if (whiteBackground) {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
@@ -73,25 +74,25 @@ function drawScaled(img: HTMLImageElement, whiteBackground: boolean): HTMLCanvas
   return canvas
 }
 
-function canvasBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob> {
-  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not encode the image.'))), type, quality))
+function canvasBlob(canvas: HTMLCanvasElement, type: string, quality: number | undefined, t: Tr): Promise<Blob> {
+  return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error(t('errEncode')))), type, quality))
 }
 
 /**
  * Turns whatever the manager picked (PNG, JPG, WebP, SVG) into a bounded PNG (JPG when a PNG would be
  * too large), so jsPDF never has to deal with SVG or WebP and the bucket's 1 MB limit holds.
  */
-export async function prepareLogoFile(file: File): Promise<{ blob: Blob; ext: 'png' | 'jpg' }> {
-  if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) throw new Error('Use a PNG, JPG, WebP or SVG image.')
-  if (file.size > 8 * 1024 * 1024) throw new Error('That file is too large. Use an image under 8 MB.')
+export async function prepareLogoFile(file: File, t: Tr): Promise<{ blob: Blob; ext: 'png' | 'jpg' }> {
+  if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) throw new Error(t('errFormat'))
+  if (file.size > 8 * 1024 * 1024) throw new Error(t('errTooLarge'))
   const url = URL.createObjectURL(file)
   try {
-    const img = await loadImage(url)
-    if (!img.naturalWidth || !img.naturalHeight) throw new Error('This image has no size information. Export it again with a width and height.')
-    const png = await canvasBlob(drawScaled(img, false), 'image/png')
+    const img = await loadImage(url, t)
+    if (!img.naturalWidth || !img.naturalHeight) throw new Error(t('errNoSize'))
+    const png = await canvasBlob(drawScaled(img, false, t), 'image/png', undefined, t)
     if (png.size <= MAX_LOGO_BYTES) return { blob: png, ext: 'png' }
-    const jpg = await canvasBlob(drawScaled(img, true), 'image/jpeg', 0.9)
-    if (jpg.size > MAX_LOGO_BYTES) throw new Error('This image is too detailed. Use a simpler or smaller logo.')
+    const jpg = await canvasBlob(drawScaled(img, true, t), 'image/jpeg', 0.9, t)
+    if (jpg.size > MAX_LOGO_BYTES) throw new Error(t('errTooDetailed'))
     return { blob: jpg, ext: 'jpg' }
   } finally {
     URL.revokeObjectURL(url)

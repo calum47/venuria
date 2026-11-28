@@ -3,8 +3,11 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createVenue } from './actions'
+import { useTranslations } from 'next-intl'
 
 export function CreateVenueForm() {
+  const t = useTranslations('Admin')
+  const tc = useTranslations('Common')
   const router = useRouter()
   const formRef = useRef<HTMLFormElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -24,23 +27,23 @@ export function CreateVenueForm() {
       return
     }
 
-    setSuccess('Venue created — assign it a manager account below.')
+    setSuccess(t('venueCreatedAssignItA'))
     formRef.current?.reset()
     router.refresh()
   }
 
   return (
     <form ref={formRef} action={handleSubmit} className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
-      <h2 className="text-sm font-semibold text-gray-900">Create venue</h2>
+      <h2 className="text-sm font-semibold text-gray-900">{t('createVenue')}</h2>
       <p className="text-xs text-gray-400">
-        The property itself — no login yet. Assign a manager account to it after.
+        {t('thePropertyItselfNoLogin')}
       </p>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {success && <p className="text-sm text-green-600">{success}</p>}
 
       <div className="space-y-1">
-        <label className="text-xs text-gray-500">Venue name</label>
+        <label className="text-xs text-gray-500">{t('venueName')}</label>
         <input
           name="name"
           required
@@ -49,7 +52,7 @@ export function CreateVenueForm() {
       </div>
 
       <div className="space-y-1">
-        <label className="text-xs text-gray-500">Max capacity (persons)</label>
+        <label className="text-xs text-gray-500">{t('maxCapacityPersons')}</label>
         <input
           name="maxCapacityPersons"
           type="number"
@@ -62,7 +65,7 @@ export function CreateVenueForm() {
         disabled={isLoading}
         className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
       >
-        {isLoading ? 'Creating...' : 'Create venue'}
+        {isLoading ? tc('creating') : t('createVenue')}
       </button>
     </form>
   )

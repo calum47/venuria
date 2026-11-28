@@ -1,12 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useZoneStore } from '@/stores/zoneStore'
 import { ZONE_PALETTE, ZONE_PRESETS, zoneAreaM2, type ZoneTool } from '@/lib/zones'
 
 type Props = { roomName: string }
 
 export default function ZonePanel({ roomName }: Props) {
+  const t = useTranslations('Zones')
   const {
     zones,
     zoneTool,
@@ -20,25 +22,32 @@ export default function ZonePanel({ roomName }: Props) {
   } = useZoneStore()
   const [customName, setCustomName] = useState('')
 
-  const isCustom = !ZONE_PRESETS.some((p) => p.name === pendingPreset.name)
+  const isCustom = !pendingPreset.key
+
+  // A built-in preset's name is stored on the zone when it is drawn, so keep it in the current language.
+  useEffect(() => {
+    if (!pendingPreset.key) return
+    const name = t(`preset.${pendingPreset.key}`)
+    if (name !== pendingPreset.name) setPendingPreset({ ...pendingPreset, name })
+  }, [pendingPreset, setPendingPreset, t])
 
   return (
     <div className="w-64 h-full bg-white border-l border-gray-200 flex flex-col">
       <div className="p-4 border-b border-gray-200">
-        <p className="text-xs text-gray-400 uppercase tracking-wide">Zones</p>
+        <p className="text-xs text-gray-400 uppercase tracking-wide">{t('title')}</p>
         <h3 className="font-semibold text-gray-800 mt-0.5">{roomName}</h3>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
         {/* Tool */}
         <section>
-          <p className="text-xs text-gray-500 mb-1.5">Tool</p>
+          <p className="text-xs text-gray-500 mb-1.5">{t('tool')}</p>
           <div className="grid grid-cols-3 gap-1">
             {(
               [
-                ['select', '↖ Select'],
-                ['rect', '▭ Rect'],
-                ['polygon', '⬠ Poly'],
+                ['select', t('toolSelect')],
+                ['rect', t('toolRect')],
+                ['polygon', t('toolPoly')],
               ] as [ZoneTool, string][]
             ).map(([tool, label]) => (
               <button
@@ -53,35 +62,35 @@ export default function ZonePanel({ roomName }: Props) {
             ))}
           </div>
           <p className="text-[11px] text-gray-400 mt-1.5 leading-snug">
-            {zoneTool === 'rect' && 'Drag on the canvas to draw a rectangle.'}
-            {zoneTool === 'polygon' && 'Click to add corners, double-click to finish. Esc cancels.'}
-            {zoneTool === 'select' && 'Click a zone to select it; drag to move; drag the handles to reshape. Delete key removes it.'}
+            {zoneTool === 'rect' && t('helpRect')}
+            {zoneTool === 'polygon' && t('helpPoly')}
+            {zoneTool === 'select' && t('helpSelect')}
           </p>
         </section>
 
         {/* Next zone preset */}
         <section>
-          <p className="text-xs text-gray-500 mb-1.5">New zones are</p>
+          <p className="text-xs text-gray-500 mb-1.5">{t('newZonesAre')}</p>
           <div className="flex flex-wrap gap-1">
             {ZONE_PRESETS.map((p) => (
               <button
                 key={p.name}
-                onClick={() => setPendingPreset(p)}
+                onClick={() => setPendingPreset({ ...p, name: t(`preset.${p.key!}`) })}
                 className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border transition-colors ${
-                  pendingPreset.name === p.name ? 'border-brand-600 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
+                  pendingPreset.key === p.key ? 'border-brand-600 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
                 }`}
               >
                 <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: p.color }} />
-                {p.name}
+                {t(`preset.${p.key!}`)}
               </button>
             ))}
             <button
-              onClick={() => setPendingPreset({ name: customName.trim() || 'Custom', color: pendingPreset.color })}
+              onClick={() => setPendingPreset({ name: customName.trim() || t('customFallback'), color: pendingPreset.color })}
               className={`px-2 py-1 text-xs rounded-md border transition-colors ${
                 isCustom ? 'border-brand-600 bg-gray-50 text-gray-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
-              Custom…
+              {t('custom')}
             </button>
           </div>
           {isCustom && (
@@ -89,9 +98,9 @@ export default function ZonePanel({ roomName }: Props) {
               value={customName}
               onChange={(e) => {
                 setCustomName(e.target.value)
-                setPendingPreset({ name: e.target.value.trim() || 'Custom', color: pendingPreset.color })
+                setPendingPreset({ name: e.target.value.trim() || t('customFallback'), color: pendingPreset.color })
               }}
-              placeholder="Zone name"
+              placeholder={t('zoneName')}
               className="mt-2 w-full border border-gray-200 rounded-md px-2 py-1 text-sm"
             />
           )}
@@ -99,9 +108,9 @@ export default function ZonePanel({ roomName }: Props) {
 
         {/* Zone list */}
         <section>
-          <p className="text-xs text-gray-500 mb-1.5">In this room ({zones.length})</p>
+          <p className="text-xs text-gray-500 mb-1.5">{t('inRoom', { count: zones.length })}</p>
           {zones.length === 0 ? (
-            <p className="text-xs text-gray-400">No zones yet.</p>
+            <p className="text-xs text-gray-400">{t('noZones')}</p>
           ) : (
             <ul className="space-y-1">
               {zones.map((z) => {
@@ -116,7 +125,7 @@ export default function ZonePanel({ roomName }: Props) {
                   >
                     <div className="flex items-center gap-2">
                       <button
-                        title="Change colour"
+                        title={t('changeColour')}
                         onClick={(e) => {
                           e.stopPropagation()
                           const idx = ZONE_PALETTE.indexOf(z.color as (typeof ZONE_PALETTE)[number])
@@ -130,12 +139,12 @@ export default function ZonePanel({ roomName }: Props) {
                         value={z.name}
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => useZoneStore.getState().updateZoneLocal(z.id, { name: e.target.value })}
-                        onBlur={(e) => updateZone(z.id, { name: e.target.value.trim() || 'Zone' })}
+                        onBlur={(e) => updateZone(z.id, { name: e.target.value.trim() || t('zoneFallback') })}
                         className="flex-1 min-w-0 bg-transparent text-sm text-gray-900 outline-none"
                       />
                       <span className="text-[11px] text-gray-400 shrink-0">{zoneAreaM2(z).toFixed(1)} m²</span>
                       <button
-                        title="Delete zone"
+                        title={t('deleteZone')}
                         onClick={(e) => { e.stopPropagation(); deleteZone(z.id) }}
                         className="text-gray-300 hover:text-red-500 text-sm leading-none shrink-0"
                       >
@@ -152,7 +161,7 @@ export default function ZonePanel({ roomName }: Props) {
 
       <div className="p-3 border-t border-gray-100">
         <p className="text-[11px] text-gray-400 leading-snug">
-          Auto-Arrange avoids zones. Click a swatch to change its colour.
+          {t('footer')}
         </p>
       </div>
     </div>

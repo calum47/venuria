@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import { INTL_TAG, type Locale } from '@/i18n/config'
 
 import FloorPlanCanvas from '@/components/canvas/FloorPlanCanvas'
 import { supabase } from '@/lib/supabase/client'
@@ -41,6 +43,8 @@ import { getTableSettingCatalogItems, listTemplates } from '@/lib/supabase/table
 // ─── Editor page ──────────────────────────────────────────────────────────────
 
 export default function EditorPage() {
+  const te = useTranslations('Editor')
+  const locale = useLocale() as Locale
   const params = useParams()
   const router = useRouter()
   const projectId = params.projectId as string
@@ -387,7 +391,7 @@ export default function EditorPage() {
   if (isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
-        <p className="text-sm text-gray-400">Loading project...</p>
+        <p className="text-sm text-gray-400">{te('loadingProject')}</p>
       </div>
     )
   }
@@ -413,11 +417,11 @@ export default function EditorPage() {
             data-tour="summary-link"
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
-            📋 Summary
+            {te('summary')}
           </Link>
           <span className="text-gray-300">|</span>
           {viewOnly ? (
-            <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800" title="You are not assigned to this project, so you can look but not change anything">View only</span>
+            <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800" title={te('viewOnlyHint')}>{te('viewOnly')}</span>
           ) : (<>
           <button
             data-tour="auto-arrange"
@@ -425,7 +429,7 @@ export default function EditorPage() {
             disabled={!currentRoom || isGuestMode}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
           >
-            ✨ Auto-Arrange
+            {te('autoArrange')}
           </button>
           </>)}
           <span className="text-gray-300">|</span>
@@ -433,10 +437,10 @@ export default function EditorPage() {
             data-tour="export-jpg"
             onClick={() => exportJpgRef.current?.().catch((err) => console.error('JPG export failed:', err))}
             disabled={!currentRoom}
-            title="Download the current room as a JPG image"
+            title={te('exportJpgHint')}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
           >
-            🖼 Export JPG
+            {te('exportJpg')}
           </button>
           <span className="text-gray-300">|</span>
           {/* Room tabs */}
@@ -469,7 +473,7 @@ export default function EditorPage() {
                 : 'text-gray-500 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            👥 Seating plan
+            {te('seatingPlan')}
           </button>}
 
           {/* Zone mode toggle */}
@@ -483,7 +487,7 @@ export default function EditorPage() {
                 : 'text-gray-500 hover:bg-gray-100 border border-gray-200'
             }`}
           >
-            🎨 {zoneMode ? 'Zones ON' : 'Zones'}
+            {zoneMode ? te('zonesOn') : te('zones')}
           </button>}
 
           {/* Area capacity: seated / standing choice, load vs the venue's limit, over-the-limit warning */}
@@ -500,14 +504,14 @@ export default function EditorPage() {
           <span className="text-xs text-gray-400 ml-auto">
             {zoom !== 1
               ? `${Math.round(zoom * 100)}%`
-              : 'Drag to pan · Ctrl+drag to select · Scroll or pinch to zoom'}
+              : te('zoomHint')}
           </span>
 
           {/* Save status */}
           <div className="text-xs text-gray-400" data-tour="save-status">
-            {isSwitchingRoom && 'Switching room…'}
-            {!isSwitchingRoom && isSaving && 'Saving…'}
-            {!isSwitchingRoom && !isSaving && lastSaved && `Saved ${lastSaved.toLocaleTimeString()}`}
+            {isSwitchingRoom && te('switchingRoom')}
+            {!isSwitchingRoom && isSaving && te('saving')}
+            {!isSwitchingRoom && !isSaving && lastSaved && te('saved', { time: lastSaved.toLocaleTimeString(INTL_TAG[locale]) })}
           </div>
         </div>
 

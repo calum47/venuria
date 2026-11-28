@@ -6,6 +6,7 @@ import { daysUntil } from '@/lib/projectDates'
 import { projectTitle } from '@/lib/projectTitle'
 import AssigneeFilter from './AssigneeFilter'
 import PaymentsOverview, { type OverviewPayment } from './PaymentsOverview'
+import { getTranslations } from 'next-intl/server'
 
 /**
  * My projects (Phase 9 + 22c, access levels in migration 038).
@@ -20,6 +21,8 @@ import PaymentsOverview, { type OverviewPayment } from './PaymentsOverview'
  * The payments calendar/list covers the same projects, restricted to the ones the planner can edit.
  */
 export default async function PlannerPage({ searchParams }: { searchParams: Promise<{ assignee?: string | string[] }> }) {
+  const tx = await getTranslations('Planner')
+  const tRoles = await getTranslations('Roles')
   const { assignee: assigneeParam } = await searchParams
   const supabase = await createClient()
   const ctx = await getPlannerContext(supabase)
@@ -27,7 +30,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
   if (!ctx) {
     return (
       <main className="p-8">
-        <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
+        <p className="text-sm text-red-600">{tx('noPlannerAccountLinkedTo')}</p>
       </main>
     )
   }
@@ -51,17 +54,17 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
   for (const r of assigneeRows ?? []) assigneesOf.set(r.project_id, (assigneesOf.get(r.project_id) ?? new Set()).add(r.planner_id))
 
   const allRows: ProjectRowData[] = (projects ?? []).map((p) => {
-    const assignees = [...(assigneesOf.get(p.id) ?? [])].map((id) => ({ id, name: nameById.get(id) ?? 'Former teammate' }))
+    const assignees = [...(assigneesOf.get(p.id) ?? [])].map((id) => ({ id, name: nameById.get(id) ?? tx('formerTeammate') }))
     const isMine = p.planner_id === ctx.planner.id || assignees.some((a) => a.id === ctx.planner.id)
     return {
       id: p.id,
       status: p.status,
       event_date: p.event_date,
       due_by: p.due_by,
-      venueName: (p.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue',
+      venueName: (p.venues as unknown as { name: string } | null)?.name ?? tx('unknownVenue'),
       coupleNames: p.couple_names,
       creatorId: p.planner_id,
-      creatorName: nameById.get(p.planner_id) ?? 'Former teammate',
+      creatorName: nameById.get(p.planner_id) ?? tx('formerTeammate'),
       assignees,
       visibility: p.visibility as 'private' | 'public',
       // Same rule as planner_can_access_project; the database enforces it either way.
@@ -120,7 +123,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
     <main className="px-4 sm:px-6 py-10">
       <div className="max-w-4xl mx-auto space-y-10">
         <div>
-          <h1 className="text-4xl font-semibold text-gray-900">My projects</h1>
+          <h1 className="text-4xl font-semibold text-gray-900">{tx('myProjects')}</h1>
           {canAssign && (
             <div className="mt-3">
               <AssigneeFilter teammates={teammates ?? []} value={assigneeFilter} meId={ctx.planner.id} />
@@ -129,27 +132,27 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
         </div>
 
         <section data-tour="new-project">
-          <h2 className="text-xl font-medium text-gray-900 mb-3">New project</h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-3">{tx('newProject')}</h2>
           <NewProjectForm venues={venues ?? []} />
         </section>
 
         <section data-tour="project-list">
-          <h2 className="text-xl font-medium text-gray-900 mb-3">Mine <span className="font-sans text-sm text-gray-400">{mine.length}</span></h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-3">{tx('mine')} <span className="font-sans text-sm text-gray-400">{mine.length}</span></h2>
           <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
             {mine.map(renderRow)}
             {mine.length === 0 && (
-              <li className="px-5 py-4 text-sm text-gray-400">No projects yet.</li>
+              <li className="px-5 py-4 text-sm text-gray-400">{tx('noProjectsYet')}</li>
             )}
           </ul>
         </section>
 
         {(teammates ?? []).length > 1 && (
           <section>
-            <h2 className="text-xl font-medium text-gray-900 mb-3">Team projects <span className="font-sans text-sm text-gray-400">{team.length}</span></h2>
+            <h2 className="text-xl font-medium text-gray-900 mb-3">{tx('teamProjects')} <span className="font-sans text-sm text-gray-400">{team.length}</span></h2>
             <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
               {team.map(renderRow)}
               {team.length === 0 && (
-                <li className="px-5 py-4 text-sm text-gray-400">No public projects from teammates.</li>
+                <li className="px-5 py-4 text-sm text-gray-400">{tx('noPublicProjectsFromTeammates')}</li>
               )}
             </ul>
           </section>
@@ -157,8 +160,8 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
 
         {canAssign && otherPrivate.length > 0 && (
           <section>
-            <h2 className="text-xl font-medium text-gray-500 mb-1">Teammates&apos; private projects <span className="font-sans text-sm text-gray-400">{otherPrivate.length}</span></h2>
-            <p className="text-xs text-gray-400 mb-2">Visible to you as {ctx.planner.role}. Not shown to regular members.</p>
+            <h2 className="text-xl font-medium text-gray-500 mb-1">{tx('teammatesPrivateProjects')} <span className="font-sans text-sm text-gray-400">{otherPrivate.length}</span></h2>
+            <p className="text-xs text-gray-400 mb-2">{tx('visibleAsRole', { role: tRoles(ctx.planner.role) })}</p>
             <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
               {otherPrivate.map(renderRow)}
             </ul>
@@ -166,7 +169,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
         )}
 
         <section data-tour="payments-overview">
-          <h2 className="text-xl font-medium text-gray-900 mb-3">Payments <span className="font-sans text-sm text-gray-400">{payments.length}</span></h2>
+          <h2 className="text-xl font-medium text-gray-900 mb-3">{tx('payments')} <span className="font-sans text-sm text-gray-400">{payments.length}</span></h2>
           <PaymentsOverview payments={payments} currency={ctx.team.currency} />
         </section>
       </div>

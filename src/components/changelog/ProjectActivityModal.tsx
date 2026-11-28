@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { INTL_TAG, type Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
 import type { DbProjectActivity, DbRoom } from '@/types/db'
 import {
   getProjectLastOpenedAt,
@@ -33,6 +36,8 @@ type Group = { actor: string; when: string; lines: Line[] }
  * nothing is lost for when teams arrive.
  */
 export default function ProjectActivityModal({ projectId, rooms }: Props) {
+  const t = useTranslations('Activity')
+  const locale = useLocale() as Locale
   const [events, setEvents] = useState<DbProjectActivity[]>([])
   const [open, setOpen] = useState(false)
 
@@ -63,7 +68,7 @@ export default function ProjectActivityModal({ projectId, rooms }: Props) {
     return (id: string | null) => (id ? map.get(id) ?? null : null)
   }, [rooms])
 
-  const groups = useMemo<Group[]>(() => aggregate(events, roomName), [events, roomName])
+  const groups = useMemo<Group[]>(() => aggregate(events, roomName, t, locale), [events, roomName, t, locale])
 
   if (!open || groups.length === 0) return null
 
@@ -71,9 +76,9 @@ export default function ProjectActivityModal({ projectId, rooms }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl w-[30rem] max-h-[85vh] flex flex-col">
         <div className="px-6 pt-6 pb-3">
-          <h3 className="font-semibold text-gray-900">Since you were last here</h3>
+          <h3 className="font-semibold text-gray-900">{t('title')}</h3>
           <p className="text-xs text-gray-400 mt-0.5">
-            {events.length} change{events.length === 1 ? '' : 's'} by other people on this project
+            {t('subtitle', { count: events.length })}
           </p>
         </div>
 
@@ -98,7 +103,7 @@ export default function ProjectActivityModal({ projectId, rooms }: Props) {
             onClick={() => setOpen(false)}
             className="w-full py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors"
           >
-            Got it
+            {t('gotIt')}
           </button>
         </div>
       </div>
@@ -113,14 +118,19 @@ export default function ProjectActivityModal({ projectId, rooms }: Props) {
 // actor + calendar day, then within that collapse by (entity, action, room)
 // into a count, keeping a couple of names for flavour.
 
-function aggregate(events: DbProjectActivity[], roomName: (id: string | null) => string | null): Group[] {
+function aggregate(
+  events: DbProjectActivity[],
+  roomName: (id: string | null) => string | null,
+  t: Tr,
+  locale: Locale,
+): Group[] {
   const byActorDay = new Map<string, { actor: string; when: string; events: DbProjectActivity[] }>()
 
   for (const e of events) {
-    const actor = e.actor_name ?? (e.actor_user_id ? 'Another user' : 'System')
+    const actor = e.actor_name ?? (e.actor_user_id ? t('anotherUser') : t('system'))
     const day = e.created_at.slice(0, 10)
     const key = `${actor}|${day}`
-    if (!byActorDay.has(key)) byActorDay.set(key, { actor, when: formatDay(day), events: [] })
+    if (!byActorDay.has(key)) byActorDay.set(key, { actor, when: formatDay(day, locale), events: [] })
     byActorDay.get(key)!.events.push(e)
   }
 
@@ -139,7 +149,7 @@ function aggregate(events: DbProjectActivity[], roomName: (id: string | null) =>
       }
     }
     const lines: Line[] = []
-    for (const [key, b] of buckets) lines.push({ key, text: describe(b.sample, b.count, b.names, roomName) })
+    for (const [key, b] of buckets) lines.push({ key, text: describe(b.sample, b.count, b.names, roomName, t) })
     groups.push({ actor, when, lines })
   }
   return groups
@@ -154,57 +164,59 @@ function displayName(e: DbProjectActivity): string | null {
   return e.summary.guest_name ?? null
 }
 
+/** `t` = translator for "Activity". */
 function describe(
   e: DbProjectActivity,
   count: number,
   names: string[],
   roomName: (id: string | null) => string | null,
+  t: Tr,
 ): string {
   const room = roomName(e.room_id)
-  const where = room ? ` in ${room}` : ''
-  const plural = count === 1 ? '' : 's'
+  const where = room ? t('inRoom', { room }) : ''
   const sample = names.length > 0 ? ` (${names.join(', ')}${count > names.length ? ', …' : ''})` : ''
+  const v = { count, where, sample }
 
   switch (e.entity) {
     case 'layout_object': {
-      const verbs: Record<string, string> = { added: 'Added', moved: 'Moved', updated: 'Changed', removed: 'Removed' }
-      const verb = verbs[e.action] ?? 'Changed'
-      return `${verb} ${count} item${plural}${where}${sample}`
+      const keys: Record<string, string> = { added: 'objAdded', moved: 'objMoved', updated: 'objUpdated', removed: 'objRemoved' }
+      return t(keys[e.action] ?? 'objUpdated', v)
     }
     case 'guest': {
-      const verbs: Record<string, string> = { added: 'Added', updated: 'Edited', removed: 'Removed' }
-      const verb = verbs[e.action] ?? 'Changed'
-      return `${verb} ${count} guest${plural}${sample}`
+      const keys: Record<string, string> = { added: 'guestAdded', updated: 'guestUpdated', removed: 'guestRemoved' }
+      return t(keys[e.action] ?? 'guestChanged', v)
     }
     case 'seat_assignment': {
-      const verbs: Record<string, string> = { assigned: 'Seated', unassigned: 'Unseated', reassigned: 'Moved' }
-      const verb = verbs[e.action] ?? 'Changed seating for'
-      return `${verb} ${count} guest${plural}${where}${sample}`
+      const keys: Record<string, string> = { assigned: 'seatAssigned', unassigned: 'seatUnassigned', reassigned: 'seatReassigned' }
+      return t(keys[e.action] ?? 'seatChanged', v)
     }
     case 'payment': {
       // Amounts are deliberately never put in the activity log — only labels.
-      if (e.action === 'marked_paid') return `Marked ${count} payment${plural} as paid${sample}`
-      if (e.action === 'marked_unpaid') return `Marked ${count} payment${plural} as unpaid${sample}`
-      const verbs: Record<string, string> = { added: 'Added', updated: 'Edited', removed: 'Removed' }
-      const verb = verbs[e.action] ?? 'Changed'
-      return `${verb} ${count} payment${plural}${sample}`
+      const keys: Record<string, string> = {
+        marked_paid: 'payMarkedPaid',
+        marked_unpaid: 'payMarkedUnpaid',
+        added: 'payAdded',
+        updated: 'payUpdated',
+        removed: 'payRemoved',
+      }
+      return t(keys[e.action] ?? 'payChanged', v)
     }
     case 'timetable': {
-      const verbs: Record<string, string> = { added: 'Added', updated: 'Changed', removed: 'Removed' }
-      const verb = verbs[e.action] ?? 'Changed'
-      return `${verb} ${count} timetable block${plural}${sample}`
+      const keys: Record<string, string> = { added: 'ttAdded', updated: 'ttUpdated', removed: 'ttRemoved' }
+      return t(keys[e.action] ?? 'ttUpdated', v)
     }
-    case 'capacity':
-      return `Went over the ${(e.summary as { mode?: string }).mode ?? ''} limit${where} and continued with a note`.replace('  ', ' ')
+    case 'capacity': {
+      const mode = (e.summary as { mode?: string }).mode
+      return t('capacity', { mode: mode === 'seated' ? t('modeSeated') : mode === 'standing' ? t('modeStanding') : (mode ?? ''), where }).replace('  ', ' ')
+    }
     case 'document': {
-      if (e.action === 'new_version') return `Uploaded a new version of ${count} document${plural}${sample}`
-      const verb = e.action === 'removed' ? 'Removed' : 'Attached'
-      return `${verb} ${count} document${plural}${sample}`
+      if (e.action === 'new_version') return t('docNewVersion', v)
+      return t(e.action === 'removed' ? 'docRemoved' : 'docAttached', v)
     }
   }
 }
 
-function formatDay(isoDay: string): string {
+function formatDay(isoDay: string, locale: Locale): string {
   const d = new Date(`${isoDay}T00:00:00`)
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(INTL_TAG[locale], { weekday: 'short', day: 'numeric', month: 'short' })
 }

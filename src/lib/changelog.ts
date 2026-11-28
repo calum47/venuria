@@ -1,4 +1,6 @@
 import type { AuthRole } from '@/lib/supabase/role'
+import type { Locale } from '@/i18n/config'
+import { CHANGELOG_ES } from '@/lib/changelogEs'
 
 /**
  * User-facing release notes, shown by WhatsNewModal on the first visit after
@@ -470,6 +472,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
 ]
+
+/** The entry's title and items in the user's language (English until a translation exists). */
+export function localizedEntry(entry: ChangelogEntry, locale: Locale): { title: string; items: string[] } {
+  if (locale === 'es') {
+    const es = CHANGELOG_ES[entry.id]
+    if (es) return es
+  }
+  return { title: entry.title, items: entry.items }
+}
 
 /** Newest entry visible to this role, or null if nothing applies. */
 export function latestEntryForRole(role: AuthRole): ChangelogEntry | null {

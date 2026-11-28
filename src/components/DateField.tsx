@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { displayToIso, isoToDisplay } from '@/lib/dateInput'
 
 /**
@@ -22,6 +23,7 @@ export function DateField({
   className?: string
   ariaLabel?: string
 }) {
+  const t = useTranslations('Common')
   const [text, setText] = useState(() => isoToDisplay(value))
   const [seen, setSeen] = useState(value)
   // The value changed from outside (PDF fill, calculated due date, opening the form): show it.
@@ -43,7 +45,7 @@ export function DateField({
           setSeen(iso)
           onChange(iso)
         }}
-        placeholder="dd/mm/yyyy"
+        placeholder={t('datePlaceholder')}
         inputMode="numeric"
         autoComplete="off"
         maxLength={10}
@@ -66,7 +68,7 @@ export function DateField({
           className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         />
       </span>
-      {invalid && <span className="sr-only">Use the format dd/mm/yyyy</span>}
+      {invalid && <span className="sr-only">{t('dateFormatHint')}</span>}
     </div>
   )
 }

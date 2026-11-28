@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { DbCatalogItem } from '@/types/db'
 import { getMasterCatalogItems, getStock, upsertStockQuantity } from '@/lib/supabase/queries'
 import { STOCK_TRACKED_CATEGORIES } from '@/lib/tableSetting'
+import { useTranslations } from 'next-intl'
+import { categoryLabel } from '@/lib/categories'
 
 const STOCK_CATEGORIES = STOCK_TRACKED_CATEGORIES
 
@@ -26,6 +28,9 @@ function readCollapsed(key: string): Record<string, boolean> {
 }
 
 export default function StockManager({ ownerType, ownerId }: Props) {
+  const t = useTranslations('Stock')
+  const tc = useTranslations('Common')
+  const tcat = useTranslations('Categories')
   const storageKey = collapsedKey(ownerType, ownerId)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => readCollapsed(storageKey))
   const toggleGroup = (category: string) => {
@@ -65,12 +70,12 @@ export default function StockManager({ ownerType, ownerId }: Props) {
         setError(null)
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load stock.')
+        if (!cancelled) setError(err instanceof Error ? err.message : t('failedToLoadStock'))
       })
     return () => {
       cancelled = true
     }
-  }, [ownerType, ownerId])
+  }, [ownerType, ownerId, t])
 
   const handleSave = async (catalogItemId: string) => {
     const quantity = quantities[catalogItemId] ?? 0
@@ -80,13 +85,13 @@ export default function StockManager({ ownerType, ownerId }: Props) {
       await upsertStockQuantity(catalogItemId, ownerType, ownerId, quantity)
       setSavedQuantities((prev) => ({ ...prev, [catalogItemId]: quantity }))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save.')
+      setError(err instanceof Error ? err.message : t('failedToSave'))
     } finally {
       setSaving(null)
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Loading stock…</p>
+  if (loading) return <p className="text-sm text-gray-400">{t('loadingStock')}</p>
 
   const byCategory = STOCK_CATEGORIES.map((category) => ({
     category,
@@ -105,9 +110,9 @@ export default function StockManager({ ownerType, ownerId }: Props) {
             className="mb-1 flex w-full items-center gap-2 text-left text-xs font-semibold uppercase text-gray-500 hover:text-gray-800"
           >
             <span aria-hidden="true" className={`inline-block w-3 transition-transform ${collapsed[category] ? '' : 'rotate-90'}`}>▸</span>
-            {category}
+            {categoryLabel(tcat, category)}
             <span className="font-normal normal-case text-gray-400">
-              {categoryItems.reduce((sum, i) => sum + (savedQuantities[i.id] ?? 0), 0)} in stock
+              {t('inStock', { count: categoryItems.reduce((sum, i) => sum + (savedQuantities[i.id] ?? 0), 0) })}
             </span>
           </button>
           {!collapsed[category] && (
@@ -123,7 +128,7 @@ export default function StockManager({ ownerType, ownerId }: Props) {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label htmlFor={`qty-${item.id}`} className="text-[11px] text-gray-500">Quantity</label>
+                    <label htmlFor={`qty-${item.id}`} className="text-[11px] text-gray-500">{t('quantity')}</label>
                     <input
                       id={`qty-${item.id}`}
                       type="number"
@@ -139,7 +144,7 @@ export default function StockManager({ ownerType, ownerId }: Props) {
                       disabled={!dirty || saving === item.id}
                       className="rounded-lg bg-brand-600 px-2 py-1 text-xs text-white disabled:opacity-30"
                     >
-                      {saving === item.id ? 'Saving…' : 'Save'}
+                      {saving === item.id ? tc('saving') : tc('save')}
                     </button>
                   </div>
                 </li>

@@ -5,6 +5,7 @@ import type { DbStockItem, DbStockOrder } from '@/types/db'
 import { addStockOrder, setStockOrderStatus, deleteStockOrder } from '@/lib/supabase/stockQueries'
 import type { ProjectOption } from './StockApp'
 import { Labelled } from '@/components/Labelled'
+import { useTranslations } from 'next-intl'
 
 type Props = {
   teamId: string
@@ -25,6 +26,8 @@ type Props = {
  * (17TRACK) is v2, built after this core CRUD ships.
  */
 export default function OrdersTab({ teamId, items, orders, projects, canManage, itemById, onChanged }: Props) {
+  const t = useTranslations('Stock')
+  const tc = useTranslations('Common')
   const projectById = useMemo(() => new Map(projects.map((p) => [p.id, p.label])), [projects])
 
   const [itemId, setItemId] = useState('')
@@ -37,8 +40,8 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
   const submit = async () => {
     setError(null)
     const q = Number(qty)
-    if (!itemId && !freeText.trim()) return setError('Pick a product or describe a one-off order.')
-    if (!Number.isFinite(q) || q <= 0) return setError('Quantity must be a positive number.')
+    if (!itemId && !freeText.trim()) return setError(t('pickAProductOrDescribe'))
+    if (!Number.isFinite(q) || q <= 0) return setError(t('quantityMustBeAPositive'))
 
     setIsSaving(true)
     try {
@@ -55,7 +58,7 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
       setProjectId('')
       onChanged()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save order.')
+      setError(err instanceof Error ? err.message : t('failedToSaveOrder'))
     } finally {
       setIsSaving(false)
     }
@@ -67,7 +70,7 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Remove this order?')) return
+    if (!confirm(t('removeThisOrder'))) return
     await deleteStockOrder(id)
     onChanged()
   }
@@ -81,42 +84,42 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
           Anything you&apos;ve ordered in — from a catalogue product to a one-off personalized piece. Doesn&apos;t change stock counts.
         </p>
         <div className="flex flex-wrap items-end gap-2">
-          <Labelled label="Catalogue product">
+          <Labelled label={t('catalogueProduct')}>
             <select
               value={itemId}
               onChange={(e) => { setItemId(e.target.value); if (e.target.value) setFreeText('') }}
               className={input}
             >
-              <option value="">Choose a product…</option>
+              <option value="">{t('chooseAProduct')}</option>
               {items.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
             </select>
           </Labelled>
-          <span className="pb-2 text-xs text-gray-400">or</span>
-          <Labelled label="One-off order (not saved — see note below)">
+          <span className="pb-2 text-xs text-gray-400">{t('or')}</span>
+          <Labelled label={t('oneOffOrderNotSaved')}>
             <input
               value={freeText}
               onChange={(e) => { setFreeText(e.target.value); if (e.target.value) setItemId('') }}
-              placeholder="e.g. Personalised welcome sign"
+              placeholder={t('eGPersonalisedWelcomeSign')}
               disabled={!!itemId}
-              title="v1 limitation: only tracked as a reminder while filling this form — not persisted without a catalogue product"
+              title={t('v1LimitationOnlyTrackedAs')}
               className={`${input} w-64 disabled:bg-gray-50`}
             />
           </Labelled>
-          <Labelled label="Quantity">
+          <Labelled label={t('quantity')}>
             <input type="number" min="1" value={qty} onChange={(e) => setQty(e.target.value)} className={`${input} w-20`} />
           </Labelled>
-          <Labelled label="Wedding">
+          <Labelled label={t('wedding')}>
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={input}>
-              <option value="">No wedding tag</option>
+              <option value="">{t('noWeddingTag')}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </Labelled>
           <button onClick={submit} disabled={isSaving || (!itemId && !freeText.trim())} className="rounded-lg bg-brand-600 text-white text-sm px-3 py-1.5 disabled:opacity-40 hover:bg-brand-700">
-            {isSaving ? 'Saving…' : 'Add order'}
+            {isSaving ? tc('saving') : t('addOrder')}
           </button>
         </div>
         {!itemId && freeText.trim() && (
@@ -131,7 +134,7 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
         {orders.map((o) => (
           <li key={o.id} className="px-4 py-2.5 text-sm flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <span className="text-gray-900">{o.item_id ? itemById.get(o.item_id)?.name ?? 'Deleted product' : 'One-off order'}</span>
+              <span className="text-gray-900">{o.item_id ? itemById.get(o.item_id)?.name ?? t('deletedProduct') : t('oneOffOrder')}</span>
               <span className="text-gray-400 ml-2">×{o.qty}</span>
               {o.project_id && <span className="text-gray-400 ml-2">· {projectById.get(o.project_id) ?? 'project'}</span>}
             </div>
@@ -140,16 +143,16 @@ export default function OrdersTab({ teamId, items, orders, projects, canManage, 
               <button
                 onClick={() => toggleStatus(o)}
                 disabled={!canManage}
-                title={canManage ? undefined : 'Only managers and leads change an order\'s status'}
+                title={canManage ? undefined : t('onlyManagersAndLeadsChange')}
                 className={`text-xs px-2 py-0.5 rounded-full ${o.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} disabled:cursor-default`}
               >
-                {o.status === 'received' ? 'Received' : 'Pending'}
+                {o.status === 'received' ? t('received') : t('pending')}
               </button>
               {canManage && <button onClick={() => remove(o.id)} className="text-gray-300 hover:text-red-500">✕</button>}
             </div>
           </li>
         ))}
-        {orders.length === 0 && <li className="px-4 py-6 text-sm text-gray-400 text-center">No orders logged yet.</li>}
+        {orders.length === 0 && <li className="px-4 py-6 text-sm text-gray-400 text-center">{t('noOrdersLoggedYet')}</li>}
       </ul>
     </div>
   )

@@ -2,14 +2,17 @@
 
 import type { DraftField, FromPdf, PaymentDraft } from '@/lib/pdfPayments'
 import { useId } from 'react'
+import { useTranslations } from 'next-intl'
 import { DateField } from '@/components/DateField'
 import { input } from './documentUi'
 
-const FIELDS: { field: DraftField; label: string; placeholder: string; extra?: Record<string, string> }[] = [
-  { field: 'vendor', label: 'Vendor / supplier', placeholder: '' },
-  { field: 'label', label: 'For', placeholder: 'Deposit, First payment, etc.' },
-  { field: 'amount', label: 'Amount', placeholder: '', extra: { inputMode: 'decimal' } },
-  { field: 'dueDate', label: 'Due date', placeholder: 'dd/mm/yyyy' },
+type FieldLabel = 'fieldVendor' | 'fieldFor' | 'fieldAmount' | 'fieldDueDate'
+type FieldPlaceholder = '' | 'fieldForPlaceholder' | 'datePlaceholder'
+const FIELDS: { field: DraftField; label: FieldLabel; placeholder: FieldPlaceholder; extra?: Record<string, string> }[] = [
+  { field: 'vendor', label: 'fieldVendor', placeholder: '' },
+  { field: 'label', label: 'fieldFor', placeholder: 'fieldForPlaceholder' },
+  { field: 'amount', label: 'fieldAmount', placeholder: '', extra: { inputMode: 'decimal' } },
+  { field: 'dueDate', label: 'fieldDueDate', placeholder: 'datePlaceholder' },
 ]
 
 /**
@@ -34,6 +37,7 @@ export function PaymentFields({
   /** How the due date was worked out from a relative wording + the event date (or why it could not be). */
   dueCalc?: string | null
 }) {
+  const t = useTranslations('Pay')
   const uid = useId()
   const hints = [...new Set(Object.values(from ?? {}))]
   return (
@@ -46,9 +50,9 @@ export function PaymentFields({
           return (
             <div key={field} className="min-w-0">
               <label htmlFor={`${uid}-${field}`} className="mb-0.5 flex items-center gap-1 text-[11px] text-gray-500">
-                {label}
-                {fromPdf && <span className="rounded-lg bg-blue-100 px-1 text-blue-700">from PDF</span>}
-                {missing && <span className="rounded-lg bg-amber-100 px-1 text-amber-700">not found — enter it</span>}
+                {t(label)}
+                {fromPdf && <span className="rounded-lg bg-blue-100 px-1 text-blue-700">{t('fromPdf')}</span>}
+                {missing && <span className="rounded-lg bg-amber-100 px-1 text-amber-700">{t('notFoundEnter')}</span>}
               </label>
               {field === 'dueDate' ? (
                 <DateField id={`${uid}-${field}`} value={value.dueDate} onChange={(iso) => onChange('dueDate', iso)} className={`${input}${tint}`} />
@@ -57,7 +61,7 @@ export function PaymentFields({
                   id={`${uid}-${field}`}
                   value={value[field]}
                   onChange={(e) => onChange(field, e.target.value)}
-                  placeholder={placeholder}
+                  placeholder={placeholder ? t(placeholder) : ''}
                   maxLength={field === 'vendor' || field === 'label' ? 120 : undefined}
                   list={field === 'vendor' ? 'team-vendor-names' : undefined}
                   className={`${input} w-full${tint}`}
@@ -69,23 +73,23 @@ export function PaymentFields({
         })}
       </div>
       <div>
-        <label htmlFor={`${uid}-notes`} className="mb-0.5 block text-[11px] text-gray-500">Notes (optional)</label>
+        <label htmlFor={`${uid}-notes`} className="mb-0.5 block text-[11px] text-gray-500">{t('notesOptional')}</label>
         <input
           id={`${uid}-notes`}
           value={value.notes}
           onChange={(e) => onChange('notes', e.target.value)}
-          placeholder="e.g. Bank transfer, send receipt to the planner"
+          placeholder={t('notesPlaceholder')}
           className={`${input} w-full`}
           maxLength={500}
         />
       </div>
       {dueCalc && <p className="text-xs text-blue-700">{dueCalc}</p>}
       {dueText && !dueCalc && !value.dueDate && (
-        <p className="text-xs text-amber-700">The PDF gives the due date as “{dueText}” — enter the actual date.</p>
+        <p className="text-xs text-amber-700">{t('pdfDueAs', { text: dueText })}</p>
       )}
       {hints.length > 0 && (
         <p className="text-xs text-gray-500">
-          Found in the PDF: {hints.map((h) => `“${h}”`).join(' · ')}
+          {t('foundInPdf', { hints: hints.map((h) => `«${h}»`).join(' · ') })}
         </p>
       )}
     </div>

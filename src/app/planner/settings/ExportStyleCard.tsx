@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import { supabase } from '@/lib/supabase/client'
 import {
   BASE_SIZE_RANGE,
@@ -29,22 +31,25 @@ type Props = {
 
 const ACCENT_SWATCHES = ['#282828', '#8b4a6b', '#1f4e79', '#2f6b4f', '#9a6a1f', '#a33a3a']
 
-const POSITIONS: { value: LogoPosition; label: string }[] = [
-  { value: 'bottom-left', label: 'Bottom left' },
-  { value: 'bottom-center', label: 'Bottom centre' },
-]
-const SIZES: { value: LogoSize; label: string }[] = [
-  { value: 'small', label: 'Small' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'large', label: 'Large' },
-]
-const SPACINGS: { value: PdfSpacing; label: string }[] = [
-  { value: 'compact', label: 'Compact' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'roomy', label: 'Roomy' },
-]
 
 export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath, projects }: Props) {
+  const t = useTranslations('ExportStyle')
+  const tp = useTranslations('Pdf')
+  const locale = useLocale() as Locale
+  const POSITIONS: { value: LogoPosition; label: string }[] = [
+    { value: 'bottom-left', label: t('posLeft') },
+    { value: 'bottom-center', label: t('posCenter') },
+  ]
+  const SIZES: { value: LogoSize; label: string }[] = [
+    { value: 'small', label: t('sizeSmall') },
+    { value: 'medium', label: t('sizeMedium') },
+    { value: 'large', label: t('sizeLarge') },
+  ]
+  const SPACINGS: { value: PdfSpacing; label: string }[] = [
+    { value: 'compact', label: t('spacingCompact') },
+    { value: 'normal', label: t('spacingNormal') },
+    { value: 'roomy', label: t('spacingRoomy') },
+  ]
   const [saved, setSaved] = useState<PdfStyle>(initialStyle)
   const [style, setStyle] = useState<PdfStyle>(initialStyle)
   const [logoPath, setLogoPath] = useState<string | null>(initialLogoPath)
@@ -76,13 +81,13 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       .then((d) => {
         if (cancelled) return
         setData(d)
-        setDataError(d ? null : 'Could not load this project for the preview.')
+        setDataError(d ? null : t('loadProjectFailed'))
       })
-      .catch(() => !cancelled && setDataError('Could not load this project for the preview.'))
+      .catch(() => !cancelled && setDataError(t('loadProjectFailed')))
     return () => {
       cancelled = true
     }
-  }, [projectId])
+  }, [projectId, t])
 
   // The logo image (re-read whenever a new file is uploaded).
   useEffect(() => {
@@ -120,6 +125,8 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           fonts,
           logo,
           brandMark,
+          t: tp,
+          locale,
         })
         url = URL.createObjectURL(doc.output('blob'))
         if (cancelled) {
@@ -133,7 +140,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
         setPreviewError(null)
       } catch (e) {
         console.error('Preview failed', e)
-        if (!cancelled) setPreviewError('The preview could not be drawn.')
+        if (!cancelled) setPreviewError(t('previewFailed'))
       } finally {
         if (!cancelled) setRendering(false)
       }
@@ -142,7 +149,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       cancelled = true
       clearTimeout(timer)
     }
-  }, [data, style, logo, brandMark])
+  }, [data, style, logo, brandMark, t, tp, locale])
 
   function save() {
     setMessage(null)
@@ -151,7 +158,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       if (r.error) setMessage({ kind: 'error', text: r.error })
       else {
         setSaved(style)
-        setMessage({ kind: 'ok', text: 'Saved. Every export from your team now uses this look.' })
+        setMessage({ kind: 'ok', text: t('saved') })
       }
     })
   }
@@ -162,7 +169,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
     setLogoBusy(true)
     let uploaded: string | null = null
     try {
-      const { blob, ext } = await prepareLogoFile(file)
+      const { blob, ext } = await prepareLogoFile(file, tp)
       const path = `${teamId}/logo-${Date.now()}.${ext}`
       const { error: upErr } = await supabase.storage.from(LOGO_BUCKET).upload(path, blob, {
         contentType: blob.type,
@@ -173,10 +180,10 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       const r = await saveTeamLogo(path)
       if (r.error) throw new Error(r.error)
       setLogoPath(path)
-      setMessage({ kind: 'ok', text: 'Logo saved.' })
+      setMessage({ kind: 'ok', text: t('logoSaved') })
     } catch (e) {
       if (uploaded) await supabase.storage.from(LOGO_BUCKET).remove([uploaded])
-      setMessage({ kind: 'error', text: e instanceof Error ? e.message : 'Could not upload the logo.' })
+      setMessage({ kind: 'error', text: e instanceof Error ? e.message : t('logoUploadFailed') })
     } finally {
       setLogoBusy(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -191,7 +198,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
     if (r.error) setMessage({ kind: 'error', text: r.error })
     else {
       setLogoPath(null)
-      setMessage({ kind: 'ok', text: 'Logo removed.' })
+      setMessage({ kind: 'ok', text: t('logoRemoved') })
     }
   }
 
@@ -206,10 +213,9 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
   return (
     <section className="bg-white rounded-xl border border-gray-100 p-5 space-y-5">
       <div>
-        <h2 className="text-sm font-semibold text-gray-900">Exports: look and logo</h2>
+        <h2 className="text-sm font-semibold text-gray-900">{t('title')}</h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          How your team&apos;s exported PDFs look, plus your logo on every page (also on floor plan JPGs). Applies to the whole team.
-          The Venuria mark always stays at the bottom right.
+          {t('intro')}
         </p>
       </div>
 
@@ -217,17 +223,17 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
         {/* Controls */}
         <div className="space-y-4">
           <div>
-            <label className={label}>Font</label>
+            <label className={label}>{t('font')}</label>
             <select
               value={style.font}
               onChange={(e) => patch({ font: e.target.value as PdfStyle['font'] })}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
             >
               {(['Sans', 'Serif'] as const).map((kind) => (
-                <optgroup key={kind} label={kind}>
+                <optgroup key={kind} label={kind === 'Sans' ? t('kindSans') : t('kindSerif')}>
                   {PDF_FONTS.filter((f) => f.kind === kind).map((f) => (
                     <option key={f.key} value={f.key}>
-                      {f.label}
+                      {f.key === 'helvetica' ? t('fontHelvetica') : f.label}
                     </option>
                   ))}
                 </optgroup>
@@ -237,7 +243,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={label}>Title size: {style.titleSize} pt</label>
+              <label className={label}>{t('titleSize', { size: style.titleSize })}</label>
               <input
                 type="range"
                 min={TITLE_SIZE_RANGE.min}
@@ -249,7 +255,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
               />
             </div>
             <div>
-              <label className={label}>Text size: {style.baseSize} pt</label>
+              <label className={label}>{t('textSize', { size: style.baseSize })}</label>
               <input
                 type="range"
                 min={BASE_SIZE_RANGE.min}
@@ -263,14 +269,14 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           </div>
 
           <div>
-            <label className={label}>Accent colour (titles, table headers, header line)</label>
+            <label className={label}>{t('accent')}</label>
             <div className="flex flex-wrap items-center gap-2">
               {ACCENT_SWATCHES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => patch({ accent: c })}
-                  aria-label={`Use ${c}`}
+                  aria-label={t('useColour', { colour: c })}
                   className={`h-6 w-6 rounded-full border ${style.accent === c ? 'ring-2 ring-offset-1 ring-gray-900' : 'border-gray-200'}`}
                   style={{ backgroundColor: c }}
                 />
@@ -279,7 +285,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
                 type="color"
                 value={style.accent}
                 onChange={(e) => patch({ accent: e.target.value })}
-                aria-label="Custom accent colour"
+                aria-label={t('customAccent')}
                 className="h-7 w-9 cursor-pointer rounded border border-gray-200 p-0.5"
               />
               <span className="font-mono text-xs text-gray-500">{style.accent}</span>
@@ -287,37 +293,37 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           </div>
 
           <div>
-            <label className={label}>Spacing</label>
+            <label className={label}>{t('spacing')}</label>
             <div className="flex gap-4">{SPACINGS.map((o) => radio('spacing', o.value, style.spacing, o.label, () => patch({ spacing: o.value })))}</div>
           </div>
 
           <div>
-            <label className={label}>Footer text (left of the page footer)</label>
+            <label className={label}>{t('footerText')}</label>
             <input
               type="text"
               value={style.footerText}
               maxLength={FOOTER_TEXT_MAX}
               onChange={(e) => setStyle((s) => ({ ...s, footerText: e.target.value.slice(0, FOOTER_TEXT_MAX) }))}
               onBlur={() => patch({})}
-              placeholder="e.g. your company name and website"
+              placeholder={t('footerPlaceholder')}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
             />
           </div>
 
           <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium text-gray-500">Logo</span>
+              <span className="text-xs font-medium text-gray-500">{t('logo')}</span>
               <label className="flex items-center gap-1.5 text-sm text-gray-700">
                 <input type="checkbox" checked={style.showLogo} onChange={(e) => patch({ showLogo: e.target.checked })} />
-                Show on every page
+                {t('showEveryPage')}
               </label>
             </div>
             <div className="flex items-center gap-3">
               {logo ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={logo.dataUrl} alt="Team logo" className="h-10 max-w-[140px] rounded border border-gray-200 bg-white object-contain p-1" />
+                <img src={logo.dataUrl} alt={t('teamLogo')} className="h-10 max-w-[140px] rounded border border-gray-200 bg-white object-contain p-1" />
               ) : (
-                <span className="text-xs text-gray-400">{logoPath ? 'Loading logo…' : 'No logo yet'}</span>
+                <span className="text-xs text-gray-400">{logoPath ? t('loadingLogo') : t('noLogo')}</span>
               )}
               <input
                 ref={fileRef}
@@ -332,23 +338,23 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
                 onClick={() => fileRef.current?.click()}
                 className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs text-gray-700 disabled:opacity-50"
               >
-                {logoBusy ? 'Working…' : logoPath ? 'Replace' : 'Upload logo'}
+                {logoBusy ? t('working') : logoPath ? t('replace') : t('uploadLogo')}
               </button>
               {logoPath && (
                 <button type="button" disabled={logoBusy} onClick={removeLogo} className="text-xs text-red-600 disabled:opacity-50">
-                  Remove
+                  {t('remove')}
                 </button>
               )}
             </div>
-            <p className="text-[11px] text-gray-400">PNG, JPG, WebP or SVG. A transparent PNG looks best.</p>
+            <p className="text-[11px] text-gray-400">{t('formats')}</p>
             <div>
-              <label className={label}>Position</label>
+              <label className={label}>{t('position')}</label>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {POSITIONS.map((o) => radio('logoPos', o.value, style.logoPosition, o.label, () => patch({ logoPosition: o.value })))}
               </div>
             </div>
             <div>
-              <label className={label}>Size</label>
+              <label className={label}>{t('size')}</label>
               <div className="flex gap-4">{SIZES.map((o) => radio('logoSize', o.value, style.logoSize, o.label, () => patch({ logoSize: o.value })))}</div>
             </div>
           </div>
@@ -360,16 +366,16 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
               disabled={!dirty || isSaving}
               className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
             >
-              {isSaving ? 'Saving…' : 'Save look'}
+              {isSaving ? t('saving') : t('saveLook')}
             </button>
             <button
               type="button"
               onClick={() => patch({ ...DEFAULT_PDF_STYLE })}
               className="text-xs text-gray-500 underline-offset-2 hover:underline"
             >
-              Reset to default
+              {t('reset')}
             </button>
-            {dirty && !isSaving && <span className="text-xs text-amber-700">Unsaved changes</span>}
+            {dirty && !isSaving && <span className="text-xs text-amber-700">{t('unsaved')}</span>}
           </div>
           {message && <p className={`text-sm ${message.kind === 'ok' ? 'text-green-700' : 'text-red-600'}`}>{message.text}</p>}
         </div>
@@ -377,7 +383,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
         {/* Live preview */}
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-gray-500">Preview from</span>
+            <span className="text-xs font-medium text-gray-500">{t('previewFrom')}</span>
             {projects.length > 0 ? (
               <select
                 value={projectId}
@@ -395,23 +401,23 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
                 ))}
               </select>
             ) : (
-              <span className="text-xs text-gray-400">no projects yet</span>
+              <span className="text-xs text-gray-400">{t('noProjects')}</span>
             )}
-            {rendering && <span className="text-xs text-gray-400">Updating…</span>}
+            {rendering && <span className="text-xs text-gray-400">{t('updating')}</span>}
           </div>
           <div className="h-[560px] overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
             {projects.length === 0 ? (
-              <p className="p-6 text-sm text-gray-400">Create a project first — the preview uses a real one.</p>
+              <p className="p-6 text-sm text-gray-400">{t('createFirst')}</p>
             ) : dataError || previewError ? (
               <p className="p-6 text-sm text-red-600">{dataError ?? previewError}</p>
             ) : previewUrl ? (
-              <iframe key={previewUrl} src={`${previewUrl}#toolbar=0&navpanes=0`} title="PDF preview" className="h-full w-full" />
+              <iframe key={previewUrl} src={`${previewUrl}#toolbar=0&navpanes=0`} title={t('previewTitle')} className="h-full w-full" />
             ) : (
-              <p className="p-6 text-sm text-gray-400">Loading preview…</p>
+              <p className="p-6 text-sm text-gray-400">{t('loadingPreview')}</p>
             )}
           </div>
           <p className="mt-1.5 text-[11px] text-gray-400">
-            Unsaved changes show here but only apply to exports once you save.
+            {t('previewNote')}
           </p>
         </div>
       </div>

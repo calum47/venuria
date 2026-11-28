@@ -13,6 +13,7 @@ import {
   type StockItemInput,
 } from '@/lib/supabase/stockQueries'
 import { money } from './StockApp'
+import { useTranslations } from 'next-intl'
 
 type Props = {
   teamId: string
@@ -29,6 +30,7 @@ type Props = {
 }
 
 export default function CatalogueTab({ teamId, currency, items, groups, canManage, outByItem, soldByItem, onItemsChanged, onGroupsChanged }: Props) {
+  const t = useTranslations('Stock')
   const [activeGroup, setActiveGroup] = useState<string | 'all'>('all')
   const [editing, setEditing] = useState<DbStockItem | 'new' | null>(null)
   const [newGroupName, setNewGroupName] = useState('')
@@ -45,7 +47,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
   }
 
   const removeGroup = async (id: string) => {
-    if (!confirm('Remove this group? Items keep their data and become ungrouped.')) return
+    if (!confirm(t('removeThisGroupItemsKeep'))) return
     if (activeGroup === id) setActiveGroup('all')
     await deleteStockGroup(id)
     onGroupsChanged()
@@ -64,7 +66,7 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
             </Chip>
             {canManage && <button
               onClick={() => removeGroup(g.id)}
-              title="Remove group"
+              title={t('removeGroup')}
               className="absolute -right-1 -top-1 hidden group-hover:flex w-3.5 h-3.5 items-center justify-center rounded-full bg-gray-400 text-white text-[9px] leading-none"
             >
               ✕
@@ -72,12 +74,12 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
           </div>
         ))}
         {canManage && (
-          <Labelled label="New group (press Enter)" className="w-32">
+          <Labelled label={t('newGroupPressEnter')} className="w-32">
             <input
               value={newGroupName}
               onChange={(e) => setNewGroupName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addGroup()}
-              placeholder="e.g. Centrepieces"
+              placeholder={t('eGCentrepieces')}
               className="w-full text-xs px-2 py-1 rounded-full border border-dashed border-gray-300 text-gray-500 focus:outline-none"
             />
           </Labelled>
@@ -88,11 +90,11 @@ export default function CatalogueTab({ teamId, currency, items, groups, canManag
         >
           + Add product
         </button>}
-        {!canManage && <span className="ml-auto text-xs text-gray-400">View only — managers and leads edit the catalogue</span>}
+        {!canManage && <span className="ml-auto text-xs text-gray-400">{t('viewOnlyManagersAndLeads')}</span>}
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-sm text-gray-400 py-8 text-center">No products {activeGroup === 'all' ? 'yet' : 'in this group'}.</p>
+        <p className="text-sm text-gray-400 py-8 text-center">{activeGroup === 'all' ? t('noProductsYet') : t('noProductsInGroup')}</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
           {visible.map((item) => (
@@ -151,6 +153,7 @@ function ItemCard({
   showPrices: boolean
   onClick: () => void
 }) {
+  const t = useTranslations('Stock')
   const margin = item.sell_price > 0 ? ((item.sell_price - item.cost_price) / item.sell_price) * 100 : 0
   const low = !item.on_demand && item.current_stock <= item.min_stock_alert
 
@@ -162,10 +165,10 @@ function ItemCard({
       <div className="flex items-center justify-between">
         <Icon item={item} />
         {item.on_demand ? (
-          <span className="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-lg px-1.5 py-0.5">On Demand</span>
+          <span className="text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-lg px-1.5 py-0.5">{t('onDemand')}</span>
         ) : (
           <span className={`text-[10px] uppercase tracking-wide rounded-lg px-1.5 py-0.5 ${low ? 'bg-amber-100 text-amber-700' : 'bg-gray-50 text-gray-400'}`}>
-            {item.current_stock} in stock
+            {t('countInStock', { count: item.current_stock })}
           </span>
         )}
       </div>
@@ -173,18 +176,18 @@ function ItemCard({
       {showPrices && (
         <>
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span title="Weighted average of everything bought">Avg cost {money(item.cost_price, currency)}</span>
-            <span>Sell {money(item.sell_price, currency)}</span>
+            <span title={t('weightedAverageOfEverythingBought')}>{t('avgCostAmount', { amount: money(item.cost_price, currency) })}</span>
+            <span>{t('sellAmount', { amount: money(item.sell_price, currency) })}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span title="Margin on the average cost">{margin.toFixed(0)}% margin</span>
-            <span>{sold} sold</span>
+            <span title={t('marginOnTheAverageCost')}>{t('pctMargin', { pct: margin.toFixed(0) })}</span>
+            <span>{t('countSold', { count: sold })}</span>
           </div>
         </>
       )}
-      {!showPrices && sold > 0 && <p className="text-xs text-gray-500">{sold} sold</p>}
+      {!showPrices && sold > 0 && <p className="text-xs text-gray-500">{t('countSold', { count: sold })}</p>}
       {item.reusable && (
-        <p className="text-[10px] text-indigo-600">Reusable{out > 0 ? ` · ${out} out with clients` : ''}</p>
+        <p className="text-[10px] text-indigo-600">{out > 0 ? t('reusableOut', { count: out }) : t('reusableLabel')}</p>
       )}
       {groupName && <p className="text-[10px] text-gray-400">{groupName}</p>}
     </button>
@@ -220,6 +223,8 @@ function EditProductModal({
   onSaved: () => void
   onDeleted: () => void
 }) {
+  const t = useTranslations('Stock')
+  const tc = useTranslations('Common')
   const [name, setName] = useState(item?.name ?? '')
   const [groupId, setGroupId] = useState(item?.group_id ?? '')
   const [iconType, setIconType] = useState<'emoji' | 'photo'>(item?.icon_type ?? 'emoji')
@@ -244,7 +249,7 @@ function EditProductModal({
       setPhotoUrl(url)
       setIconType('photo')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Photo upload failed.')
+      setError(err instanceof Error ? err.message : t('photoUploadFailed'))
     } finally {
       setIsUploading(false)
     }
@@ -252,12 +257,12 @@ function EditProductModal({
 
   const save = async () => {
     setError(null)
-    if (!name.trim()) return setError('Name is required.')
+    if (!name.trim()) return setError(t('nameIsRequired'))
     const cost = Number(costPrice)
     const sell = Number(sellPrice)
-    if (Number.isNaN(cost) || Number.isNaN(sell)) return setError('Prices must be numbers.')
+    if (Number.isNaN(cost) || Number.isNaN(sell)) return setError(t('pricesMustBeNumbers'))
     // A new product must say what it will be sold for (use 0 if it is given away). Editable later.
-    if (!item && !sellPriceEntered(sellPrice)) return setError('Enter the selling price for this product (0 if it is not charged for).')
+    if (!item && !sellPriceEntered(sellPrice)) return setError(t('enterTheSellingPriceFor'))
 
     const input: Omit<StockItemInput, 'teamId'> = {
       groupId: groupId || null,
@@ -278,7 +283,7 @@ function EditProductModal({
       else await createStockItem({ teamId, ...input })
       onSaved()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save.')
+      setError(err instanceof Error ? err.message : t('failedToSave'))
     } finally {
       setIsSaving(false)
     }
@@ -286,13 +291,13 @@ function EditProductModal({
 
   const remove = async () => {
     if (!item) return
-    if (!confirm(`Delete "${item.name}"? This also removes its purchase/sale/order history.`)) return
+    if (!confirm(t('deleteNameThisAlsoRemoves', { name: item.name }))) return
     setIsSaving(true)
     try {
       await deleteStockItem(item.id)
       onDeleted()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete.')
+      setError(err instanceof Error ? err.message : t('failedToDelete'))
       setIsSaving(false)
     }
   }
@@ -302,7 +307,7 @@ function EditProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl w-[26rem] max-h-[85vh] overflow-y-auto p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">{item ? 'Edit product' : 'Add product'}</h3>
+        <h3 className="font-semibold text-gray-900">{item ? t('editProduct') : t('addProduct')}</h3>
 
         <div className="flex items-center gap-3">
           <div className="w-14 h-14 rounded-xl bg-gray-50 flex items-center justify-center text-2xl overflow-hidden shrink-0">
@@ -315,28 +320,28 @@ function EditProductModal({
           </div>
           <div className="flex-1 space-y-1">
             <div className="flex gap-1 text-xs">
-              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded-lg ${iconType === 'emoji' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Emoji</button>
-              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded-lg ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>Photo</button>
+              <button onClick={() => setIconType('emoji')} className={`px-2 py-0.5 rounded-lg ${iconType === 'emoji' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{t('emoji')}</button>
+              <button onClick={() => setIconType('photo')} className={`px-2 py-0.5 rounded-lg ${iconType === 'photo' ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>{t('photo')}</button>
             </div>
             {iconType === 'emoji' ? (
-              <Labelled label="Emoji (shown on the product card)">
+              <Labelled label={t('emojiShownOnTheProduct')}>
                 <input value={emoji} onChange={(e) => setEmoji(e.target.value)} placeholder="📦" maxLength={4} className={input} />
               </Labelled>
             ) : (
-              <Labelled label="Photo">
+              <Labelled label={t('photo')}>
                 <input type="file" accept="image/*" onChange={(e) => handlePhoto(e.target.files?.[0])} disabled={isUploading} className="text-xs" />
               </Labelled>
             )}
           </div>
         </div>
 
-        <Labelled label="Name">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Gold candle holder" className={input} />
+        <Labelled label={tc('name')}>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('eGGoldCandleHolder')} className={input} />
         </Labelled>
 
-        <Labelled label="Group">
+        <Labelled label={t('group')}>
           <select value={groupId} onChange={(e) => setGroupId(e.target.value)} className={input}>
-            <option value="">Ungrouped</option>
+            <option value="">{t('ungrouped')}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
@@ -344,15 +349,15 @@ function EditProductModal({
         </Labelled>
 
         <div className="grid grid-cols-2 gap-3">
-          <Labelled label={item ? 'Avg cost' : 'Starting cost (optional)'}>
+          <Labelled label={item ? t('avgCost') : t('startingCostOptional')}>
             <input type="number" step="0.0001" min="0" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className={input} />
           </Labelled>
-          <Labelled label={item ? 'Selling price' : 'Selling price (required)'}>
+          <Labelled label={item ? t('sellingPrice') : t('sellingPriceRequired')}>
             <input type="number" step="0.01" min="0" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder="0.00" className={input} />
           </Labelled>
         </div>
         <p className="text-xs text-gray-500">
-          Avg cost updates itself with each purchase. Edit it only to correct it.
+          {t('avgCostUpdatesItselfWith')}
         </p>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -364,19 +369,19 @@ function EditProductModal({
           <label className="flex items-start gap-2 text-sm text-gray-700">
             <input type="checkbox" checked={reusable} onChange={(e) => setReusable(e.target.checked)} className="mt-0.5 rounded-lg border-gray-300" />
             <span>
-              Reusable (sold every wedding but comes back afterwards). A sale takes items out; after the wedding you confirm how many came back, so loss or breakage is recorded.
+              {t('reusableHelp')}
             </span>
           </label>
         )}
 
         {!onDemand && (
-          <Labelled label="Low-stock alert threshold (warn when stock falls to this number)">
+          <Labelled label={t('lowStockAlertThresholdWarn')}>
             <input type="number" value={minStockAlert} onChange={(e) => setMinStockAlert(e.target.value)} placeholder="e.g. 5" className={input} />
           </Labelled>
         )}
 
-        <Labelled label="Notes (optional)">
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="e.g. Comes in sets of 4, stored in the blue crate" className={input} />
+        <Labelled label={t('notesOptional')}>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder={t('eGComesInSets')} className={input} />
         </Labelled>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -391,7 +396,7 @@ function EditProductModal({
             Cancel
           </button>
           <button onClick={save} disabled={isSaving || isUploading} className="py-2 px-4 text-sm font-medium text-white bg-brand-600 rounded-lg disabled:opacity-40 hover:bg-brand-700">
-            {isSaving ? 'Saving…' : 'Save'}
+            {isSaving ? tc('saving') : tc('save')}
           </button>
         </div>
       </div>

@@ -8,6 +8,7 @@
  *     every day until they are paid
  */
 import { daysUntil } from '@/lib/projectDates'
+import type { Tr } from '@/i18n/types'
 
 /** A payment starts appearing this many days before its due date (due date included). */
 export const PAYMENT_LEAD_DAYS = 7
@@ -98,12 +99,12 @@ export function buildBell(input: {
   return { currency, reviews, payments, unseen }
 }
 
-export function paymentWhen(daysLeft: number): string {
-  if (daysLeft < -1) return `${-daysLeft} days overdue`
-  if (daysLeft === -1) return '1 day overdue'
-  if (daysLeft === 0) return 'Due today'
-  if (daysLeft === 1) return 'Due tomorrow'
-  return `Due in ${daysLeft} days`
+/** `t` = translator for "Bell". */
+export function paymentWhen(daysLeft: number, t: Tr): string {
+  if (daysLeft < 0) return t('overdueDays', { count: -daysLeft })
+  if (daysLeft === 0) return t('dueToday')
+  if (daysLeft === 1) return t('dueTomorrow')
+  return t('dueInDays', { count: daysLeft })
 }
 
 /** Pages call this after they change something the bell shows (mark reviewed, mark paid). */

@@ -18,6 +18,7 @@ import {
   type RsvpContentPatch,
 } from '@/lib/supabase/rsvpQueries'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
+import { useTranslations } from 'next-intl'
 import { MAX_AREA_PHOTOS, MAX_HOTELS, RSVP_COVER_EDGE, RSVP_PHOTO_EDGE, normalizeWebUrl } from '@/lib/rsvpContent'
 import { rsvpPath } from '@/lib/rsvp'
 
@@ -26,8 +27,8 @@ const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text
 const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 const section = 'space-y-2 border-t border-gray-100 pt-4'
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
 type Props = {
@@ -63,7 +64,8 @@ function FilePick({ label, disabled, onFile }: { label: string; disabled?: boole
 }
 
 function Thumb({ url, alt, className }: { url: string | undefined; alt: string; className: string }) {
-  if (!url) return <div className={`${className} flex items-center justify-center bg-gray-100 text-[10px] text-gray-400`}>No preview</div>
+  const t = useTranslations('Rsvp')
+  if (!url) return <div className={`${className} flex items-center justify-center bg-gray-100 text-[10px] text-gray-400`}>{t('noPreview')}</div>
   // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset
   return <img src={url} alt={alt} className={`${className} object-cover`} />
 }
@@ -75,6 +77,8 @@ function Thumb({ url, alt, className }: { url: string | undefined; alt: string; 
  * list on the page only; a guest's own hotel per night stays free text.
  */
 export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCfg, initialPhotos, initialHotels, initialUrls }: Props) {
+  const t = useTranslations('Rsvp')
+  const tg = useTranslations('Guests')
   const [urls, setUrls] = useState<Record<string, string>>(initialUrls)
   const [photos, setPhotos] = useState<DbRsvpPhoto[]>(initialPhotos)
   const [hotels, setHotels] = useState<DbRsvpHotel[]>(initialHotels)
@@ -101,7 +105,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
     try {
       await fn()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, tg('somethingWrong')))
     } finally {
       setBusy(null)
     }
@@ -112,8 +116,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const saveDetails = () =>
     run('details', async () => {
-      const link = normalizeWebUrl(mapUrl)
-      if (!link.ok) throw new Error(`Map link: ${link.error}`)
+      const link = normalizeWebUrl(mapUrl, tg)
+      if (!link.ok) throw new Error(t('mapLinkError', { error: link.error }))
       await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url })
       setMapUrl(link.url ?? '')
     })
@@ -124,7 +128,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const pickCover = (file: File) =>
     run('cover', async () => {
-      const jpeg = await prepareGuestPhoto(file, RSVP_COVER_EDGE)
+      const jpeg = await prepareGuestPhoto(file, tg, RSVP_COVER_EDGE)
       const r = await setCoverPhoto({ teamId, projectId, jpeg, previousPath: cfg?.cover_path ?? null })
       onCfg(r.cfg)
       if (r.cfg.cover_path) addUrl(r.cfg.cover_path, r.url)
@@ -137,7 +141,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const pickAreaPhoto = (file: File) =>
     run('photo', async () => {
-      const jpeg = await prepareGuestPhoto(file, RSVP_PHOTO_EDGE)
+      const jpeg = await prepareGuestPhoto(file, tg, RSVP_PHOTO_EDGE)
       const position = photos.reduce((m, p) => Math.max(m, p.position), 0) + 1
       const r = await addAreaPhoto({ teamId, projectId, jpeg, position })
       setPhotos((prev) => [...prev, r.photo])
@@ -180,7 +184,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const pickHotelImage = (h: DbRsvpHotel, file: File) =>
     run(`hotel-${h.id}`, async () => {
-      const jpeg = await prepareGuestPhoto(file, RSVP_PHOTO_EDGE)
+      const jpeg = await prepareGuestPhoto(file, tg, RSVP_PHOTO_EDGE)
       const r = await setHotelImage({ teamId, projectId, hotelId: h.id, jpeg, previousPath: h.image_path })
       setHotels((prev) => prev.map((x) => (x.id === r.hotel.id ? r.hotel : x)))
       if (r.hotel.image_path) addUrl(r.hotel.image_path, r.url)
@@ -203,88 +207,88 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   return (
     <div className="space-y-4 border-t border-gray-200 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-gray-900">Page content</p>
+        <p className="text-sm font-medium text-gray-900">{t('pageContent')}</p>
         {cfg ? (
-          <a href={`${origin}${rsvpPath(cfg.token)}?preview=1`} target="_blank" rel="noopener noreferrer" className={btn}>Preview the page ↗</a>
+          <a href={`${origin}${rsvpPath(cfg.token)}?preview=1`} target="_blank" rel="noopener noreferrer" className={btn}>{t('previewPage')}</a>
         ) : (
-          <span className="text-xs text-gray-500">Save something below to enable the preview.</span>
+          <span className="text-xs text-gray-500">{t('saveToPreview')}</span>
         )}
       </div>
       <p className="text-xs text-gray-500">
-        Guests see these sections in this order: cover with names, details, your RSVP questions, the area, hotels. Empty sections are hidden. Texts are shown as typed, in every language.
+        {t('sectionsIntro')}
       </p>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
-      <p className="text-xs text-gray-500">The names at the top of the page are the project&apos;s couple&apos;s names. Change them on the project page.</p>
+      <p className="text-xs text-gray-500">{t('coupleNamesNote')}</p>
 
       {/* Cover */}
       <div className="space-y-2">
-        <p className="text-sm font-medium text-gray-900">Cover photo</p>
+        <p className="text-sm font-medium text-gray-900">{t('coverPhoto')}</p>
         <div className="flex flex-wrap items-center gap-3">
-          {cfg?.cover_path && <Thumb url={urls[cfg.cover_path]} alt="Cover photo" className="h-20 w-36 rounded-lg" />}
-          <FilePick label={cfg?.cover_path ? 'Replace photo' : 'Add a photo'} disabled={busy !== null} onFile={pickCover} />
-          {cfg?.cover_path && <button type="button" className={btn} disabled={busy !== null} onClick={dropCover}>Remove</button>}
-          {busy === 'cover' && <span className="text-xs text-gray-500">Working…</span>}
+          {cfg?.cover_path && <Thumb url={urls[cfg.cover_path]} alt={t('coverPhoto')} className="h-20 w-36 rounded-lg" />}
+          <FilePick label={cfg?.cover_path ? t('replacePhoto') : t('addAPhoto')} disabled={busy !== null} onFile={pickCover} />
+          {cfg?.cover_path && <button type="button" className={btn} disabled={busy !== null} onClick={dropCover}>{t('remove')}</button>}
+          {busy === 'cover' && <span className="text-xs text-gray-500">{t('working')}</span>}
         </div>
-        <p className="text-xs text-gray-500">Shown wide across the top, so a landscape photo works best. JPEG, PNG or WebP; it is resized here and location data in the file is dropped.</p>
+        <p className="text-xs text-gray-500">{t('coverHelp')}</p>
       </div>
 
       {/* Details */}
       <div className={section}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900">Details</p>
-          {showToggle('show_details', showDetails, 'Show on the page')}
+          <p className="text-sm font-medium text-gray-900">{t('details')}</p>
+          {showToggle('show_details', showDetails, t('showOnPage'))}
         </div>
         <label className="block text-xs text-gray-600">
-          Schedule (one line per row, e.g. “17:00 Ceremony”)
+          {t('schedule')}
           <textarea value={schedule} onChange={(e) => setSchedule(e.target.value)} maxLength={1000} rows={4} className={input + ' mt-1 block w-full'} />
         </label>
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="block text-xs text-gray-600">
-            Dress code
+            {t('dressCode')}
             <input value={dress} onChange={(e) => setDress(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} />
           </label>
           <label className="block text-xs text-gray-600">
-            Map link (Google Maps or similar)
+            {t('mapLink')}
             <input value={mapUrl} onChange={(e) => setMapUrl(e.target.value)} maxLength={500} placeholder="https://maps.app.goo.gl/…" className={input + ' mt-1 block w-full'} />
           </label>
         </div>
-        <button type="button" onClick={saveDetails} disabled={!detailsDirty || busy !== null} className={btnPrimary}>{busy === 'details' ? 'Saving…' : 'Save details'}</button>
+        <button type="button" onClick={saveDetails} disabled={!detailsDirty || busy !== null} className={btnPrimary}>{busy === 'details' ? tg('saving') : t('saveDetails')}</button>
       </div>
 
       {/* Area */}
       <div className={section}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900">Getting there &amp; the area</p>
-          {showToggle('show_area', showArea, 'Show on the page')}
+          <p className="text-sm font-medium text-gray-900">{t('gettingThere')}</p>
+          {showToggle('show_area', showArea, t('showOnPage'))}
         </div>
         <label className="block text-xs text-gray-600">
-          Text (getting there, parking, transport, nearby…)
+          {t('areaText')}
           <textarea value={areaText} onChange={(e) => setAreaText(e.target.value)} maxLength={2000} rows={5} className={input + ' mt-1 block w-full'} />
         </label>
-        <button type="button" onClick={saveArea} disabled={!areaDirty || busy !== null} className={btnPrimary}>{busy === 'area' ? 'Saving…' : 'Save text'}</button>
+        <button type="button" onClick={saveArea} disabled={!areaDirty || busy !== null} className={btnPrimary}>{busy === 'area' ? tg('saving') : t('saveText')}</button>
 
         <div className="space-y-2 pt-2">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs font-medium text-gray-700">Photos ({photos.length}/{MAX_AREA_PHOTOS})</p>
-            <FilePick label="Add a photo" disabled={busy !== null || photos.length >= MAX_AREA_PHOTOS} onFile={pickAreaPhoto} />
-            {busy === 'photo' && <span className="text-xs text-gray-500">Uploading…</span>}
+            <p className="text-xs font-medium text-gray-700">{t('photosCount', { count: photos.length, max: MAX_AREA_PHOTOS })}</p>
+            <FilePick label={t('addAPhoto')} disabled={busy !== null || photos.length >= MAX_AREA_PHOTOS} onFile={pickAreaPhoto} />
+            {busy === 'photo' && <span className="text-xs text-gray-500">{t('uploading')}</span>}
           </div>
           {photos.length > 0 && (
             <ul className="grid gap-3 sm:grid-cols-2">
               {photos.map((p) => (
                 <li key={p.id} className="space-y-1 rounded-lg border border-gray-200 p-2">
-                  <Thumb url={urls[p.path]} alt={p.caption ?? 'Area photo'} className="aspect-[4/3] w-full rounded-lg" />
+                  <Thumb url={urls[p.path]} alt={p.caption ?? t('areaPhoto')} className="aspect-[4/3] w-full rounded-lg" />
                   <input
                     defaultValue={p.caption ?? ''}
                     maxLength={120}
-                    placeholder="Caption (optional)"
-                    aria-label="Photo caption"
+                    placeholder={t('captionOptional')}
+                    aria-label={t('photoCaption')}
                     onBlur={(e) => saveCaption(p, e.target.value)}
                     className={input + ' w-full text-xs'}
                   />
-                  <button type="button" className={btn} disabled={busy !== null} onClick={() => dropPhoto(p)}>Remove photo</button>
+                  <button type="button" className={btn} disabled={busy !== null} onClick={() => dropPhoto(p)}>{t('removePhoto')}</button>
                 </li>
               ))}
             </ul>
@@ -295,10 +299,10 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       {/* Hotels */}
       <div className={section}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-gray-900">Hotels ({hotels.length}/{MAX_HOTELS})</p>
-          {showToggle('show_hotels', showHotels, 'Show on the page')}
+          <p className="text-sm font-medium text-gray-900">{t('hotelsCount', { count: hotels.length, max: MAX_HOTELS })}</p>
+          {showToggle('show_hotels', showHotels, t('showOnPage'))}
         </div>
-        <p className="text-xs text-gray-500">Recommended places to stay, shown on the page. Separate from each guest&rsquo;s own hotel.</p>
+        <p className="text-xs text-gray-500">{t('hotelsHelp')}</p>
 
         {hotels.map((h) =>
           editingHotel === h.id ? (
@@ -310,13 +314,13 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
                 <p className="text-sm font-medium text-gray-900">{h.name}</p>
                 {h.address && <p className="text-xs text-gray-500">{h.address}</p>}
                 {h.description && <p className="text-xs text-gray-700">{h.description}</p>}
-                {h.booking_note && <p className="text-xs text-gray-700">Booking: {h.booking_note}</p>}
+                {h.booking_note && <p className="text-xs text-gray-700">{t('bookingLine', { note: h.booking_note })}</p>}
                 {h.url && <p className="truncate text-xs text-gray-500">{h.url}</p>}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <button type="button" className={btn} disabled={busy !== null} onClick={() => { setEditingHotel(h.id); setAddingHotel(false) }}>Edit</button>
-                  <FilePick label={h.image_path ? 'Replace photo' : 'Add photo'} disabled={busy !== null} onFile={(f) => pickHotelImage(h, f)} />
-                  {h.image_path && <button type="button" className={btn} disabled={busy !== null} onClick={() => dropHotelImage(h)}>Remove photo</button>}
-                  <button type="button" className={btn} disabled={busy !== null} onClick={() => dropHotel(h)}>Delete hotel</button>
+                  <button type="button" className={btn} disabled={busy !== null} onClick={() => { setEditingHotel(h.id); setAddingHotel(false) }}>{t('edit')}</button>
+                  <FilePick label={h.image_path ? t('replacePhoto') : t('addPhoto')} disabled={busy !== null} onFile={(f) => pickHotelImage(h, f)} />
+                  {h.image_path && <button type="button" className={btn} disabled={busy !== null} onClick={() => dropHotelImage(h)}>{t('removePhoto')}</button>}
+                  <button type="button" className={btn} disabled={busy !== null} onClick={() => dropHotel(h)}>{t('deleteHotel')}</button>
                 </div>
               </div>
             </div>
@@ -326,7 +330,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         {addingHotel ? (
           <HotelForm initial={null} busy={busy === 'hotel'} onSave={(d) => saveHotel(null, d)} onCancel={() => setAddingHotel(false)} />
         ) : (
-          <button type="button" className={btn} disabled={busy !== null || hotels.length >= MAX_HOTELS} onClick={() => { setAddingHotel(true); setEditingHotel(null) }}>Add a hotel</button>
+          <button type="button" className={btn} disabled={busy !== null || hotels.length >= MAX_HOTELS} onClick={() => { setAddingHotel(true); setEditingHotel(null) }}>{t('addHotelBtn')}</button>
         )}
       </div>
     </div>
@@ -334,6 +338,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 }
 
 function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel | null; busy: boolean; onSave: (d: HotelInput) => void; onCancel: () => void }) {
+  const t = useTranslations('Rsvp')
+  const tg = useTranslations('Guests')
   const [name, setName] = useState(initial?.name ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
   const [url, setUrl] = useState(initial?.url ?? '')
@@ -343,9 +349,9 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return setErr('The hotel needs a name.')
-    const link = normalizeWebUrl(url)
-    if (!link.ok) return setErr(`Website: ${link.error}`)
+    if (!name.trim()) return setErr(t('hotelNeedsName'))
+    const link = normalizeWebUrl(url, tg)
+    if (!link.ok) return setErr(t('websiteError', { error: link.error }))
     setErr(null)
     onSave({ name: name.trim(), address: address.trim() || null, url: link.url, booking_note: booking.trim() || null, description: desc.trim() || null })
   }
@@ -354,17 +360,17 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
     <form onSubmit={submit} className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 p-3">
       {err && <p className="text-xs text-red-700" role="alert">{err}</p>}
       <div className="grid gap-2 sm:grid-cols-2">
-        <label className="block text-xs text-gray-600">Name<input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>
-        <label className="block text-xs text-gray-600">Address<input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={200} className={input + ' mt-1 block w-full'} /></label>
-        <label className="block text-xs text-gray-600">Website<input value={url} onChange={(e) => setUrl(e.target.value)} maxLength={500} placeholder="www.hotel.com" className={input + ' mt-1 block w-full'} /></label>
-        <label className="block text-xs text-gray-600">Booking note (code, rate, deadline…)<input value={booking} onChange={(e) => setBooking(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('hotelName')}<input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('hotelAddress')}<input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={200} className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('hotelWebsite')}<input value={url} onChange={(e) => setUrl(e.target.value)} maxLength={500} placeholder="www.hotel.com" className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('hotelBooking')}<input value={booking} onChange={(e) => setBooking(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} /></label>
       </div>
-      <label className="block text-xs text-gray-600">Short description<textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={500} rows={2} className={input + ' mt-1 block w-full'} /></label>
+      <label className="block text-xs text-gray-600">{t('hotelDescription')}<textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={500} rows={2} className={input + ' mt-1 block w-full'} /></label>
       <div className="flex gap-2">
-        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : initial ? 'Save hotel' : 'Add hotel'}</button>
-        <button type="button" onClick={onCancel} className={btn}>Cancel</button>
+        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? tg('saving') : initial ? t('saveHotel') : t('addHotel')}</button>
+        <button type="button" onClick={onCancel} className={btn}>{tg('cancel')}</button>
       </div>
-      {!initial && <p className="text-xs text-gray-500">You can add a photo once the hotel is saved.</p>}
+      {!initial && <p className="text-xs text-gray-500">{t('hotelPhotoLater')}</p>}
     </form>
   )
 }

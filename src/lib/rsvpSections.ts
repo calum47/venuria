@@ -2,13 +2,6 @@
 export const RSVP_SECTIONS = ['details', 'form', 'area', 'hotels'] as const
 export type RsvpSectionKey = (typeof RSVP_SECTIONS)[number]
 
-export const RSVP_SECTION_LABEL: Record<RsvpSectionKey, string> = {
-  details: 'Event details',
-  form: 'Answer form',
-  area: 'The area',
-  hotels: 'Hotels',
-}
-
 /** Same rule as the database: a permutation of the four keys. Anything else falls back to the default order. */
 export function normalizeSectionOrder(value: unknown): RsvpSectionKey[] {
   if (Array.isArray(value) && value.length === RSVP_SECTIONS.length && RSVP_SECTIONS.every((k) => value.includes(k))) {

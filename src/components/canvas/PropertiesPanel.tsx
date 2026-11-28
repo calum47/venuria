@@ -1,5 +1,6 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useLayoutStore } from '@/stores/layoutStore'
 import { LayoutObject, ChairSides } from '@/types'
 import { DbCatalogItem, DbTableSettingTemplate } from '@/types/db'
@@ -33,6 +34,7 @@ const ROTATION_TO_EDGE: Record<number, 'top' | 'bottom' | 'left' | 'right'> = {
 }
 
 export default function PropertiesPanel({ object, catalogItems, settingItems, templates, onManageTemplates }: Props) {
+  const t = useTranslations('Properties')
   const {
     updateObject,
     removeObjectWithChairs,
@@ -193,7 +195,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
       {/* Header: what is selected, its size, and (for tables) its label */}
       <div className="px-4 pt-4 pb-3 border-b border-gray-200 space-y-2">
         <div>
-          <p className="text-[11px] text-gray-400 uppercase tracking-wide">Selected</p>
+          <p className="text-[11px] text-gray-400 uppercase tracking-wide">{t('selected')}</p>
           <h3 className="font-semibold text-gray-800 mt-0.5 leading-snug">
             {catalogItem?.name ?? object.catalogItemId}
           </h3>
@@ -204,8 +206,8 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
         {isTable && (
           <input
             type="text"
-            aria-label="Table label"
-            placeholder="Label — e.g. Table 1, Bride & Groom…"
+            aria-label={t('tableLabelAria')}
+            placeholder={t('tableLabelPlaceholder')}
             value={object.tableLabel ?? ''}
             onChange={(e) => updateObject(object.id, { tableLabel: e.target.value || undefined })}
             className="w-full min-w-0 text-sm border border-gray-200 rounded-lg px-2 py-1.5
@@ -217,9 +219,9 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
         {/* Rotation and seating */}
-        <Section title="Rotation and seating" hint={showSeating ? `${currentChairCount} chair${currentChairCount === 1 ? '' : 's'}` : undefined}>
+        <Section title={t('rotationSeating')} hint={showSeating ? t('chairsHint', { count: currentChairCount }) : undefined}>
           <div>
-            <p className="text-[11px] text-gray-400 mb-1">Rotation</p>
+            <p className="text-[11px] text-gray-400 mb-1">{t('rotation')}</p>
             <div className="grid grid-cols-4 gap-1">
               {ROTATION_OPTIONS.map((deg) => (
                 <button
@@ -241,7 +243,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
             <>
               {isRectTable && currentChairCount > 0 && (
                 <div>
-                  <p className="text-[11px] text-gray-400 mb-1">Chair sides</p>
+                  <p className="text-[11px] text-gray-400 mb-1">{t('chairSides')}</p>
                   <div className="grid grid-cols-4 gap-1">
                     {(['top', 'bottom', 'left', 'right'] as const).map((side) => (
                       <button
@@ -253,7 +255,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
                             : 'border-gray-200 text-gray-500 hover:bg-gray-50'
                         }`}
                       >
-                        {side}
+                        {t(`side.${side}`)}
                       </button>
                     ))}
                   </div>
@@ -263,7 +265,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
               {canAddChairs && (
                 <div>
                   <p className="text-[11px] text-gray-400 mb-1">
-                    Add chairs <span className="text-gray-300">({currentChairCount}/{tableConfig?.maxChairs})</span>
+                    {t('addChairs')} <span className="text-gray-300">({currentChairCount}/{tableConfig?.maxChairs})</span>
                   </p>
                   <div className="grid grid-cols-3 gap-1">
                     {[1, 2, 4]
@@ -284,10 +286,10 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
 
               {currentChairCount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600">Mirror drag</span>
+                  <span className="text-xs text-gray-600">{t('mirrorDrag')}</span>
                   <button
                     onClick={() => updateObject(object.id, { mirrorEnabled: !(object.mirrorEnabled ?? true) })}
-                    aria-label="Toggle mirror drag"
+                    aria-label={t('mirrorDragAria')}
                     className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                       (object.mirrorEnabled ?? true) ? 'bg-blue-600' : 'bg-gray-300'
                     }`}
@@ -304,7 +306,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
 
         {/* Table setting — real tables only (not chairs, not placed decorations) */}
         {isRealTable && (
-          <Section title="Table setting" hint={settingCount > 0 ? `${settingCount} item${settingCount === 1 ? '' : 's'}` : 'none'}>
+          <Section title={t('tableSetting')} hint={settingCount > 0 ? t('itemsHint', { count: settingCount }) : t('none')}>
             <TableSettingSection
               object={object}
               catalogItems={catalogItems}
@@ -317,10 +319,10 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
 
         {/* Note */}
         {isTable && (
-          <Section title="Note" hint={object.tableNote ? 'added' : undefined} defaultOpen={!!object.tableNote}>
+          <Section title={t('note')} hint={object.tableNote ? t('added') : undefined} defaultOpen={!!object.tableNote}>
             <textarea
-              aria-label="Table note"
-              placeholder="e.g. 2 vegetarian guests…"
+              aria-label={t('tableNoteAria')}
+              placeholder={t('tableNotePlaceholder')}
               value={object.tableNote ?? ''}
               onChange={(e) => updateObject(object.id, { tableNote: e.target.value || undefined })}
               rows={3}
@@ -338,7 +340,7 @@ export default function PropertiesPanel({ object, catalogItems, settingItems, te
           className="w-full py-2 text-sm text-red-500 border border-red-200
                      rounded-lg hover:bg-red-50 transition-colors"
         >
-          Remove from layout
+          {t('removeFromLayout')}
         </button>
       </div>
     </div>

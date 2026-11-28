@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import { getBell, markPaymentsSeen } from '@/app/planner/notificationActions'
 import { BELL_REFRESH_EVENT, EMPTY_BELL, paymentWhen, type BellData } from '@/lib/notifications'
 import { formatMoney } from '@/lib/payments'
@@ -17,6 +19,8 @@ const POLL_MS = 120_000
  * something the bell shows (mark reviewed, mark paid) asks for a refresh.
  */
 export default function NotificationBell() {
+  const t = useTranslations('Bell')
+  const locale = useLocale() as Locale
   const pathname = usePathname()
   const [bell, setBell] = useState<BellData>(EMPTY_BELL)
   const [open, setOpen] = useState(false)
@@ -34,11 +38,11 @@ export default function NotificationBell() {
     const onFocus = () => load()
     window.addEventListener('focus', onFocus)
     window.addEventListener(BELL_REFRESH_EVENT, onFocus)
-    const t = window.setInterval(load, POLL_MS)
+    const timer = window.setInterval(load, POLL_MS)
     return () => {
       window.removeEventListener('focus', onFocus)
       window.removeEventListener(BELL_REFRESH_EVENT, onFocus)
-      window.clearInterval(t)
+      window.clearInterval(timer)
     }
   }, [load])
 
@@ -80,7 +84,7 @@ export default function NotificationBell() {
       <button
         type="button"
         onClick={toggle}
-        aria-label={bell.unseen > 0 ? `Notifications, ${bell.unseen} new` : 'Notifications'}
+        aria-label={bell.unseen > 0 ? t('ariaNew', { count: bell.unseen }) : t('aria')}
         aria-expanded={open}
         className="relative p-2 rounded-md text-gray-600 hover:bg-gray-100"
       >
@@ -98,12 +102,12 @@ export default function NotificationBell() {
       {open && (
         <div className="absolute right-0 mt-2 w-[min(20rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg z-50">
           {total === 0 ? (
-            <p className="p-4 text-sm text-gray-500">Nothing needs your attention.</p>
+            <p className="p-4 text-sm text-gray-500">{t('empty')}</p>
           ) : (
             <>
               {bell.reviews.length > 0 && (
                 <section>
-                  <h3 className="px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">RSVPs to review</h3>
+                  <h3 className="px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('rsvpsToReview')}</h3>
                   <ul>
                     {bell.reviews.map((r) => (
                       <li key={r.projectId}>
@@ -113,7 +117,7 @@ export default function NotificationBell() {
                           className="block px-3 py-2 text-sm hover:bg-gray-50"
                         >
                           <span className="text-gray-900">
-                            {r.count} {r.count === 1 ? 'guest' : 'guests'} to review
+                            {t('guestsToReview', { count: r.count })}
                           </span>
                           <span className="block text-xs text-gray-500">{r.projectLabel}</span>
                         </Link>
@@ -124,7 +128,7 @@ export default function NotificationBell() {
               )}
               {bell.payments.length > 0 && (
                 <section>
-                  <h3 className="px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">Payments</h3>
+                  <h3 className="px-3 pt-3 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">{t('payments')}</h3>
                   <ul>
                     {bell.payments.map((p) => (
                       <li key={p.paymentId}>
@@ -135,10 +139,10 @@ export default function NotificationBell() {
                         >
                           <span className="flex items-baseline justify-between gap-2">
                             <span className="text-gray-900 truncate">{p.vendorName} · {p.label}</span>
-                            <span className="text-gray-900 shrink-0">{formatMoney(p.amount, bell.currency)}</span>
+                            <span className="text-gray-900 shrink-0">{formatMoney(p.amount, bell.currency, locale)}</span>
                           </span>
                           <span className={`block text-xs ${p.daysLeft < 0 ? 'text-red-600' : 'text-amber-700'}`}>
-                            {paymentWhen(p.daysLeft)} · {formatDate(p.dueDate)}
+                            {paymentWhen(p.daysLeft, t)} · {formatDate(p.dueDate, locale)}
                           </span>
                           <span className="block text-xs text-gray-500">{p.projectLabel}</span>
                         </Link>
@@ -148,7 +152,7 @@ export default function NotificationBell() {
                 </section>
               )}
               <p className="px-3 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-                Payment reminders start 7 days before the due date, daily until paid.
+                {t('footer')}
               </p>
             </>
           )}

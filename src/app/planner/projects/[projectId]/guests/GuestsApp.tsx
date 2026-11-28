@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
+
 import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import {
   createFamily,
@@ -19,7 +22,7 @@ import {
   uploadGuestPhoto,
 } from '@/lib/supabase/guestQueries'
 import {
-  AGE_LABEL,
+  ageLabel,
   NO_FILTERS,
   filterGuests,
   familyMembers,
@@ -38,7 +41,7 @@ import {
 } from '@/lib/guests'
 import { prepareGuestPhoto } from '@/lib/guestPhoto'
 import { markRsvpReviewed, setGuestRsvp } from '@/lib/supabase/rsvpQueries'
-import { RSVP_LABEL, RSVP_STATUSES, type RsvpStatus } from '@/lib/rsvp'
+import { RSVP_STATUSES, type RsvpStatus } from '@/lib/rsvp'
 import RsvpPanel from './RsvpPanel'
 import GuestImport from '@/components/guests/GuestImport'
 import { addDays, todayIso } from '@/lib/projectDates'
@@ -73,11 +76,13 @@ const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text
 const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 const chipBase = 'rounded-full border px-3 py-1 text-xs'
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
 export default function GuestsApp({ projectId, teamId, eventDate, initialGuests, initialFamilies, initialStays, seats, initialPhotoUrls, initialRsvp, origin, hasContactEmail, initialRsvpPhotos, initialRsvpHotels, initialRsvpUrls, initialSelectedId = null, readOnly = false }: Props) {
+  const t = useTranslations('Guests')
+  const locale = useLocale() as Locale
   const [guests, setGuests] = useState<DbGuest[]>(initialGuests)
   // The nav bell lists guests waiting for review: tell it when that number changes.
   const reviewCount = guests.filter((g) => g.rsvp_needs_review).length
@@ -160,7 +165,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       setChecked((prev) => new Set([...prev].filter((id) => !gone.has(id))))
       if (selectedId && gone.has(selectedId)) setSelectedId(null)
       if (res.error) {
-        setError(`${res.deletedIds.length} of ${victims.length} guests were deleted before something went wrong: ${errMsg(res.error)} The rest are still ticked.`)
+        setError(t('bulkPartial', { deleted: res.deletedIds.length, total: victims.length, error: errMsg(res.error, t('somethingWrong')) }))
       } else {
         setConfirmingBulk(false)
         setBulkText('')
@@ -182,7 +187,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       setNewName('')
       setSelectedId(g.id)
     } catch (err) {
-      setError(errMsg(err))
+      setError(errMsg(err, t('somethingWrong')))
     } finally {
       setAdding(false)
     }
@@ -213,13 +218,13 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Add a guest — full name"
+          placeholder={t('addPlaceholder')}
           maxLength={120}
           className={input + ' w-64'}
-          aria-label="New guest name"
+          aria-label={t('newGuestName')}
         />
-        <button type="submit" disabled={adding || !newName.trim()} className={btnPrimary}>{adding ? 'Adding…' : 'Add guest'}</button>
-        <button type="button" onClick={() => setImporting(true)} className={btn}>Import from file…</button>
+        <button type="submit" disabled={adding || !newName.trim()} className={btnPrimary}>{adding ? t('adding') : t('addGuest')}</button>
+        <button type="button" onClick={() => setImporting(true)} className={btn}>{t('importFromFile')}</button>
       </form>}
 
       {importing && (
@@ -238,75 +243,75 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
         <input
           value={filters.query}
           onChange={(e) => setFilters((f) => ({ ...f, query: e.target.value }))}
-          placeholder="Search name, family, dietary, hotel, notes…"
+          placeholder={t('searchPlaceholder')}
           className={input + ' w-72'}
-          aria-label="Search guests"
+          aria-label={t('searchGuests')}
         />
-        <button type="button" onClick={() => toggle('vip')} aria-pressed={filters.vip} className={chip(filters.vip)}>VIP ({stats.vip})</button>
-        <button type="button" onClick={() => toggle('speech')} aria-pressed={filters.speech} className={chip(filters.speech)}>Speeches ({stats.speech})</button>
-        <button type="button" onClick={() => toggle('dietary')} aria-pressed={filters.dietary} className={chip(filters.dietary)}>Dietary ({stats.dietary})</button>
-        <button type="button" onClick={() => toggle('unseated')} aria-pressed={filters.unseated} className={chip(filters.unseated)}>Needs a seat ({stats.unseated})</button>
+        <button type="button" onClick={() => toggle('vip')} aria-pressed={filters.vip} className={chip(filters.vip)}>{t('chipVip', { count: stats.vip })}</button>
+        <button type="button" onClick={() => toggle('speech')} aria-pressed={filters.speech} className={chip(filters.speech)}>{t('chipSpeeches', { count: stats.speech })}</button>
+        <button type="button" onClick={() => toggle('dietary')} aria-pressed={filters.dietary} className={chip(filters.dietary)}>{t('chipDietary', { count: stats.dietary })}</button>
+        <button type="button" onClick={() => toggle('unseated')} aria-pressed={filters.unseated} className={chip(filters.unseated)}>{t('chipNeedsSeat', { count: stats.unseated })}</button>
         <select
           value={filters.familyId}
           onChange={(e) => setFilters((f) => ({ ...f, familyId: e.target.value }))}
           className={input}
-          aria-label="Filter by family"
+          aria-label={t('filterByFamily')}
         >
-          <option value="">All families</option>
+          <option value="">{t('allFamilies')}</option>
           {[...families].sort((a, b) => a.name.localeCompare(b.name)).map((f) => (
             <option key={f.id} value={f.id}>{f.name}</option>
           ))}
         </select>
-        <select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value as typeof rsvpFilter)} className={input} aria-label="Filter by RSVP answer">
-          <option value="">All answers</option>
-          {RSVP_STATUSES.map((st) => <option key={st} value={st}>{RSVP_LABEL[st]}</option>)}
-          <option value="pending">Pending</option>
-          <option value="review">To review (added via link)</option>
+        <select value={rsvpFilter} onChange={(e) => setRsvpFilter(e.target.value as typeof rsvpFilter)} className={input} aria-label={t('filterByRsvp')}>
+          <option value="">{t('allAnswers')}</option>
+          {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp.${st}`)}</option>)}
+          <option value="pending">{t('pending')}</option>
+          <option value="review">{t('toReviewViaLink')}</option>
         </select>
-        <select value={sortMode} onChange={(e) => setSortMode(e.target.value as 'name' | 'family')} className={input} aria-label="Sort guests">
-          <option value="name">Sort: name</option>
-          <option value="family">Sort: families together</option>
+        <select value={sortMode} onChange={(e) => setSortMode(e.target.value as 'name' | 'family')} className={input} aria-label={t('sortGuests')}>
+          <option value="name">{t('sortName')}</option>
+          <option value="family">{t('sortFamily')}</option>
         </select>
-        {filtering && <button type="button" onClick={() => { setFilters(NO_FILTERS); setRsvpFilter('') }} className={btn}>Clear filters</button>}
+        {filtering && <button type="button" onClick={() => { setFilters(NO_FILTERS); setRsvpFilter('') }} className={btn}>{t('clearFilters')}</button>}
       </div>
 
       <p className="text-sm text-gray-500">
-        {filtering ? `${visible.length} of ${stats.total} guests` : `${stats.total} ${stats.total === 1 ? 'guest' : 'guests'}`}
-        {stats.families > 0 ? ` · ${stats.families} ${stats.families === 1 ? 'family' : 'families'}` : ''}
-        {readOnly ? ' · click a guest to see their details' : ' · click a guest or Edit to change details, add a photo, family or hotel'}
+        {filtering ? t('countFiltered', { shown: visible.length, total: stats.total }) : t('countGuests', { count: stats.total })}
+        {stats.families > 0 ? t('countFamilies', { count: stats.families }) : ''}
+        {readOnly ? t('hintReadOnly') : t('hintEdit')}
       </p>
 
       {nChecked > 0 && (
-        <div className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" role="region" aria-label="Selected guests">
+        <div className="space-y-2 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2 text-sm" role="region" aria-label={t('selectedGuests')}>
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-gray-900">
-              {nChecked} selected{filtering ? ` (of ${visible.length} shown)` : ''}
+              {filtering ? t('selectedOfShown', { count: nChecked, shown: visible.length }) : t('selectedCount', { count: nChecked })}
             </span>
             {!allShownChecked && (
               <button type="button" onClick={() => pick(new Set(visible.map((g) => g.id)))} className={btn}>
-                {filtering ? `Select all ${visible.length} shown` : `Select all ${visible.length}`}
+                {filtering ? t('selectAllShown', { count: visible.length }) : t('selectAll', { count: visible.length })}
               </button>
             )}
-            <button type="button" onClick={() => pick(new Set())} className={btn}>Clear selection</button>
+            <button type="button" onClick={() => pick(new Set())} className={btn}>{t('clearSelection')}</button>
             {!confirmingBulk && (
               <button type="button" onClick={() => setConfirmingBulk(true)} className="rounded-lg border border-red-300 bg-white px-2.5 py-1 text-xs text-red-700 hover:bg-red-50">
-                Delete selected…
+                {t('deleteSelected')}
               </button>
             )}
           </div>
           {confirmingBulk && (
             <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
               <p className="text-red-800">
-                Delete {nChecked} {nChecked === 1 ? 'guest' : 'guests'}? Their seats, hotel stays, photos and RSVP answers are removed too. This cannot be undone.
+                {t('confirmBulk', { count: nChecked })}
               </p>
               {deletingEveryone && (
                 <label className="block text-xs text-red-800">
-                  This is every guest in the project. Type DELETE to confirm:
+                  {t('everyGuestType')}
                   <input
                     value={bulkText}
                     onChange={(e) => setBulkText(e.target.value)}
                     className={input + ' ml-2 w-28'}
-                    aria-label="Type DELETE to confirm deleting every guest"
+                    aria-label={t('typeDeleteAria')}
                     autoComplete="off"
                   />
                 </label>
@@ -315,12 +320,12 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                 <button
                   type="button"
                   onClick={() => void deleteChecked()}
-                  disabled={bulkBusy || (deletingEveryone && bulkText.trim() !== 'DELETE')}
+                  disabled={bulkBusy || (deletingEveryone && bulkText.trim().toUpperCase() !== t('deleteWord'))}
                   className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white hover:bg-red-700 disabled:opacity-50"
                 >
-                  {bulkBusy ? 'Deleting…' : `Delete ${nChecked} ${nChecked === 1 ? 'guest' : 'guests'}`}
+                  {bulkBusy ? t('deleting') : t('deleteN', { count: nChecked })}
                 </button>
-                <button type="button" onClick={() => { setConfirmingBulk(false); setBulkText('') }} disabled={bulkBusy} className={btn}>Cancel</button>
+                <button type="button" onClick={() => { setConfirmingBulk(false); setBulkText('') }} disabled={bulkBusy} className={btn}>{t('cancel')}</button>
               </div>
             </div>
           )}
@@ -329,10 +334,10 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
 
       {guests.length === 0 ? (
         <p data-tour="guest-list" className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-          No guests yet.
+          {t('noGuestsYet')}
         </p>
       ) : visible.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">No guests match these filters.</p>
+        <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">{t('noGuestsMatch')}</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white" data-tour="guest-list">
           <table className="w-full text-left text-sm">
@@ -345,17 +350,17 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                     checked={allShownChecked}
                     onChange={toggleAllShown}
                     disabled={readOnly}
-                    aria-label={filtering ? `Select all ${visible.length} shown guests` : `Select all ${visible.length} guests`}
+                    aria-label={filtering ? t('selectAllShownAria', { count: visible.length }) : t('selectAllAria', { count: visible.length })}
                   />
                 </th>
-                <th className="w-14 px-3 py-2"><span className="sr-only">Photo</span></th>
-                <th className="px-3 py-2">Guest</th>
-                <th className="px-3 py-2">Family</th>
-                <th className="px-3 py-2">RSVP</th>
-                <th className="hidden px-3 py-2 md:table-cell">Dietary</th>
-                <th className="px-3 py-2">Seat</th>
-                <th className="hidden px-3 py-2 lg:table-cell">Hotel</th>
-                <th className="w-20 px-3 py-2"><span className="sr-only">Edit</span></th>
+                <th className="w-14 px-3 py-2"><span className="sr-only">{t('colPhoto')}</span></th>
+                <th className="px-3 py-2">{t('colGuest')}</th>
+                <th className="px-3 py-2">{t('colFamily')}</th>
+                <th className="px-3 py-2">{t('colRsvp')}</th>
+                <th className="hidden px-3 py-2 md:table-cell">{t('colDietary')}</th>
+                <th className="px-3 py-2">{t('colSeat')}</th>
+                <th className="hidden px-3 py-2 lg:table-cell">{t('colHotel')}</th>
+                <th className="w-20 px-3 py-2"><span className="sr-only">{t('colEdit')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -376,7 +381,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                         checked={checked.has(g.id)}
                         onChange={() => toggleChecked(g.id)}
                         disabled={readOnly}
-                        aria-label={`Select ${g.name}`}
+                        aria-label={t('selectGuest', { name: g.name })}
                       />
                     </td>
                     <td className="px-3 py-2"><Avatar name={g.name} url={g.photo_path ? photoUrls[g.photo_path] : undefined} size={36} /></td>
@@ -384,38 +389,38 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
                       <button type="button" onClick={() => setSelectedId(g.id)} className="text-left font-medium text-gray-900 underline decoration-gray-300 underline-offset-2 hover:decoration-gray-900">{g.name}</button>
                       <span className="ml-2 inline-flex gap-1 align-middle">
                         {g.is_vip && <Pill tone="amber">VIP</Pill>}
-                        {g.gives_speech && <Pill tone="blue">Speech</Pill>}
+                        {g.gives_speech && <Pill tone="blue">{t('speech')}</Pill>}
                       </span>
-                      {g.plus_one_of && guestById.get(g.plus_one_of) && <p className="mt-0.5 text-xs text-gray-500">Plus-one of {guestById.get(g.plus_one_of)!.name}</p>}
+                      {g.plus_one_of && guestById.get(g.plus_one_of) && <p className="mt-0.5 text-xs text-gray-500">{t('plusOneOf', { name: guestById.get(g.plus_one_of)!.name })}</p>}
                       {g.notes && <p className="mt-0.5 max-w-xs truncate text-xs text-gray-500" title={g.notes}>{g.notes}</p>}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
                       {fam ? fam.name : <span className="text-gray-400">—</span>}
-                      {g.age_group !== 'adult' && <span className="ml-1.5"><Pill tone="gray">{AGE_LABEL[g.age_group]}</Pill></span>}
+                      {g.age_group !== 'adult' && <span className="ml-1.5"><Pill tone="gray">{ageLabel(g.age_group, t)}</Pill></span>}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {g.rsvp_status ? <Pill tone={g.rsvp_status === 'attending' ? 'green' : g.rsvp_status === 'maybe' ? 'amber' : 'gray'}>{RSVP_LABEL[g.rsvp_status]}</Pill> : <span className="text-gray-400">Pending</span>}
-                      {g.rsvp_needs_review && <span className="ml-1.5"><Pill tone="blue">To review</Pill></span>}
+                      {g.rsvp_status ? <Pill tone={g.rsvp_status === 'attending' ? 'green' : g.rsvp_status === 'maybe' ? 'amber' : 'gray'}>{t(`rsvp.${g.rsvp_status}`)}</Pill> : <span className="text-gray-400">{t('pending')}</span>}
+                      {g.rsvp_needs_review && <span className="ml-1.5"><Pill tone="blue">{t('toReview')}</Pill></span>}
                     </td>
                     <td className="hidden max-w-[14rem] px-3 py-2 text-gray-700 md:table-cell">
                       {hasDietary(g) ? <span className="line-clamp-2" title={g.dietary ?? ''}>{g.dietary}</span> : <span className="text-gray-400">—</span>}
                     </td>
                     <td className="px-3 py-2 text-gray-700">
                       {gSeats.length > 0
-                        ? gSeats.map((s, i) => <div key={i}>{seatLabel(s, multiRoom)}</div>)
+                        ? gSeats.map((s, i) => <div key={i}>{seatLabel(s, multiRoom, t)}</div>)
                         : g.rsvp_status === 'declined'
-                          ? <span className="text-gray-400">Not attending</span>
+                          ? <span className="text-gray-400">{t('notAttending')}</span>
                         : g.age_group === 'baby'
-                          ? <span className="text-gray-400">No seat needed</span>
+                          ? <span className="text-gray-400">{t('noSeatNeeded')}</span>
                           : g.seat_dismissed_at
-                            ? <span className="text-gray-500" title={g.seat_dismissed_note ?? ''}>No seat needed <span className="text-xs text-gray-400">(dismissed)</span></span>
-                            : <span className="font-medium text-amber-700">Needs a seat</span>}
+                            ? <span className="text-gray-500" title={g.seat_dismissed_note ?? ''}>{t('noSeatNeeded')} <span className="text-xs text-gray-400">{t('dismissed')}</span></span>
+                            : <span className="font-medium text-amber-700">{t('needsSeat')}</span>}
                     </td>
                     <td className="hidden max-w-[16rem] px-3 py-2 text-gray-700 lg:table-cell">
-                      {gStays.length === 0 ? <span className="text-gray-400">—</span> : <span className="line-clamp-2" title={staySummary(gStays)}>{staySummary(gStays)}</span>}
+                      {gStays.length === 0 ? <span className="text-gray-400">—</span> : <span className="line-clamp-2" title={staySummary(gStays, locale)}>{staySummary(gStays, locale)}</span>}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <button type="button" onClick={() => setSelectedId(g.id)} className={btn} aria-label={`${readOnly ? 'View' : 'Edit'} ${g.name}`}>{readOnly ? 'View' : 'Edit'}</button>
+                      <button type="button" onClick={() => setSelectedId(g.id)} className={btn} aria-label={readOnly ? t('viewGuest', { name: g.name }) : t('editGuest', { name: g.name })}>{readOnly ? t('view') : t('edit')}</button>
                     </td>
                   </tr>
                 )
@@ -503,6 +508,8 @@ type PanelProps = {
 }
 
 function GuestPanel(p: PanelProps) {
+  const t = useTranslations('Guests')
+  const locale = useLocale() as Locale
   const { guest } = p
   const [name, setName] = useState(guest.name)
   const [notes, setNotes] = useState(guest.notes ?? '')
@@ -551,7 +558,7 @@ function GuestPanel(p: PanelProps) {
     try {
       await fn()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, t('somethingWrong')))
     } finally {
       setBusy(null)
     }
@@ -561,7 +568,7 @@ function GuestPanel(p: PanelProps) {
 
   const save = () =>
     run('save', async () => {
-      if (!name.trim()) throw new Error('A guest needs a name.')
+      if (!name.trim()) throw new Error(t('guestNeedsName'))
       const g = await updateGuest(guest.id, {
         name: name.trim(),
         notes: notes.trim() || null,
@@ -587,7 +594,7 @@ function GuestPanel(p: PanelProps) {
 
   const dismissFlag = () =>
     run('dismiss', async () => {
-      replaceGuest(await dismissSeatFlag(guest.id, dismissNote))
+      replaceGuest(await dismissSeatFlag(guest.id, dismissNote, t))
       setDismissNote('')
     })
 
@@ -599,7 +606,7 @@ function GuestPanel(p: PanelProps) {
   const choosePhoto = (file: File | null) =>
     run('photo', async () => {
       if (!file) return
-      const jpeg = await prepareGuestPhoto(file)
+      const jpeg = await prepareGuestPhoto(file, t)
       const { guest: g, url } = await uploadGuestPhoto({
         teamId: p.teamId,
         projectId: p.projectId,
@@ -638,13 +645,13 @@ function GuestPanel(p: PanelProps) {
 
   const startNewFamily = () => {
     const last = guest.name.trim().split(/\s+/).slice(-1)[0]
-    setFamilyName(last && guest.name.trim().includes(' ') ? `${last} family` : '')
+    setFamilyName(last && guest.name.trim().includes(' ') ? t('familySuffix', { name: last }) : '')
     setCreatingFamily(true)
   }
 
   const makeFamily = () =>
     run('family', async () => {
-      if (!familyName.trim()) throw new Error('Give the family a name.')
+      if (!familyName.trim()) throw new Error(t('familyNeedsName'))
       const f = await createFamily(p.projectId, familyName)
       p.setFamilies((prev) => [...prev, f])
       const { guest: g, removedFamilyId } = await setGuestFamily(guest.id, f.id, guest.family_id)
@@ -656,7 +663,7 @@ function GuestPanel(p: PanelProps) {
   const doRename = () =>
     run('family', async () => {
       if (!family) return
-      if (!renameValue.trim()) throw new Error('Give the family a name.')
+      if (!renameValue.trim()) throw new Error(t('familyNeedsName'))
       const f = await renameFamily(family.id, renameValue)
       p.setFamilies((prev) => prev.map((x) => (x.id === f.id ? f : x)))
       setRenaming(false)
@@ -668,8 +675,8 @@ function GuestPanel(p: PanelProps) {
 
   const addStay = () =>
     run('stay', async () => {
-      if (!hotel.trim()) throw new Error('Enter the hotel name.')
-      const range = nightsInRange(from, to)
+      if (!hotel.trim()) throw new Error(t('enterHotel'))
+      const range = nightsInRange(from, to, t)
       if (!range.ok) throw new Error(range.error)
       const saved = await saveStays(p.projectId, guest.id, range.nights, hotel)
       const nights = new Set(range.nights)
@@ -701,12 +708,12 @@ function GuestPanel(p: PanelProps) {
   return (
     <>
       <div className="fixed inset-0 z-30 bg-black/20" onClick={() => { if (!dirty) p.onClose() }} aria-hidden="true" />
-      <aside role="dialog" aria-label={`Details for ${guest.name}`} className="fixed inset-y-0 right-0 z-40 w-full max-w-md overflow-y-auto border-l border-gray-200 bg-white p-5 shadow-xl">
+      <aside role="dialog" aria-label={t('detailsFor', { name: guest.name })} className="fixed inset-y-0 right-0 z-40 w-full max-w-md overflow-y-auto border-l border-gray-200 bg-white p-5 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-semibold text-gray-900">{guest.name}</h2>
-          <button type="button" onClick={p.onClose} className={btn} aria-label="Close details">Close</button>
+          <button type="button" onClick={p.onClose} className={btn} aria-label={t('closeDetails')}>{t('close')}</button>
         </div>
-        {dirty && <p className="mt-1 text-xs text-amber-700">Unsaved changes.</p>}
+        {dirty && <p className="mt-1 text-xs text-amber-700">{t('unsaved')}</p>}
         {error && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
         <fieldset disabled={p.readOnly} className="m-0 mt-4 min-w-0 space-y-4 border-0 p-0">
@@ -729,90 +736,90 @@ function GuestPanel(p: PanelProps) {
               />
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => fileInput.current?.click()} disabled={busy === 'photo'} className={btn}>
-                  {busy === 'photo' ? 'Uploading…' : guest.photo_path ? 'Replace photo…' : 'Choose photo…'}
+                  {busy === 'photo' ? t('uploading') : guest.photo_path ? t('replacePhoto') : t('choosePhoto')}
                 </button>
-                {guest.photo_path && !confirmRemovePhoto && <button type="button" onClick={() => setConfirmRemovePhoto(true)} className={btn}>Remove</button>}
+                {guest.photo_path && !confirmRemovePhoto && <button type="button" onClick={() => setConfirmRemovePhoto(true)} className={btn}>{t('remove')}</button>}
                 {guest.photo_path && confirmRemovePhoto && (
                   <>
-                    <button type="button" onClick={dropPhoto} disabled={busy === 'photo'} className={btn + ' !border-red-300 !text-red-700'}>Confirm remove</button>
-                    <button type="button" onClick={() => setConfirmRemovePhoto(false)} className={btn}>Keep</button>
+                    <button type="button" onClick={dropPhoto} disabled={busy === 'photo'} className={btn + ' !border-red-300 !text-red-700'}>{t('confirmRemove')}</button>
+                    <button type="button" onClick={() => setConfirmRemovePhoto(false)} className={btn}>{t('keep')}</button>
                   </>
                 )}
               </div>
-              <p className="text-xs text-gray-500">JPEG, PNG or WebP. Stored privately for your team.</p>
+              <p className="text-xs text-gray-500">{t('photoHelp')}</p>
             </div>
           </div>
 
           {/* Basics */}
           <div className={section}>
             <div>
-              <label className={label} htmlFor="g-name">Name</label>
+              <label className={label} htmlFor="g-name">{t('name')}</label>
               <input id="g-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className={input + ' w-full'} />
             </div>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-              <label className="flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} /> VIP</label>
-              <label className="flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" checked={speech} onChange={(e) => setSpeech(e.target.checked)} /> Giving a speech</label>
+              <label className="flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} /> {t('vip')}</label>
+              <label className="flex items-center gap-2 text-sm text-gray-800"><input type="checkbox" checked={speech} onChange={(e) => setSpeech(e.target.checked)} /> {t('givingSpeech')}</label>
               <label className="flex items-center gap-2 text-sm text-gray-800">
-                Age
+                {t('age')}
                 <select value={age} onChange={(e) => setAge(e.target.value as DbAgeGroup)} className={input}>
-                  {(Object.keys(AGE_LABEL) as DbAgeGroup[]).map((k) => <option key={k} value={k}>{AGE_LABEL[k]}</option>)}
+                  {(['adult', 'child', 'baby'] as DbAgeGroup[]).map((k) => <option key={k} value={k}>{ageLabel(k, t)}</option>)}
                 </select>
               </label>
             </div>
             <div>
-              <label className={label} htmlFor="g-diet">Dietary needs / allergies</label>
-              <textarea id="g-diet" value={dietary} onChange={(e) => setDietary(e.target.value)} maxLength={500} rows={2} className={input + ' w-full'} placeholder="e.g. coeliac, no nuts, vegetarian" />
+              <label className={label} htmlFor="g-diet">{t('dietaryNeeds')}</label>
+              <textarea id="g-diet" value={dietary} onChange={(e) => setDietary(e.target.value)} maxLength={500} rows={2} className={input + ' w-full'} placeholder={t('dietaryExample')} />
             </div>
             <div>
-              <label className={label} htmlFor="g-notes">Notes</label>
+              <label className={label} htmlFor="g-notes">{t('notes')}</label>
               <textarea id="g-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className={input + ' w-full'} />
             </div>
-            <button type="button" onClick={save} disabled={!dirty || busy === 'save'} className={btnPrimary}>{busy === 'save' ? 'Saving…' : 'Save changes'}</button>
+            <button type="button" onClick={save} disabled={!dirty || busy === 'save'} className={btnPrimary}>{busy === 'save' ? t('saving') : t('saveChanges')}</button>
           </div>
 
           {/* Family */}
           <div className={section}>
-            <p className="text-sm font-medium text-gray-900">Family</p>
-            <p className="text-xs text-gray-500">Link parents and children so they show together.</p>
+            <p className="text-sm font-medium text-gray-900">{t('family')}</p>
+            <p className="text-xs text-gray-500">{t('familyHelp')}</p>
             {!creatingFamily ? (
               <select
                 value={guest.family_id ?? ''}
                 disabled={busy === 'family'}
                 onChange={(e) => (e.target.value === '__new' ? startNewFamily() : void moveToFamily(e.target.value || null))}
                 className={input + ' w-full'}
-                aria-label="Family"
+                aria-label={t('family')}
               >
-                <option value="">No family</option>
+                <option value="">{t('noFamily')}</option>
                 {[...p.families].sort((a, b) => a.name.localeCompare(b.name)).map((f) => (
                   <option key={f.id} value={f.id}>{f.name} ({familySizes.get(f.id) ?? 0})</option>
                 ))}
-                <option value="__new">+ New family…</option>
+                <option value="__new">{t('newFamilyOption')}</option>
               </select>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <input value={familyName} onChange={(e) => setFamilyName(e.target.value)} maxLength={80} placeholder="Family name" className={input + ' flex-1'} aria-label="New family name" />
-                <button type="button" onClick={makeFamily} disabled={busy === 'family'} className={btnPrimary + ' !py-1 !text-xs'}>Create</button>
-                <button type="button" onClick={() => setCreatingFamily(false)} className={btn}>Cancel</button>
+                <input value={familyName} onChange={(e) => setFamilyName(e.target.value)} maxLength={80} placeholder={t('familyName')} className={input + ' flex-1'} aria-label={t('newFamilyName')} />
+                <button type="button" onClick={makeFamily} disabled={busy === 'family'} className={btnPrimary + ' !py-1 !text-xs'}>{t('create')}</button>
+                <button type="button" onClick={() => setCreatingFamily(false)} className={btn}>{t('cancel')}</button>
               </div>
             )}
             {family && !renaming && (
-              <button type="button" onClick={() => { setRenameValue(family.name); setRenaming(true) }} className="text-xs text-gray-500 underline hover:text-gray-900">Rename “{family.name}”</button>
+              <button type="button" onClick={() => { setRenameValue(family.name); setRenaming(true) }} className="text-xs text-gray-500 underline hover:text-gray-900">{t('renameNamed', { name: family.name })}</button>
             )}
             {family && renaming && (
               <div className="flex flex-wrap gap-2">
-                <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={80} className={input + ' flex-1'} aria-label="Rename family" />
-                <button type="button" onClick={doRename} disabled={busy === 'family'} className={btn}>Save name</button>
-                <button type="button" onClick={() => setRenaming(false)} className={btn}>Cancel</button>
+                <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} maxLength={80} className={input + ' flex-1'} aria-label={t('renameFamily')} />
+                <button type="button" onClick={doRename} disabled={busy === 'family'} className={btn}>{t('saveName')}</button>
+                <button type="button" onClick={() => setRenaming(false)} className={btn}>{t('cancel')}</button>
               </div>
             )}
             {others.length > 0 && (
               <p className="text-xs text-gray-600">
-                Also in this family:{' '}
+                {t('alsoInFamily')}{' '}
                 {others.map((o, i) => (
                   <span key={o.id}>
                     {i > 0 && ', '}
                     <button type="button" onClick={() => p.onSelect(o.id)} disabled={dirty} className="underline hover:text-gray-900 disabled:no-underline disabled:opacity-60">{o.name}</button>
-                    {o.age_group !== 'adult' ? ` (${AGE_LABEL[o.age_group].toLowerCase()})` : ''}
+                    {o.age_group !== 'adult' ? ` (${ageLabel(o.age_group, t).toLowerCase()})` : ''}
                   </span>
                 ))}
               </p>
@@ -821,30 +828,30 @@ function GuestPanel(p: PanelProps) {
 
           {/* RSVP */}
           <div className={section}>
-            <p className="text-sm font-medium text-gray-900">RSVP</p>
+            <p className="text-sm font-medium text-gray-900">{t('rsvp')}</p>
             {guest.rsvp_needs_review && (
               <div className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 p-2 text-xs text-blue-900">
                 <span>
-                  {guest.plus_one_of ? 'Added as a plus-one through the RSVP link.' : 'Not on your list: added through the RSVP link.'}{' '}
-                  Check the details. If it duplicates someone already on the list, set that guest&rsquo;s answer and delete this one.
+                  {guest.plus_one_of ? t('addedPlusOne') : t('addedViaLink')}{' '}
+                  {t('reviewHelp')}
                 </span>
-                <button type="button" disabled={busy !== null} onClick={reviewed} className={btn}>Mark as reviewed</button>
+                <button type="button" disabled={busy !== null} onClick={reviewed} className={btn}>{t('markReviewed')}</button>
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <select value={guest.rsvp_status ?? ''} onChange={(e) => changeRsvp(e.target.value)} disabled={busy !== null} className={input} aria-label="RSVP answer">
-                <option value="">Pending</option>
-                {RSVP_STATUSES.map((st) => <option key={st} value={st}>{RSVP_LABEL[st]}</option>)}
+              <select value={guest.rsvp_status ?? ''} onChange={(e) => changeRsvp(e.target.value)} disabled={busy !== null} className={input} aria-label={t('rsvpAnswer')}>
+                <option value="">{t('pending')}</option>
+                {RSVP_STATUSES.map((st) => <option key={st} value={st}>{t(`rsvp.${st}`)}</option>)}
               </select>
               <span className="text-xs text-gray-500">
                 {guest.rsvp_at
-                  ? `${guest.rsvp_source === 'link' ? 'Answered through the link' : 'Set by your team'} on ${shortDate(guest.rsvp_at.slice(0, 10))}`
-                  : 'No answer yet'}
+                  ? t(guest.rsvp_source === 'link' ? 'answeredLink' : 'setByTeam', { date: shortDate(guest.rsvp_at.slice(0, 10), locale) })
+                  : t('noAnswerYet')}
               </span>
             </div>
             {inviter && (
               <p className="text-xs text-gray-600">
-                Plus-one of{' '}
+                {t('plusOneOfLabel')}{' '}
                 <button type="button" onClick={() => p.onSelect(inviter.id)} disabled={dirty} className="underline hover:text-gray-900 disabled:no-underline disabled:opacity-60">{inviter.name}</button>
               </p>
             )}
@@ -852,65 +859,65 @@ function GuestPanel(p: PanelProps) {
 
           {/* Seats */}
           <div className={section}>
-            <p className="text-sm font-medium text-gray-900">Seat</p>
+            <p className="text-sm font-medium text-gray-900">{t('seat')}</p>
             {p.seats.length > 0 ? (
-              <ul className="text-sm text-gray-700">{p.seats.map((s, i) => <li key={i}>{seatLabel(s, true)}</li>)}</ul>
+              <ul className="text-sm text-gray-700">{p.seats.map((s, i) => <li key={i}>{seatLabel(s, true, t)}</li>)}</ul>
             ) : guest.rsvp_status === 'declined' ? (
-              <p className="text-sm text-gray-500">Not attending.</p>
+              <p className="text-sm text-gray-500">{t('notAttendingDot')}</p>
             ) : guest.age_group === 'baby' ? (
-              <p className="text-sm text-gray-500">Babies don&rsquo;t need a seat.</p>
+              <p className="text-sm text-gray-500">{t('babiesNoSeat')}</p>
             ) : guest.seat_dismissed_at ? (
               <div className="rounded-lg border border-gray-200 bg-gray-50 p-2 text-sm text-gray-700">
-                <p>No seat needed: {guest.seat_dismissed_note}</p>
-                <button type="button" disabled={busy !== null} onClick={restoreFlag} className={btn + ' mt-1.5'}>Flag as needing a seat again</button>
+                <p>{t('noSeatNeededNote', { note: guest.seat_dismissed_note ?? '' })}</p>
+                <button type="button" disabled={busy !== null} onClick={restoreFlag} className={btn + ' mt-1.5'}>{t('flagAgain')}</button>
               </div>
             ) : (
               <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2">
-                <p className="text-sm font-medium text-amber-800">Needs a seat</p>
-                <p className="text-xs text-amber-800">Seat them in the editor, or dismiss this if they will not sit (say why).</p>
+                <p className="text-sm font-medium text-amber-800">{t('needsSeat')}</p>
+                <p className="text-xs text-amber-800">{t('seatThemHelp')}</p>
                 <div className="flex gap-1.5">
-                  <input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} maxLength={300} placeholder="Why no seat? e.g. leaves after the ceremony" aria-label="Reason no seat is needed" className={input + ' min-w-0 flex-1'} />
-                  <button type="button" disabled={busy !== null || !dismissNote.trim()} onClick={dismissFlag} className={btn}>Dismiss</button>
+                  <input value={dismissNote} onChange={(e) => setDismissNote(e.target.value)} maxLength={300} placeholder={t('whyNoSeat')} aria-label={t('reasonNoSeat')} className={input + ' min-w-0 flex-1'} />
+                  <button type="button" disabled={busy !== null || !dismissNote.trim()} onClick={dismissFlag} className={btn}>{t('dismiss')}</button>
                 </div>
               </div>
             )}
-            <Link href={`/editor/${p.projectId}`} className="text-xs text-gray-500 underline hover:text-gray-900">Change seats in the editor</Link>
+            <Link href={`/editor/${p.projectId}`} className="text-xs text-gray-500 underline hover:text-gray-900">{t('changeSeats')}</Link>
           </div>
 
           {/* Hotel per night */}
           <div className={section}>
-            <p className="text-sm font-medium text-gray-900">Hotel per night</p>
-            <p className="text-xs text-gray-500">A night is the evening of that date. Entering an existing night replaces it.</p>
-            {runs.length === 0 ? <p className="text-sm text-gray-500">No stays recorded.</p> : (
+            <p className="text-sm font-medium text-gray-900">{t('hotelPerNight')}</p>
+            <p className="text-xs text-gray-500">{t('hotelNightHelp')}</p>
+            {runs.length === 0 ? <p className="text-sm text-gray-500">{t('noStays')}</p> : (
               <ul className="space-y-1">
                 {runs.map((r) => (
                   <li key={`${r.hotel}-${r.from}`} className="flex items-center justify-between gap-2 text-sm text-gray-700">
-                    <span>{runLabel(r)} <span className="text-gray-400">({r.nights} {r.nights === 1 ? 'night' : 'nights'})</span></span>
-                    <button type="button" onClick={() => removeRun(r)} disabled={busy === 'stay'} className={btn}>Remove</button>
+                    <span>{runLabel(r, locale)} <span className="text-gray-400">{t('nightsCount', { count: r.nights })}</span></span>
+                    <button type="button" onClick={() => removeRun(r)} disabled={busy === 'stay'} className={btn}>{t('remove')}</button>
                   </li>
                 ))}
               </ul>
             )}
             <div className="flex flex-wrap items-end gap-2">
-              <label className="text-xs text-gray-600">First night<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input + ' mt-1 block'} /></label>
-              <label className="text-xs text-gray-600">Last night<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={input + ' mt-1 block'} /></label>
-              <label className="min-w-[8rem] flex-1 text-xs text-gray-600">Hotel
+              <label className="text-xs text-gray-600">{t('firstNight')}<input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={input + ' mt-1 block'} /></label>
+              <label className="text-xs text-gray-600">{t('lastNight')}<input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={input + ' mt-1 block'} /></label>
+              <label className="min-w-[8rem] flex-1 text-xs text-gray-600">{t('hotel')}
                 <input value={hotel} onChange={(e) => setHotel(e.target.value)} list="known-hotels" maxLength={120} className={input + ' mt-1 block w-full'} />
               </label>
               <datalist id="known-hotels">{knownHotels.map((h) => <option key={h} value={h} />)}</datalist>
-              <button type="button" onClick={addStay} disabled={busy === 'stay'} className={btn}>{busy === 'stay' ? 'Saving…' : 'Add'}</button>
+              <button type="button" onClick={addStay} disabled={busy === 'stay'} className={btn}>{busy === 'stay' ? t('saving') : t('add')}</button>
             </div>
           </div>
 
           {/* Delete */}
           <div className={section}>
             {!confirmDelete ? (
-              <button type="button" onClick={() => setConfirmDelete(true)} className={btn + ' !text-red-700'}>Delete guest…</button>
+              <button type="button" onClick={() => setConfirmDelete(true)} className={btn + ' !text-red-700'}>{t('deleteGuest')}</button>
             ) : (
               <div className="flex flex-wrap items-center gap-2 text-sm text-gray-700">
-                <span>Delete {guest.name}, their seat, stays and photo?</span>
-                <button type="button" onClick={removeGuest} disabled={busy === 'delete'} className={btn + ' !border-red-300 !text-red-700'}>Yes, delete</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className={btn}>Keep</button>
+                <span>{t('deleteGuestConfirm', { name: guest.name })}</span>
+                <button type="button" onClick={removeGuest} disabled={busy === 'delete'} className={btn + ' !border-red-300 !text-red-700'}>{t('yesDelete')}</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className={btn}>{t('keep')}</button>
               </div>
             )}
           </div>

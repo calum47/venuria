@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
+import { formatDate } from '@/lib/projectDates'
 import { supabase } from '@/lib/supabase/client'
 import { resolveUserRole } from '@/lib/supabase/role'
-import { CHANGELOG, unseenEntries, whatsNewAllowedOn, type ChangelogEntry } from '@/lib/changelog'
+import { CHANGELOG, localizedEntry, unseenEntries, whatsNewAllowedOn, type ChangelogEntry } from '@/lib/changelog'
 
 const SEEN_KEY = 'last_seen_changelog_id'
 
@@ -21,6 +24,8 @@ const SEEN_KEY = 'last_seen_changelog_id'
  * lookups). Role is only resolved when something might be unseen.
  */
 export default function WhatsNewModal() {
+  const t = useTranslations('WhatsNew')
+  const locale = useLocale() as Locale
   const [entries, setEntries] = useState<ChangelogEntry[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const allowed = whatsNewAllowedOn(usePathname())
@@ -69,24 +74,27 @@ export default function WhatsNewModal() {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl w-[30rem] max-h-[85vh] flex flex-col">
         <div className="px-6 pt-6 pb-3">
-          <h3 className="font-semibold text-gray-900">What&apos;s new in Venuria</h3>
-          <p className="text-xs text-gray-400 mt-0.5">Changes since you were last here</p>
+          <h3 className="font-semibold text-gray-900">{t('title')}</h3>
+          <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
         </div>
 
         <div className="px-6 overflow-y-auto space-y-5 pb-4">
-          {entries.map((entry) => (
-            <section key={entry.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <h4 className="text-sm font-medium text-gray-900">{entry.title}</h4>
-                <span className="text-xs text-gray-400 shrink-0">{entry.date}</span>
-              </div>
-              <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc pl-5">
-                {entry.items.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {entries.map((entry) => {
+            const text = localizedEntry(entry, locale)
+            return (
+              <section key={entry.id}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <h4 className="text-sm font-medium text-gray-900">{text.title}</h4>
+                  <span className="text-xs text-gray-400 shrink-0">{formatDate(entry.date, locale)}</span>
+                </div>
+                <ul className="mt-2 space-y-1.5 text-sm text-gray-600 list-disc pl-5">
+                  {text.items.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  ))}
+                </ul>
+              </section>
+            )
+          })}
         </div>
 
         <div className="px-6 pb-6 pt-2">
@@ -95,7 +103,7 @@ export default function WhatsNewModal() {
             disabled={isSaving}
             className="w-full py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 disabled:opacity-50 transition-colors"
           >
-            Got it
+            {t('gotIt')}
           </button>
         </div>
       </div>

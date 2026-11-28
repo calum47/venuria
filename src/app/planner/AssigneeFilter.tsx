@@ -1,6 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 /** Managers and Leads: narrow My Projects (and its payments) to one teammate's projects, or to unassigned ones. */
 export default function AssigneeFilter({
@@ -12,19 +13,20 @@ export default function AssigneeFilter({
   value: string
   meId: string
 }) {
+  const tx = useTranslations('Planner')
   const router = useRouter()
   return (
     <label className="flex items-center gap-2 text-sm text-gray-600">
-      Show projects of
+      {tx('showProjectsOf')}
       <select
         value={value}
         onChange={(e) => router.replace(e.target.value ? `/planner?assignee=${encodeURIComponent(e.target.value)}` : '/planner')}
         className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900"
       >
-        <option value="">Everyone</option>
-        <option value="none">Unassigned</option>
+        <option value="">{tx('everyone')}</option>
+        <option value="none">{tx('unassigned')}</option>
         {teammates.map((t) => (
-          <option key={t.id} value={t.id}>{t.id === meId ? `${t.name} (you)` : t.name}</option>
+          <option key={t.id} value={t.id}>{t.id === meId ? tx('nameYou', { name: t.name }) : t.name}</option>
         ))}
       </select>
     </label>

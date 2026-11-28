@@ -5,6 +5,9 @@
  * depending on the browser's zone.
  */
 
+import type { Tr } from '@/i18n/types'
+import { INTL_TAG, type Locale } from '@/i18n/config'
+
 export const DUE_BY_LEAD_DAYS = 14
 
 export function isIsoDate(s: string): boolean {
@@ -42,11 +45,11 @@ export function applyDueRule(eventDate: string, rule: DueRule): string {
   return addDays(eventDate, rule.unit === 'weeks' ? n * 7 : n)
 }
 
-/** "1 month before the event", "2 weeks before the event", "on the event day". */
-export function describeDueRule(rule: DueRule): string {
-  if (rule.amount === 0) return 'on the event day'
-  const unit = rule.amount === 1 ? rule.unit.slice(0, -1) : rule.unit
-  return `${rule.amount} ${unit} ${rule.direction} the event`
+/** "1 month before the event", "2 weeks before the event", "on the event day". `t` = translator for "Dates". */
+export function describeDueRule(rule: DueRule, t: Tr): string {
+  if (rule.amount === 0) return t('ruleEventDay')
+  const unit = t(rule.unit === 'days' ? 'unitDay' : rule.unit === 'weeks' ? 'unitWeek' : 'unitMonth', { count: rule.amount })
+  return t(rule.direction === 'before' ? 'ruleBefore' : 'ruleAfter', { amount: rule.amount, unit })
 }
 
 /** Default Due By: two weeks before the event — the point at which the layout should be locked with the venue and rental companies. */
@@ -65,17 +68,28 @@ export function todayIso(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
-export function countdownLabel(isoDate: string): string {
+/** `t` = translator for "Dates". */
+export function countdownLabel(isoDate: string, t: Tr): string {
   const n = daysUntil(isoDate)
-  if (n === 0) return 'Today'
-  if (n === 1) return 'Tomorrow'
-  if (n === -1) return 'Yesterday'
-  if (n > 0) return `In ${n} days`
-  return `${-n} days ago`
+  if (n === 0) return t('today')
+  if (n === 1) return t('tomorrow')
+  if (n === -1) return t('yesterday')
+  if (n > 0) return t('inDays', { count: n })
+  return t('daysAgo', { count: -n })
 }
 
-export function formatDate(isoDate: string): string {
-  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('en-GB', {
+/** Like formatDate but without the weekday ("12 Mar 2027"). */
+export function formatDateNoWeekday(isoDate: string, locale: Locale): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(INTL_TAG[locale], {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+export function formatDate(isoDate: string, locale: Locale): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(INTL_TAG[locale], {
     weekday: 'short',
     day: 'numeric',
     month: 'short',

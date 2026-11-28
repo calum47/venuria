@@ -8,9 +8,9 @@ import {
   getDocumentUrl,
   updateDocumentGroup,
 } from '@/lib/supabase/paymentQueries'
-import { DOC_KIND_LABEL, PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
+import { PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
 import {
-  DOC_SORT_LABEL,
+  docSortLabel,
   NO_VENDOR,
   filterAndSort,
   groupDocuments,
@@ -21,6 +21,8 @@ import {
   type DocSort,
 } from '@/lib/documents'
 import { formatDate } from '@/lib/projectDates'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import { Labelled, UploadForm, btn, btnPrimary, errMsg, input } from './documentUi'
 
 type Props = {
@@ -32,9 +34,10 @@ type Props = {
   onError: (m: string | null) => void
 }
 
-const day = (d: DbProjectDocument) => formatDate(d.created_at.slice(0, 10))
-
 export default function DocumentsSection({ teamId, projectId, documents, setDocuments, onError }: Props) {
+  const t = useTranslations('Pay')
+  const locale = useLocale() as Locale
+  const day = (d: DbProjectDocument) => formatDate(d.created_at.slice(0, 10), locale)
   const [adding, setAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null) // group id
   const [updatingId, setUpdatingId] = useState<string | null>(null) // group id
@@ -48,7 +51,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
   const [sort, setSort] = useState<DocSort>('newest')
 
   const groups = useMemo(() => groupDocuments(documents), [documents])
-  const shown = useMemo(() => filterAndSort(groups, { query, vendors, sort }), [groups, query, vendors, sort])
+  const shown = useMemo(() => filterAndSort(groups, { query, vendors, sort }, t), [groups, query, vendors, sort, t])
   const vendorOpts = useMemo(() => vendorOptions(groups), [groups])
   const filtering = query.trim() !== '' || vendors.size > 0
 
@@ -60,12 +63,12 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
       const key = vendorKey(g.current.vendor_name)
       const sec = m.get(key)
       if (sec) sec.groups.push(g)
-      else m.set(key, { key, name: key === NO_VENDOR ? 'No vendor' : (g.current.vendor_name ?? '').trim(), groups: [g] })
+      else m.set(key, { key, name: key === NO_VENDOR ? t('noVendor') : (g.current.vendor_name ?? '').trim(), groups: [g] })
     }
     return [...m.values()].sort((a, b) =>
       a.key === NO_VENDOR ? 1 : b.key === NO_VENDOR ? -1 : a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
     )
-  }, [shown])
+  }, [shown, t])
   const isSectionOpen = (sec: { key: string; groups: DocGroup[] }) =>
     openSections.has(sec.key) ||
     // Keep a section open while searching (so matches are visible) or while one of its documents has a form open.
@@ -86,7 +89,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
     try {
       await fn()
     } catch (e) {
-      onError(errMsg(e))
+      onError(errMsg(e, t('somethingWrong')))
     } finally {
       setBusy(null)
     }
@@ -98,7 +101,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
       // then point it at the short-lived signed URL.
       const w = window.open('', '_blank')
       try {
-        const url = await getDocumentUrl(doc.storage_path)
+        const url = await getDocumentUrl(doc.storage_path, t)
         if (w) {
           w.opener = null
           w.location.href = url
@@ -129,7 +132,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
 
   const saveEdit = (g: DocGroup, v: { label: string; kind: DbDocumentKind; vendorName: string | null }) =>
     run(g.id, async () => {
-      const rows = await updateDocumentGroup(g.id, v)
+      const rows = await updateDocumentGroup(g.id, v, t)
       const byId = new Map(rows.map((r) => [r.id, r]))
       setDocuments((cur) => cur.map((d) => byId.get(d.id) ?? d))
       setEditingId(null)
@@ -176,12 +179,12 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
             {d.label}
           </button>
           {hasHistory && (
-            <span className="rounded-lg bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700" title="Latest version">
+            <span className="rounded-lg bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700" title={t('latestVersion')}>
               v{d.version}
             </span>
           )}
           <span className="text-gray-400">
-            {DOC_KIND_LABEL[d.kind]}
+            {t(`docKind.${d.kind}`)}
             {d.vendor_name ? ` · ${d.vendor_name}` : ''} · {formatBytes(d.size_bytes)} · {day(d)}
           </span>
           <span className="ml-auto flex items-center gap-3">
@@ -189,17 +192,17 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
               onClick={() => { setEditingId(g.id); setUpdatingId(null); setRemovingId(null) }}
               disabled={isBusy}
               className="text-gray-500 hover:text-gray-900"
-              aria-label={`Edit ${d.label}`}
+              aria-label={t('editLabel', { label: d.label })}
             >
-              Edit
+              {t('edit')}
             </button>
             <button
               onClick={() => { setUpdatingId(g.id); setEditingId(null); setRemovingId(null) }}
               disabled={isBusy}
               className="text-gray-500 hover:text-gray-900"
-              aria-label={`Upload a new version of ${d.label}`}
+              aria-label={t('uploadNewVersionOf', { label: d.label })}
             >
-              Update
+              {t('update')}
             </button>
             <button
               onClick={() => {
@@ -208,23 +211,23 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
               }}
               disabled={isBusy}
               className="text-gray-400 hover:text-red-600"
-              aria-label={`Remove ${d.label}`}
+              aria-label={t('removeLabel', { label: d.label })}
             >
-              Remove
+              {t('remove')}
             </button>
           </span>
         </div>
 
         {removingId === g.id && hasHistory && (
           <div className="mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-gray-700">
-            <span>Remove what?</span>
+            <span>{t('removeWhat')}</span>
             <button onClick={() => removeVersion(d)} disabled={isBusy} className={btn}>
-              Only v{d.version} (v{g.previous[0].version} becomes current)
+              {t('onlyVersion', { version: d.version, next: g.previous[0].version })}
             </button>
             <button onClick={() => removeGroup(g)} disabled={isBusy} className={btn + ' !border-red-300 !text-red-700'}>
-              All {g.previous.length + 1} versions
+              {t('allVersions', { count: g.previous.length + 1 })}
             </button>
-            <button onClick={() => setRemovingId(null)} className={btn}>Cancel</button>
+            <button onClick={() => setRemovingId(null)} className={btn}>{t('cancel')}</button>
           </div>
         )}
 
@@ -240,7 +243,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
         {updatingId === g.id && (
           <div className="mt-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
             <p className="mb-2 text-xs text-gray-600">
-              New version of <strong>{d.label}</strong>. It becomes v{nextVersion(g)}; v{d.version} stays in the history.
+              {t.rich('newVersionIntro', { label: d.label, next: nextVersion(g), current: d.version, b: (c) => <strong>{c}</strong> })}
             </p>
             <UploadForm
               teamId={teamId}
@@ -261,7 +264,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
               aria-expanded={open}
               className="text-xs text-gray-500 hover:text-gray-900"
             >
-              {open ? '▾' : '▸'} Previous versions ({g.previous.length})
+              {open ? '▾' : '▸'} {t('previousVersions', { count: g.previous.length })}
             </button>
             {open && (
               <ul className="mt-1 space-y-1 border-l-2 border-gray-100 pl-3">
@@ -269,23 +272,23 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
                   <li key={p.id} className="flex items-center gap-2 text-xs text-gray-400">
                     <span className="font-medium">v{p.version}</span>
                     <button onClick={() => openDocument(p)} disabled={busy === p.id} className="text-blue-500/80 hover:underline">
-                      Open
+                      {t('open')}
                     </button>
                     <span>· {formatBytes(p.size_bytes)} · {day(p)}</span>
                     <span className="ml-auto">
                       {removingVersionId === p.id ? (
                         <span className="flex items-center gap-2">
-                          <span className="text-gray-500">Remove v{p.version}?</span>
-                          <button onClick={() => removeVersion(p)} disabled={busy === p.id} className="text-red-600 hover:underline">Remove</button>
-                          <button onClick={() => setRemovingVersionId(null)} className="text-gray-500 hover:underline">Keep</button>
+                          <span className="text-gray-500">{t('removeVersionQ', { version: p.version })}</span>
+                          <button onClick={() => removeVersion(p)} disabled={busy === p.id} className="text-red-600 hover:underline">{t('remove')}</button>
+                          <button onClick={() => setRemovingVersionId(null)} className="text-gray-500 hover:underline">{t('keep')}</button>
                         </span>
                       ) : (
                         <button
                           onClick={() => setRemovingVersionId(p.id)}
                           className="hover:text-red-600"
-                          aria-label={`Remove version ${p.version} of ${d.label}`}
+                          aria-label={t('removeVersionAria', { version: p.version, label: d.label })}
                         >
-                          Remove
+                          {t('remove')}
                         </button>
                       )}
                     </span>
@@ -303,10 +306,10 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
     <section className="rounded-lg border border-gray-200 bg-white">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Contracts &amp; other documents</h2>
-          <p className="text-xs text-gray-500">PDF, JPG, PNG or WebP, up to 10 MB.</p>
+          <h2 className="text-sm font-semibold text-gray-900">{t('docsTitle')}</h2>
+          <p className="text-xs text-gray-500">{t('docsHelp')}</p>
         </div>
-        {!adding && <button onClick={() => setAdding(true)} className={btnPrimary}>Add document</button>}
+        {!adding && <button onClick={() => setAdding(true)} className={btnPrimary}>{t('addDocument')}</button>}
       </div>
 
       {adding && (
@@ -328,14 +331,14 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, vendor or type"
-            aria-label="Search documents"
+            placeholder={t('searchDocsPlaceholder')}
+            aria-label={t('searchDocs')}
             className={input + ' w-64'}
           />
           {(vendorOpts.vendors.length > 0 || vendorOpts.hasNoVendor) && (
             <details className="relative">
               <summary className={btn + ' cursor-pointer list-none !py-1.5 !text-sm'}>
-                Vendors{vendors.size > 0 ? ` (${vendors.size})` : ''} ▾
+                {t('vendorsFilter')}{vendors.size > 0 ? ` (${vendors.size})` : ''} ▾
               </summary>
               <div className="absolute left-0 z-10 mt-1 max-h-60 min-w-48 overflow-auto rounded-lg border border-gray-200 bg-white p-2 shadow">
                 {vendorOpts.vendors.map((v) => (
@@ -347,36 +350,36 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
                 {vendorOpts.hasNoVendor && (
                   <label className="flex items-center gap-2 py-0.5 text-sm text-gray-500">
                     <input type="checkbox" checked={vendors.has(NO_VENDOR)} onChange={() => toggleVendor(NO_VENDOR)} />
-                    No vendor
+                    {t('noVendor')}
                   </label>
                 )}
                 {vendors.size > 0 && (
                   <button onClick={() => setVendors(new Set())} className="mt-1 text-xs text-gray-500 hover:underline">
-                    Clear vendors
+                    {t('clearVendors')}
                   </button>
                 )}
               </div>
             </details>
           )}
-          <select value={sort} onChange={(e) => setSort(e.target.value as DocSort)} aria-label="Sort documents" className={input}>
-            {(Object.keys(DOC_SORT_LABEL) as DocSort[]).map((s) => (
-              <option key={s} value={s}>{DOC_SORT_LABEL[s]}</option>
+          <select value={sort} onChange={(e) => setSort(e.target.value as DocSort)} aria-label={t('sortDocs')} className={input}>
+            {(['newest', 'oldest', 'name_asc', 'name_desc'] as DocSort[]).map((s) => (
+              <option key={s} value={s}>{docSortLabel(s, t)}</option>
             ))}
           </select>
           {filtering && (
             <>
-              <span className="text-xs text-gray-500">{shown.length} of {groups.length}</span>
-              <button onClick={clearFilters} className="text-xs text-gray-500 hover:underline">Clear</button>
+              <span className="text-xs text-gray-500">{t('shownOf', { shown: shown.length, total: groups.length })}</span>
+              <button onClick={clearFilters} className="text-xs text-gray-500 hover:underline">{t('clear')}</button>
             </>
           )}
         </div>
       )}
 
       {groups.length === 0 && !adding ? (
-        <p className="px-4 py-6 text-sm text-gray-400">No documents yet.</p>
+        <p className="px-4 py-6 text-sm text-gray-400">{t('noDocsYet')}</p>
       ) : shown.length === 0 && groups.length > 0 ? (
         <p className="px-4 py-6 text-sm text-gray-400">
-          No documents match. <button onClick={clearFilters} className="underline">Clear search and filters</button>
+          {t('noDocsMatch')} <button onClick={clearFilters} className="underline">{t('clearSearchFilters')}</button>
         </p>
       ) : (
         <div>
@@ -387,7 +390,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
                 className="rounded-lg border border-gray-200 px-2.5 py-1 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 onClick={() => setOpenSections(allOpen ? new Set() : new Set(sections.map((x) => x.key)))}
               >
-                {allOpen ? 'Close all' : 'Open all'}
+                {allOpen ? t('closeAll') : t('openAll')}
               </button>
             </div>
           )}
@@ -407,7 +410,7 @@ export default function DocumentsSection({ teamId, projectId, documents, setDocu
                 >
                   <span aria-hidden className={`text-gray-400 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
                   <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-900">{sec.name}</span>
-                  <span className="text-xs text-gray-500">{sec.groups.length} document{sec.groups.length === 1 ? '' : 's'}</span>
+                  <span className="text-xs text-gray-500">{t('docCount', { count: sec.groups.length })}</span>
                 </button>
                 {open && (
                   <ul id={panelId} className="divide-y divide-gray-100 border-t border-gray-100 px-4">
@@ -434,6 +437,7 @@ function EditForm({
   onSave: (v: { label: string; kind: DbDocumentKind; vendorName: string | null }) => void
   onCancel: () => void
 }) {
+  const t = useTranslations('Pay')
   const d = group.current
   const [label, setLabel] = useState(d.label)
   const [kind, setKind] = useState<DbDocumentKind>(d.kind)
@@ -445,7 +449,7 @@ function EditForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!label.trim()) return setFormError('Give the document a name.')
+    if (!label.trim()) return setFormError(t('nameDocument'))
     setFormError(null)
     onSave({ label: label.trim(), kind, vendorName: vendor.trim() || null })
   }
@@ -453,27 +457,27 @@ function EditForm({
   return (
     <form onSubmit={submit} className="mt-2 space-y-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <Labelled label="Name">
-          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="Contract, Quote, Floor plan…" className={`${input} w-full`} maxLength={150} />
+        <Labelled label={t('name')}>
+          <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t('namePlaceholder')} className={`${input} w-full`} maxLength={150} />
         </Labelled>
-        <Labelled label="Type">
+        <Labelled label={t('type')}>
           <select value={kind} onChange={(e) => setKind(e.target.value as DbDocumentKind)} className={`${input} w-full`}>
             {kinds.map((k) => (
-              <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+              <option key={k} value={k}>{t(`docKind.${k}`)}</option>
             ))}
           </select>
         </Labelled>
-        <Labelled label="Vendor / supplier (optional)">
+        <Labelled label={t('vendorOptional')}>
           <input value={vendor} onChange={(e) => setVendor(e.target.value)} className={`${input} w-full`} maxLength={120} />
         </Labelled>
       </div>
       {group.previous.length > 0 && (
-        <p className="text-xs text-gray-500">Applies to all {group.previous.length + 1} versions of this document.</p>
+        <p className="text-xs text-gray-500">{t('appliesToAll', { count: group.previous.length + 1 })}</p>
       )}
       {formError && <p className="text-xs text-red-600">{formError}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? 'Saving…' : 'Save'}</button>
-        <button type="button" onClick={onCancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+        <button type="submit" disabled={busy} className={btnPrimary}>{busy ? t('saving') : t('save')}</button>
+        <button type="button" onClick={onCancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>{t('cancel')}</button>
       </div>
     </form>
   )

@@ -2,9 +2,12 @@
 
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useLocale } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import { updateProjectDates, updateProjectCoupleNames, setProjectAssignees, setProjectVisibility } from './actions'
 import { projectTitle } from '@/lib/projectTitle'
 import { countdownLabel, daysUntil, formatDate, suggestDueBy } from '@/lib/projectDates'
+import { useTranslations } from 'next-intl'
 
 export type ProjectRowData = {
   id: string
@@ -30,6 +33,10 @@ type Props = {
 }
 
 export default function ProjectRow({ project, meId, canAssign, canToggleVisibility, teammates }: Props) {
+  const tc = useTranslations('Common')
+  const tx = useTranslations('Planner')
+  const locale = useLocale() as Locale
+  const tdates = useTranslations('Dates')
   const [editing, setEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -51,12 +58,12 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
 
   const who =
     project.creatorId === meId
-      ? 'Created by you'
-      : `Created by ${project.creatorName}`
+      ? tx('createdByYou')
+      : tx('createdByName', { name: project.creatorName })
   const assignee =
     project.assignees.length === 0
       ? null
-      : `assigned to ${project.assignees.map((a) => (a.id === meId ? 'you' : a.name)).join(', ')}`
+      : tx('assignedTo', { names: project.assignees.map((a) => (a.id === meId ? tx('you') : a.name)).join(', ') })
   const viewOnly = project.access === 'view'
 
   return (
@@ -64,30 +71,30 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <span className="font-serif text-xl font-semibold text-gray-900">{projectTitle(project.coupleNames, project.venueName)}</span>
-          <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] capitalize text-gray-500">{project.status}</span>
+          <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] capitalize text-gray-500">{tx(`statuses.${project.status as 'in_progress'}`)}</span>
           {viewOnly && (
-            <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-800 bg-amber-50 rounded-full px-2 py-0.5">View only</span>
+            <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-800 bg-amber-50 rounded-full px-2 py-0.5">{tx('viewOnly')}</span>
           )}
           {project.visibility === 'private' && (
-            <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">Private</span>
+            <span className="ml-2 text-[10px] uppercase tracking-wide text-gray-500 bg-gray-100 rounded-full px-2 py-0.5">{tx('private')}</span>
           )}
           <div className="text-xs mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
             {project.coupleNames?.trim() && <span className="text-gray-500">{project.venueName}</span>}
             {project.event_date ? (
               <span className="text-gray-600">
-                {formatDate(project.event_date)}
+                {formatDate(project.event_date, locale)}
                 <span className={`ml-1.5 ${isPast ? 'text-gray-400' : 'text-gray-900 font-medium'}`}>
-                  · {countdownLabel(project.event_date)}
+                  · {countdownLabel(project.event_date, tdates)}
                 </span>
               </span>
             ) : (
-              <span className="text-amber-600">No event date set</span>
+              <span className="text-amber-600">{tx('noEventDateSet')}</span>
             )}
             {project.due_by && !isPast && (
               <span className={dueOverdue ? 'text-red-600' : dueSoon ? 'text-amber-600' : 'text-gray-400'}>
-                Due by {formatDate(project.due_by)}
-                {dueOverdue && ' — overdue'}
-                {dueSoon && !dueOverdue && ` — ${countdownLabel(project.due_by).toLowerCase()}`}
+                {tc('dueBy')} {formatDate(project.due_by, locale)}
+                {dueOverdue && ` — ${tx('overdueSuffix')}`}
+                {dueSoon && !dueOverdue && ` — ${countdownLabel(project.due_by, tdates).toLowerCase()}`}
               </span>
             )}
             <span className="text-gray-400">
@@ -99,11 +106,11 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
         <div className="flex items-center gap-3 shrink-0">
           {!viewOnly && (
             <button onClick={() => { setEditing((v) => !v); setError(null) }} className="text-xs text-gray-400 hover:text-gray-700">
-              {editing ? 'Close' : 'Edit'}
+              {editing ? tc('close') : tc('edit')}
             </button>
           )}
           <Link href={`/planner/projects/${project.id}`} className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-100">
-            Open project →
+            {tx('openProject')}
           </Link>
         </div>
       </div>
@@ -113,30 +120,30 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
           <form key={project.coupleNames ?? ''} action={run(updateProjectCoupleNames)} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-gray-500">Couple&apos;s names</label>
+              <label className="text-[11px] text-gray-500">{tx('coupleSNames')}</label>
               <input name="coupleNames" defaultValue={project.coupleNames ?? ''} required maxLength={80} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
             <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
-              {isPending ? 'Saving…' : 'Save names'}
+              {isPending ? tc('saving') : tx('saveNames')}
             </button>
           </form>
           <form action={run(updateProjectDates)} className="flex flex-wrap items-end gap-2">
             <input type="hidden" name="projectId" value={project.id} />
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-gray-500">Event date</label>
+              <label className="text-[11px] text-gray-500">{tc('eventDate')}</label>
               <input type="date" name="eventDate" value={eventDate} onChange={(e) => setEventDate(e.target.value)} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-gray-500">Due by</label>
+              <label className="text-[11px] text-gray-500">{tc('dueBy')}</label>
               <input type="date" name="dueBy" value={dueBy} onChange={(e) => setDueBy(e.target.value)} className="rounded-lg border bg-white px-2 py-1 text-sm text-gray-900" />
             </div>
             {eventDate && (
-              <button type="button" onClick={() => setDueBy(suggestDueBy(eventDate))} className="text-[11px] text-gray-500 hover:text-gray-800 pb-1.5" title="Two weeks before the event">
-                Reset due-by
+              <button type="button" onClick={() => setDueBy(suggestDueBy(eventDate))} className="text-[11px] text-gray-500 hover:text-gray-800 pb-1.5" title={tx('twoWeeksBeforeTheEvent')}>
+                {tx('resetDueBy')}
               </button>
             )}
             <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-3 py-1 text-xs text-white disabled:opacity-40">
-              {isPending ? 'Saving…' : 'Save dates'}
+              {isPending ? tc('saving') : tx('saveDates')}
             </button>
           </form>
 
@@ -149,7 +156,7 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                   action={run(setProjectAssignees)}
                   className="flex flex-col gap-1"
                 >
-                  <span className="text-[11px] text-gray-500">Assigned to (any number)</span>
+                  <span className="text-[11px] text-gray-500">{tx('assignedToAnyNumber')}</span>
                   <input type="hidden" name="projectId" value={project.id} />
                   <div className="flex flex-wrap gap-x-3 gap-y-1">
                     {teammates.map((t) => (
@@ -166,17 +173,17 @@ export default function ProjectRow({ project, meId, canAssign, canToggleVisibili
                     ))}
                   </div>
                   <button type="submit" disabled={isPending} className="self-start rounded-lg border bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 disabled:opacity-40">
-                    {isPending ? 'Saving…' : 'Save assignees'}
+                    {isPending ? tc('saving') : tx('saveAssignees')}
                   </button>
                 </form>
               )}
               {canToggleVisibility && (
                 <form action={run(setProjectVisibility)} className="flex flex-col gap-1">
-                  <label className="text-[11px] text-gray-500">Visibility</label>
+                  <label className="text-[11px] text-gray-500">{tx('visibility')}</label>
                   <input type="hidden" name="projectId" value={project.id} />
                   <input type="hidden" name="visibility" value={project.visibility === 'public' ? 'private' : 'public'} />
                   <button type="submit" disabled={isPending} className="rounded-lg border bg-white px-2 py-1 text-xs text-gray-700 hover:bg-gray-100">
-                    {project.visibility === 'public' ? 'Public — make private' : 'Private — make public'}
+                    {project.visibility === 'public' ? tx('publicMakePrivate') : tx('privateMakePublic')}
                   </button>
                 </form>
               )}

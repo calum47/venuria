@@ -6,6 +6,7 @@
  * on AND it has something in it, so an empty section never leaves a heading
  * with nothing under it.
  */
+import type { Tr } from '@/i18n/types'
 
 export const RSVP_MEDIA_BUCKET = 'rsvp-media'
 export const MAX_AREA_PHOTOS = 6
@@ -28,7 +29,7 @@ export function scheduleLines(schedule: string | null | undefined): string[] {
  * Only http(s) is accepted (never javascript:, data:, mailto: …), and the host
  * must look like a domain. Empty input means "no link".
  */
-export function normalizeWebUrl(input: string): { ok: true; url: string | null } | { ok: false; error: string } {
+export function normalizeWebUrl(input: string, t: Tr): { ok: true; url: string | null } | { ok: false; error: string } {
   const raw = input.trim()
   if (!raw) return { ok: true, url: null }
   const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(raw) ? raw : `https://${raw}`
@@ -36,12 +37,12 @@ export function normalizeWebUrl(input: string): { ok: true; url: string | null }
   try {
     u = new URL(withScheme)
   } catch {
-    return { ok: false, error: 'That does not look like a web address.' }
+    return { ok: false, error: t('urlInvalid') }
   }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') return { ok: false, error: 'Use a web address starting with http:// or https://.' }
-  if (!u.hostname.includes('.')) return { ok: false, error: 'That does not look like a web address.' }
+  if (u.protocol !== 'http:' && u.protocol !== 'https:') return { ok: false, error: t('urlScheme') }
+  if (!u.hostname.includes('.')) return { ok: false, error: t('urlInvalid') }
   const url = u.toString()
-  if (url.length > 500) return { ok: false, error: 'That address is too long (500 characters at most).' }
+  if (url.length > 500) return { ok: false, error: t('urlLong') }
   return { ok: true, url }
 }
 

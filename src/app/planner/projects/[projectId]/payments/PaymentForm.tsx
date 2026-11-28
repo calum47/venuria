@@ -1,8 +1,10 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import type { DbDocumentKind, DbProjectPayment } from '@/types/db'
-import { DOC_KIND_LABEL, PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
+import { PROJECT_DOC_KINDS, formatBytes } from '@/lib/payments'
 import {
   EMPTY_DRAFT,
   currencyMismatch,
@@ -38,6 +40,9 @@ export default function PaymentForm({
   /** Set (edit mode) to offer "Fill from PDF". */
   fill?: { teamId: string; projectId: string; currency: string; eventDate: string | null }
 }) {
+  const t = useTranslations('Pay')
+  const tDates = useTranslations('Dates')
+  const locale = useLocale() as Locale
   const [draft, setDraft] = useState<PaymentDraft>(
     initial
       ? { vendor: initial.vendor_name, label: initial.label, amount: String(initial.amount), dueDate: initial.due_date, notes: initial.notes ?? '' }
@@ -67,7 +72,7 @@ export default function PaymentForm({
 
   /** Copies what the PDF provided into the form; fields the PDF did not provide keep their current value. */
   const apply = (p: ExtractedPayment) => {
-    const { draft: d, from: f, dueCalc: calc } = draftFromExtracted(p, fill?.eventDate ?? null)
+    const { draft: d, from: f, dueCalc: calc } = draftFromExtracted(p, fill?.eventDate ?? null, { t, tDates, locale })
     setDraft((cur) => ({
       ...cur,
       vendor: d.vendor || cur.vendor,
@@ -85,14 +90,14 @@ export default function PaymentForm({
     setFormError(null)
     setReading(true)
     try {
-      const next = await stagePdf(file, fill.teamId, fill.projectId)
+      const next = await stagePdf(file, fill.teamId, fill.projectId, t)
       if (staged) void removeStagedPdf(staged.path) // replaced
       setStaged(next)
       setPdfLabel(fileLabel(next.fileName))
       setPick(0)
       if (next.result && next.result.payments.length > 0) apply(next.result.payments[0])
     } catch (e) {
-      setFormError(errMsg(e))
+      setFormError(errMsg(e, t('somethingWrong')))
     } finally {
       setReading(false)
     }
@@ -105,7 +110,7 @@ export default function PaymentForm({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    const v = validateDraft(draft)
+    const v = validateDraft(draft, t)
     if ('error' in v) return setFormError(v.error)
     setFormError(null)
     onSubmit(v.input, staged ? { path: staged.path, size: staged.size, label: pdfLabel.trim() || fileLabel(staged.fileName), kind: pdfKind } : undefined)
@@ -132,7 +137,7 @@ export default function PaymentForm({
           />
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => fileInput.current?.click()} disabled={reading || busy} className={btn}>
-              {reading ? 'Reading PDF…' : staged ? 'Use a different PDF' : 'Fill from PDF'}
+              {reading ? t('readingPdf') : staged ? t('useDifferentPdf') : t('fillFromPdf')}
             </button>
             {staged && !reading && (
               <span className="text-xs text-gray-500">{staged.fileName} · {formatBytes(staged.size)}</span>
@@ -142,19 +147,19 @@ export default function PaymentForm({
           {staged && !reading && (
             <div className="space-y-1.5 rounded-lg border border-gray-200 bg-white p-2 text-xs text-gray-600">
               {staged.readError && (
-                <p className="text-amber-700">Could not read the PDF: {staged.readError} You can still fill the form by hand; the PDF will be attached when you save.</p>
+                <p className="text-amber-700">{t('couldNotReadForm', { error: staged.readError })}</p>
               )}
               {staged.result && found.length === 0 && (
-                <p className="text-amber-700">No payment details found in this PDF. Fill the form by hand; the PDF will be attached when you save.</p>
+                <p className="text-amber-700">{t('noneFoundForm')}</p>
               )}
               {staged.result && currencyMismatch(staged.result.currency, fill.currency) && (
                 <p className="text-amber-700">
-                  The PDF seems to be in {staged.result.currency}, but this project uses {fill.currency}. Check the amount.
+                  {t('currencyMismatchForm', { pdf: staged.result.currency ?? '', project: fill.currency })}
                 </p>
               )}
               {found.length > 1 && (
                 <label className="flex flex-wrap items-center gap-2">
-                  The PDF lists {found.length} payments. Fill from:
+                  {t('pdfListsN', { count: found.length })}
                   <select
                     value={pick}
                     onChange={(e) => {
@@ -165,19 +170,19 @@ export default function PaymentForm({
                     className={input}
                   >
                     {found.map((p, i) => (
-                      <option key={i} value={i}>{describeExtracted(p, i)}</option>
+                      <option key={i} value={i}>{describeExtracted(p, i, t)}</option>
                     ))}
                   </select>
                 </label>
               )}
               <div className="flex flex-wrap items-center gap-2">
-                <span>Attach the PDF as</span>
-                <select value={pdfKind} onChange={(e) => setPdfKind(e.target.value as DbDocumentKind)} aria-label="PDF type" className={input}>
+                <span>{t('attachPdfAs')}</span>
+                <select value={pdfKind} onChange={(e) => setPdfKind(e.target.value as DbDocumentKind)} aria-label={t('pdfType')} className={input}>
                   {[...PROJECT_DOC_KINDS, 'receipt' as const].map((k) => (
-                    <option key={k} value={k}>{DOC_KIND_LABEL[k]}</option>
+                    <option key={k} value={k}>{t(`docKind.${k}`)}</option>
                   ))}
                 </select>
-                <input value={pdfLabel} onChange={(e) => setPdfLabel(e.target.value)} aria-label="PDF name" placeholder="PDF name" maxLength={150} className={`${input} min-w-48 flex-1`} />
+                <input value={pdfLabel} onChange={(e) => setPdfLabel(e.target.value)} aria-label={t('pdfName')} placeholder={t('pdfName')} maxLength={150} className={`${input} min-w-48 flex-1`} />
               </div>
             </div>
           )}
@@ -188,8 +193,8 @@ export default function PaymentForm({
 
       {formError && <p className="text-xs text-red-600">{formError}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={busy || reading} className={btnPrimary}>{busy ? 'Saving…' : submitLabel}</button>
-        <button type="button" onClick={cancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+        <button type="submit" disabled={busy || reading} className={btnPrimary}>{busy ? t('saving') : submitLabel}</button>
+        <button type="button" onClick={cancel} disabled={busy} className={btn + ' !py-1.5 !text-sm'}>{t('cancel')}</button>
       </div>
     </form>
   )

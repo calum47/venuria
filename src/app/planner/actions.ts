@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { isIsoDate, suggestDueBy } from '@/lib/projectDates'
 import { parseCoupleNames } from '@/lib/projectTitle'
+import { getTranslations } from 'next-intl/server'
 
 /**
  * Creates a project for the currently signed-in planner and redirects into
@@ -18,13 +19,14 @@ import { parseCoupleNames } from '@/lib/projectTitle'
  * (suggestDueBy) unless the form supplied one.
  */
 export async function createProject(formData: FormData) {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { error: 'Not authenticated.' }
+    return { error: t('notAuthenticated') }
   }
 
   const { data: planner } = await supabase
@@ -34,20 +36,20 @@ export async function createProject(formData: FormData) {
     .maybeSingle()
 
   if (!planner) {
-    return { error: 'No planner account linked to this login.' }
+    return { error: t('noPlannerAccountLinkedTo') }
   }
 
   const venueId = formData.get('venueId') as string
   if (!venueId) {
-    return { error: 'Pick a venue.' }
+    return { error: t('pickAVenue') }
   }
 
-  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true)
+  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true, await getTranslations('CoupleNames'))
   if (!names.ok) return { error: names.error }
 
   const eventDate = (formData.get('eventDate') as string | null)?.trim() ?? ''
   if (!isIsoDate(eventDate)) {
-    return { error: 'Enter the event date.' }
+    return { error: t('enterTheEventDate') }
   }
   const dueByRaw = (formData.get('dueBy') as string | null)?.trim() ?? ''
   const dueBy = isIsoDate(dueByRaw) ? dueByRaw : suggestDueBy(eventDate)
@@ -59,7 +61,7 @@ export async function createProject(formData: FormData) {
     .single()
 
   if (error || !project) {
-    return { error: error?.message ?? 'Failed to create project.' }
+    return { error: error?.message ?? t('failedToCreateProject') }
   }
 
   redirect(`/editor/${project.id}`)
@@ -67,20 +69,21 @@ export async function createProject(formData: FormData) {
 
 /** Changes the couple's names that title the project. RLS decides who may update the project. */
 export async function updateProjectCoupleNames(formData: FormData): Promise<{ error?: string }> {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated.' }
+  if (!user) return { error: t('notAuthenticated') }
 
   const projectId = formData.get('projectId') as string
-  if (!projectId) return { error: 'Missing project.' }
-  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true)
+  if (!projectId) return { error: t('missingProject') }
+  const names = parseCoupleNames((formData.get('coupleNames') as string | null) ?? '', true, await getTranslations('CoupleNames'))
   if (!names.ok) return { error: names.error }
 
   const { data, error } = await supabase.from('projects').update({ couple_names: names.value }).eq('id', projectId).select('id')
   if (error) return { error: error.message }
-  if (!data || data.length === 0) return { error: 'Project not found, or you cannot edit it.' }
+  if (!data || data.length === 0) return { error: t('projectNotFoundOrYou') }
   revalidatePath('/planner')
   revalidatePath(`/planner/projects/${projectId}`)
   return {}
@@ -92,19 +95,20 @@ export async function updateProjectCoupleNames(formData: FormData): Promise<{ er
  * Either field may be blank to clear it.
  */
 export async function updateProjectDates(formData: FormData): Promise<{ error?: string }> {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated.' }
+  if (!user) return { error: t('notAuthenticated') }
 
   const projectId = formData.get('projectId') as string
-  if (!projectId) return { error: 'Missing project.' }
+  if (!projectId) return { error: t('missingProject') }
 
   const eventRaw = (formData.get('eventDate') as string | null)?.trim() ?? ''
   const dueRaw = (formData.get('dueBy') as string | null)?.trim() ?? ''
-  if (eventRaw && !isIsoDate(eventRaw)) return { error: 'Invalid event date.' }
-  if (dueRaw && !isIsoDate(dueRaw)) return { error: 'Invalid due-by date.' }
+  if (eventRaw && !isIsoDate(eventRaw)) return { error: t('invalidEventDate') }
+  if (dueRaw && !isIsoDate(dueRaw)) return { error: t('invalidDueByDate') }
 
   const { error } = await supabase
     .from('projects')
@@ -123,19 +127,20 @@ export async function updateProjectDates(formData: FormData): Promise<{ error?: 
  * whether to show the control.
  */
 export async function setProjectAssignees(formData: FormData): Promise<{ error?: string }> {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const projectId = formData.get('projectId') as string
-  if (!projectId) return { error: 'Missing project.' }
+  if (!projectId) return { error: t('missingProject') }
   const wanted = new Set(formData.getAll('plannerIds').map(String).filter(Boolean))
 
   const {
     data: { user },
   } = await supabase.auth.getUser()
   const { data: me } = await supabase.from('planners').select('id').eq('user_id', user?.id ?? '').maybeSingle()
-  if (!me) return { error: 'No planner account linked to this login.' }
+  if (!me) return { error: t('noPlannerAccountLinkedTo') }
 
   const { data: project } = await supabase.from('projects').select('id').eq('id', projectId).maybeSingle()
-  if (!project) return { error: 'You don\u2019t have access to that project.' }
+  if (!project) return { error: t('noAccessToProject') }
 
   const { data: current, error: curErr } = await supabase.from('project_assignees').select('planner_id').eq('project_id', projectId)
   if (curErr) return { error: curErr.message }
@@ -143,7 +148,7 @@ export async function setProjectAssignees(formData: FormData): Promise<{ error?:
 
   const toAdd = [...wanted].filter((id) => !have.has(id))
   const toRemove = [...have].filter((id) => !wanted.has(id))
-  const denied = 'Only a manager or lead can assign projects.'
+  const denied = t('onlyAManagerOrLead')
 
   if (toAdd.length > 0) {
     const { error } = await supabase
@@ -169,13 +174,14 @@ export async function setProjectAssignees(formData: FormData): Promise<{ error?:
 
 /** Toggle private/public. Trigger allows the creator, a manager, or a lead. */
 export async function setProjectVisibility(formData: FormData): Promise<{ error?: string }> {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const projectId = formData.get('projectId') as string
   const visibility = formData.get('visibility') as string
-  if (!projectId || (visibility !== 'private' && visibility !== 'public')) return { error: 'Invalid request.' }
+  if (!projectId || (visibility !== 'private' && visibility !== 'public')) return { error: t('invalidRequest') }
   const { data, error } = await supabase.from('projects').update({ visibility }).eq('id', projectId).select('id')
-  if (error) return { error: error.code === '42501' ? 'Only the creator, a manager or a lead can change this.' : error.message }
-  if (!data || data.length === 0) return { error: 'You don\u2019t have access to that project.' }
+  if (error) return { error: error.code === '42501' ? t('onlyTheCreatorAManager') : error.message }
+  if (!data || data.length === 0) return { error: t('noAccessToProject') }
   revalidatePath('/planner')
   return {}
 }

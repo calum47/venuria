@@ -1,6 +1,7 @@
 import { supabase } from './client'
 import type { DbAgeGroup, DbGuest, DbGuestFamily, DbGuestStay } from '@/types/db'
 import { GUEST_PHOTOS_BUCKET } from '@/lib/guests'
+import type { Tr } from '@/i18n/types'
 
 // Guest list details data access (migration 016). Browser client, like
 // paymentQueries — RLS (planner_can_access_project) is the real gate; nothing
@@ -264,10 +265,10 @@ export async function removeGuestPhoto(guestId: string, path: string): Promise<D
 // ── Seat flag ────────────────────────────────────────────────────────────────
 
 /** Dismisses the "needs a seat" flag. The reason is required (1–300 chars, also enforced by the DB). */
-export async function dismissSeatFlag(id: string, note: string): Promise<DbGuest> {
+export async function dismissSeatFlag(id: string, note: string, t: Tr): Promise<DbGuest> {
   const trimmed = note.trim()
-  if (!trimmed) throw new Error('Say why this guest does not need a seat.')
-  if (trimmed.length > 300) throw new Error('Keep the reason under 300 characters.')
+  if (!trimmed) throw new Error(t('seatNoteRequired'))
+  if (trimmed.length > 300) throw new Error(t('seatNoteLong'))
   const { data: auth } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('guests')
