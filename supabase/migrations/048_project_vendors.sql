@@ -5,7 +5,7 @@
 -- They never get guests, seat assignments, RSVP, payments, documents or notes: no policy below touches those.
 -- Nothing here grants any write on project data.
 --
--- NOT yet applied live. Apply with 047 already in place.
+-- Applied live 2026-11-28 (after 047).
 
 create table if not exists public.project_vendors (
   project_id        uuid not null references public.projects(id) on delete cascade,

@@ -2,7 +2,7 @@
 -- them across devices. The browser cookie `venuria-lang` stays the source of truth for rendering
 -- (it also works on the login page before anyone is signed in); this table only restores the
 -- choice when the cookie is missing, and is written whenever the user changes language.
--- NOT yet applied live: apply it via the Supabase MCP, then add the date here. The app works
+-- Applied live 2026-11-28. The app works
 -- without it (the language just isn't remembered per account).
 
 create table public.user_preferences (

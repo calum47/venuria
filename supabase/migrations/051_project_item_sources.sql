@@ -8,7 +8,7 @@
 -- not modelled). Those other projects belong to other teams, so the planner never reads their rows:
 -- rental_committed_elsewhere() returns only per-company totals, and only to someone who can view the project.
 --
--- NOT yet applied live.
+-- Applied live 2026-11-28.
 
 create table if not exists public.project_item_sources (
   project_id        uuid not null references public.projects(id) on delete cascade,

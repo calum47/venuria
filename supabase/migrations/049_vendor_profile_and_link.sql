@@ -9,7 +9,7 @@
 --   vendor entered, and a vendor's edit reaches every team that uses it (AFTER trigger on rental_companies).
 -- * Vendors that are not in Venuria stay free-text team vendors (rental_company_id null), unchanged.
 --
--- NOT yet applied live. Apply after 047 and 048.
+-- Applied live 2026-11-28 (after 047 and 048).
 
 alter table public.rental_companies
   add column if not exists contact_name text check (char_length(contact_name) <= 120),

@@ -84,7 +84,7 @@ export const CHANGELOG_ES: Record<string, ChangelogText> = {
     title: 'Vista 3D oculta por ahora; recorrido más corto',
     items: [
       '«Ver en 3D» se ha quitado del editor mientras se termina la función. Volverá más adelante.',
-      'El recorrido guiado es más corto (18 pasos en lugar de 29) y el proyecto de práctica incluye ahora un cronograma y un guion del día de ejemplo para que veas cómo quedan.',
+      'El recorrido guiado es más corto (17 pasos en lugar de 29) y el proyecto de práctica incluye ahora un cronograma y un guion del día de ejemplo para que veas cómo quedan.',
     ],
   },
   '2026-11-28-last-page-and-practice-project': {
