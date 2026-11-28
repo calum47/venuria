@@ -35,8 +35,7 @@ export function AddVendorRoleForm({ planners, vendorUserNames }: { planners: Pla
     <form ref={formRef} action={handleSubmit} className="bg-white border border-gray-100 rounded-xl p-6 space-y-4">
       <h2 className="text-sm font-semibold text-gray-900">{t('makeAPlannerAlsoA')}</h2>
       <p className="text-xs text-gray-400">
-        Creates the vendor company and links it to the planner&apos;s own login: same email and password, with a switch between Planner and Vendor.
-        The vendor gets what a rental company has (rentable tables and chairs) plus the team&apos;s stock, shared with My stock.
+        {t('makeVendorHelp')}
       </p>
       {vendorUserNames.length > 0 && (
         <p className="text-xs text-gray-400">{t('alreadyVendors', { names: vendorUserNames.join(', ') })}</p>

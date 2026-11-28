@@ -51,7 +51,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }, zones, { data: roomRows }] = await Promise.all([
     getAllLayoutObjectsForProject(projectId, supabase),
     supabase.from('catalog_item_stock').select('catalog_item_id, quantity').eq('owner_type', 'venue').eq('owner_id', project.venue_id),
-    supabase.from('rental_companies').select('id, name').order('name'),
+    supabase.from('rental_companies').select('id, name').eq('is_vendor', true).eq('has_vendor_stock', true).order('name'),
     getAllProjectZones(projectId, supabase),
     supabase.from('rooms').select('id, name').eq('venue_id', project.venue_id),
   ])
@@ -106,7 +106,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   // catalogItemId -> [{ companyName, quantity }]
   const rentalAvailabilityByItem = new Map<string, { companyName: string; quantity: number }[]>()
   for (const row of rentalStockRows ?? []) {
-    if (row.quantity <= 0) continue
+    if (row.quantity <= 0 || !rentalCompanyNameById.has(row.owner_id)) continue
     const companyName = rentalCompanyNameById.get(row.owner_id) ?? tpdf('unknownRental')
     const list = rentalAvailabilityByItem.get(row.catalog_item_id) ?? []
     list.push({ companyName, quantity: row.quantity })

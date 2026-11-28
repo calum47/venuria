@@ -4,6 +4,7 @@ import { CreateVenueForm } from './CreateVenueForm'
 import { CreateRentalCompanyForm } from './CreateRentalCompanyForm'
 import { CreateAccountForm } from './CreateAccountForm'
 import { AddVendorRoleForm } from './AddVendorRoleForm'
+import { VendorAccessList, type VendorAccessRow } from './VendorAccessList'
 import { ResetPasswordForm, type ResettableAccount } from './ResetPasswordForm'
 import { getTranslations } from 'next-intl/server'
 
@@ -26,7 +27,7 @@ export default async function AdminPage() {
         .order('created_at', { ascending: false }),
       supabase
         .from('rental_companies')
-        .select('id, name, contact_email, created_at')
+        .select('id, name, contact_email, created_at, is_vendor, has_vendor_stock')
         .order('created_at', { ascending: false }),
       supabase
         .from('rental_managers')
@@ -49,6 +50,15 @@ export default async function AdminPage() {
   for (const p of planners ?? []) addLogin(p.user_id, p.name, p.email, t('planner'))
   for (const m of venueManagers ?? []) addLogin(m.user_id, m.name, m.email, t('venueManager'))
   for (const m of rentalManagers ?? []) addLogin(m.user_id, m.name, m.email, t('rentalManagerVendor'))
+  const vendorRows: VendorAccessRow[] = (rentalCompanies ?? [])
+    .map((rc) => ({
+      id: rc.id as string,
+      name: rc.name as string,
+      logins: (rentalManagers ?? []).filter((m) => m.rental_company_id === rc.id).map((m) => `${m.name} — ${m.email}`),
+      isVendor: rc.is_vendor as boolean,
+      hasVendorStock: rc.has_vendor_stock as boolean,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
   const resettable: ResettableAccount[] = [...byUser.entries()]
     .map(([userId, e]) => ({ userId, label: `${e.name} — ${e.email} (${e.roles.join(' + ')})` }))
     .sort((a, b) => a.label.localeCompare(b.label))
@@ -72,6 +82,8 @@ export default async function AdminPage() {
           planners={(planners ?? []).filter((p) => !(rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => ({ id: p.id, name: p.name, email: p.email }))}
           vendorUserNames={(planners ?? []).filter((p) => (rentalManagers ?? []).some((m) => m.user_id === p.user_id)).map((p) => p.name)}
         />
+
+        <VendorAccessList key={vendorRows.map((r) => `${r.id}${r.isVendor}${r.hasVendorStock}`).join()} rows={vendorRows} />
 
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">

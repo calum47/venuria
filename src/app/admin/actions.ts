@@ -102,3 +102,24 @@ export async function addVendorRole(formData: FormData) {
   revalidatePath('/admin')
   return { success: true }
 }
+
+/**
+ * Admin switches for a vendor / rental company: the "Vendor" tag and access to Vendor stock.
+ * Hide-only: nothing is deleted, so switching back on restores everything.
+ * Covered by admin_manage_rental_companies RLS (a non-admin's update changes no rows, which we report).
+ */
+export async function setVendorAccess(companyId: string, isVendor: boolean, hasVendorStock: boolean) {
+  const t = await getTranslations('Errors')
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('rental_companies')
+    .update({ is_vendor: isVendor, has_vendor_stock: hasVendorStock })
+    .eq('id', companyId)
+    .select('id')
+  if (error) return { error: error.message }
+  if (!data || data.length === 0) return { error: t('vendorAccessNotSaved') }
+  revalidatePath('/admin')
+  revalidatePath('/rental')
+  revalidatePath('/planner')
+  return { success: true }
+}

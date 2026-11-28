@@ -227,7 +227,8 @@
     "thatVenueAlreadyHasA": "Ese espacio ya tiene una cuenta de responsable asignada.",
     "thatRentalCompanyAlreadyHas": "Esa empresa de alquiler ya tiene una cuenta de responsable asignada.",
     "chooseAnAccountAndType": "Elige una cuenta e introduce una contraseña temporal.",
-    "thatLoginDoesNotBelong": "Ese acceso no pertenece a ningún planificador, responsable de espacio ni responsable de alquiler."
+    "thatLoginDoesNotBelong": "Ese acceso no pertenece a ningún planificador, responsable de espacio ni responsable de alquiler.",
+    "vendorAccessNotSaved": "No se pudo guardar: solo un administrador puede cambiar esto."
   },
   "Capacity": {
     "seated": "Sentados",
@@ -453,7 +454,14 @@
     "theCompanyItselfNoLogin": "La propia empresa, todavía sin acceso. Asígnale después una cuenta de responsable.",
     "companyName": "Nombre de la empresa",
     "contactEmailOptional": "Correo de contacto (opcional)",
-    "alreadyVendors": "Ya son proveedores: {names}"
+    "alreadyVendors": "Ya son proveedores: {names}",
+    "vendorAccess": "Acceso de proveedores",
+    "vendorAccessHelp": "Por proveedor o empresa de alquiler. «Proveedor» = la etiqueta de proveedor (el cambio Planificación ⇄ Proveedor y la página de proveedor). «Inventario de proveedor» = las mesas y sillas que alquila, no el inventario habitual del equipo (Mi inventario). Al desactivar solo se oculta; no se elimina nada y al volver a marcarlo se restaura todo.",
+    "noLoginLinked": "Sin acceso vinculado",
+    "vendorTag": "Proveedor",
+    "vendorStock": "Inventario de proveedor",
+    "vendorStockNeedsTag": "Requiere la etiqueta de proveedor",
+    "makeVendorHelp": "Crea la empresa proveedora y la vincula al acceso del propio planificador: mismo correo y contraseña, con un cambio entre Planificación y Proveedor. El proveedor recibe lo que tiene una empresa de alquiler (mesas y sillas alquilables) más el inventario del equipo, compartido con Mi inventario. Después, usa «Acceso de proveedores» arriba para activar o desactivar la etiqueta de proveedor o el inventario de proveedor."
   },
   "Venue": {
     "notSignedIn": "No has iniciado sesión.",
@@ -517,7 +525,10 @@
     "noRentalCompanyIsLinked": "Esta cuenta no está vinculada a ninguna empresa de alquiler: contacta con un administrador.",
     "stockTablesChairs": "Inventario: mesas y sillas",
     "stockProductsYouSell": "Inventario: productos que vendes",
-    "myStock": "Mi inventario"
+    "myStock": "Mi inventario",
+    "vendorAccessOff": "El acceso de proveedor está desactivado para esta cuenta. Contacta con un administrador.",
+    "stockTablesChairsHelp": "Cuántas unidades de cada artículo estándar puedes alquilar. Los planificadores usan primero el inventario del propio espacio; el tuyo cubre el resto.",
+    "stockProductsHelp": "El mismo inventario que <b>Mi inventario</b> en la parte de planificación ({team}): catálogo, compras y ventas. Un cambio hecho aquí se ve allí, y al revés."
   },
   "Client": {
     "noProjectHasBeenSet": "Todavía no se ha configurado ningún proyecto para tu cuenta: consúltalo con tu planificador."
