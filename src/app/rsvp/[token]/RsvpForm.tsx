@@ -6,6 +6,7 @@ import type { RsvpStatus } from '@/lib/rsvp'
 import type { PublicContent } from '@/lib/rsvpContent'
 import type { RsvpSectionKey } from '@/lib/rsvpSections'
 import { Rings } from '@/components/brand/Rings'
+import RsvpMap, { type MapTexts } from './RsvpMap'
 import { lookupGuest, submitRsvp, type LookupResult, type SubmitResult } from './actions'
 
 type Props = {
@@ -39,6 +40,7 @@ function longDate(iso: string, lang: Lang): string {
 
 export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview, sectionOrder, controllerName, controllerEmail }: Props) {
   const [lang, setLang] = useState<Lang>(initialLang)
+  const [mapSelected, setMapSelected] = useState<string | null>(null)
   const t = TEXT[lang]
 
   const [step, setStep] = useState<Step>('name')
@@ -219,21 +221,58 @@ export default function RsvpForm({ token, initialLang, welcome, coupleNames, dea
     </section>
   )
 
-  const hotels = content.hotels.length > 0 && (
+  const mapTexts: MapTexts = {
+    mapHint: t.mapHint,
+    venueLabel: t.venueLabel,
+    openInGoogleMaps: t.openInGoogleMaps,
+    visitWebsite: t.visitWebsite,
+    bookingInfo: t.bookingInfo,
+    distanceFromVenue: t.distanceFromVenue,
+    closeCard: t.closeCard,
+  }
+  const hotels = (content.hotels.length > 0 || content.map) && (
     <section className="space-y-4 border-t border-gray-100 pt-8">
-      <h2 className="text-center text-3xl font-medium text-gray-900">{t.hotelsTitle}</h2>
+      <h2 className="text-center text-3xl font-medium text-gray-900">{content.hotels.length > 0 ? t.hotelsTitle : t.mapTitle}</h2>
+      {content.map && (
+        <div id="rsvp-map" className="scroll-mt-4">
+          <RsvpMap
+            venue={content.map.venue}
+            venueName={venueName}
+            venueMapUrl={content.details?.mapUrl ?? null}
+            hotels={content.hotels}
+            selectedId={mapSelected}
+            onSelect={setMapSelected}
+            texts={mapTexts}
+          />
+        </div>
+      )}
       <div className="space-y-4">
-        {content.hotels.map((h) => (
+        {content.hotels.map((h, i) => (
           <div key={h.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
             {h.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset
               <img src={h.imageUrl} alt="" loading="lazy" className="aspect-[16/9] w-full object-cover" />
             )}
             <div className="space-y-1 p-4">
-              <p className="font-serif text-xl font-semibold text-gray-900">{h.name}</p>
+              <p className="font-serif text-xl font-semibold text-gray-900">
+                {content.map && h.position && <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-gray-900 align-middle font-sans text-xs font-semibold">{i + 1}</span>}
+                {h.name}
+              </p>
               {h.address && <p className="text-xs text-gray-500">{h.address}</p>}
               {h.description && <p className="whitespace-pre-line text-sm text-gray-700">{h.description}</p>}
               {h.bookingNote && <p className="text-sm text-gray-700"><span className="font-medium">{t.bookingInfo}:</span> {h.bookingNote}</p>}
+              {content.map && h.position && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMapSelected(h.id)
+                    document.getElementById('rsvp-map')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }}
+                  className="mr-4 inline-block pt-1 text-sm text-brand-700 underline underline-offset-2 hover:text-brand-900"
+                >
+                  {t.showOnMap}
+                </button>
+              )}
               {h.url && (
                 <a href={h.url} target="_blank" rel="noopener noreferrer nofollow" className="inline-block pt-1 text-sm text-brand-700 underline underline-offset-2 hover:text-brand-900">
                   {t.visitWebsite} ↗

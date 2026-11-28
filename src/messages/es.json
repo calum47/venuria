@@ -948,7 +948,22 @@
     "hotelDescription": "Descripción breve",
     "saveHotel": "Guardar hotel",
     "addHotel": "Añadir hotel",
-    "hotelPhotoLater": "Podrás añadir una foto cuando se guarde el hotel."
+    "hotelPhotoLater": "Podrás añadir una foto cuando se guarde el hotel.",
+    "mapSection": "Mapa",
+    "mapShow": "Mostrar en la página un mapa del lugar y de los hoteles",
+    "mapHelp": "Opcional. El lugar y cada hotel se sitúan en el mapa a partir de su enlace de Google Maps o, si no hay enlace, de su dirección. No hay que marcar nada a mano. Los invitados pueden tocar un hotel en el mapa para ver sus datos, abrirlo en Google Maps o visitar su web. El mapa aparece en la sección de hoteles de la página; los hoteles que tengas ocultos allí tampoco salen en el mapa.",
+    "mapVenueAddress": "Dirección del lugar (opcional)",
+    "mapVenueAddressHelp": "Se usa cuando el enlace del mapa del lugar (en Detalles) no se puede leer, o si no hay enlace.",
+    "mapFindVenue": "Guardar y buscar en el mapa",
+    "mapLookingUp": "Buscándolo en el mapa…",
+    "mapVenueFound": "El lugar está en el mapa.",
+    "mapVenueMissing": "No se ha podido encontrar el lugar en el mapa. Revisa el enlace del mapa en Detalles o añade una dirección aquí.",
+    "mapHotelFound": "En el mapa",
+    "mapHotelMissing": "Aún no está en el mapa: revisa su enlace de Google Maps o su dirección y guárdalo de nuevo.",
+    "mapHotelNotFoundSaved": "Se ha guardado {name}, pero no se ha podido encontrar en el mapa. Revisa su enlace de Google Maps o su dirección.",
+    "mapLookupUnreachable": "No se ha podido contactar con el servicio de búsqueda del mapa. Tus cambios están guardados; vuelve a guardar en un momento para situarlo en el mapa.",
+    "hotelMapsUrl": "Enlace de Google Maps (opcional)",
+    "mapsLinkError": "Enlace de Google Maps: {error}"
   },
   "Pay": {
     "readFromPdf": "leído del PDF",

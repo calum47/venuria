@@ -59,6 +59,13 @@ const EN = {
   hotelsTitle: 'Where to stay',
   bookingInfo: 'Booking',
   visitWebsite: 'Website',
+  mapTitle: 'Map',
+  mapHint: 'Tap a pin to see the details.',
+  venueLabel: 'The venue',
+  openInGoogleMaps: 'Open in Google Maps',
+  distanceFromVenue: 'About {distance} from the venue, in a straight line',
+  showOnMap: 'Show on map',
+  closeCard: 'Close',
 }
 
 const ES: typeof EN = {
@@ -108,6 +115,13 @@ const ES: typeof EN = {
   hotelsTitle: 'Dónde alojarse',
   bookingInfo: 'Reserva',
   visitWebsite: 'Web',
+  mapTitle: 'Mapa',
+  mapHint: 'Toca un marcador para ver los detalles.',
+  venueLabel: 'El lugar de la celebración',
+  openInGoogleMaps: 'Abrir en Google Maps',
+  distanceFromVenue: 'A unos {distance} del lugar, en línea recta',
+  showOnMap: 'Ver en el mapa',
+  closeCard: 'Cerrar',
 }
 
 const FR: typeof EN = {
@@ -157,6 +171,13 @@ const FR: typeof EN = {
   hotelsTitle: 'Où dormir',
   bookingInfo: 'Réservation',
   visitWebsite: 'Site web',
+  mapTitle: 'Carte',
+  mapHint: 'Touchez un repère pour voir les détails.',
+  venueLabel: 'Le lieu de la fête',
+  openInGoogleMaps: 'Ouvrir dans Google Maps',
+  distanceFromVenue: 'À environ {distance} du lieu, à vol d’oiseau',
+  showOnMap: 'Voir sur la carte',
+  closeCard: 'Fermer',
 }
 
 export type Dict = typeof EN

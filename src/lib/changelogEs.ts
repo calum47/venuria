@@ -11,6 +11,15 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-map': {
+    title: 'Página de confirmación: mapa opcional del lugar y los hoteles',
+    items: [
+      'Ahora puedes mostrar en la página de confirmación de los invitados un mapa con el lugar y los hoteles que recomiendas. Viene desactivado: actívalo en Mapa, dentro del contenido de la página.',
+      'No hay que marcar nada a mano: cada sitio se encuentra a partir de su enlace de Google Maps o, si no hay, de su dirección. Los hoteles tienen un nuevo campo opcional de enlace de Google Maps y el lugar puede tener una dirección opcional.',
+      'Los invitados tocan un hotel en el mapa (o «Ver en el mapa» en su tarjeta) para ver sus datos, la distancia en línea recta al lugar y botones para abrirlo en Google Maps o visitar su web, cada uno en una pestaña nueva.',
+      'Si no se encuentra un sitio, verás un aviso junto a él y simplemente no aparece en el mapa.',
+    ],
+  },
   '2026-11-28-table-closeups': {
     title: 'Exportación PDF: mesas en detalle y otras mejoras',
     items: [

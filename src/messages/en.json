@@ -948,7 +948,22 @@
     "hotelDescription": "Short description",
     "saveHotel": "Save hotel",
     "addHotel": "Add hotel",
-    "hotelPhotoLater": "You can add a photo once the hotel is saved."
+    "hotelPhotoLater": "You can add a photo once the hotel is saved.",
+    "mapSection": "Map",
+    "mapShow": "Show a map of the venue and hotels on the page",
+    "mapHelp": "Optional. The venue and each hotel are placed on the map from their Google Maps link, or from their address when there is no link. There is nothing to pin by hand. Guests can tap a hotel on the map to see its details, open it in Google Maps or visit its website. The map appears in the hotels section of the page; hotels you have switched off there are left off the map too.",
+    "mapVenueAddress": "Venue address (optional)",
+    "mapVenueAddressHelp": "Used when the venue's map link (under Details) can't be read, or when there is no link.",
+    "mapFindVenue": "Save and find on map",
+    "mapLookingUp": "Finding it on the map…",
+    "mapVenueFound": "The venue is on the map.",
+    "mapVenueMissing": "The venue could not be found on the map. Check the map link under Details, or add an address here.",
+    "mapHotelFound": "On the map",
+    "mapHotelMissing": "Not on the map yet: check its Google Maps link or address, then save it again.",
+    "mapHotelNotFoundSaved": "{name} was saved, but it could not be found on the map. Check its Google Maps link or address.",
+    "mapLookupUnreachable": "The map lookup service could not be reached just now. Your changes are saved; save again in a moment to place it on the map.",
+    "hotelMapsUrl": "Google Maps link (optional)",
+    "mapsLinkError": "Google Maps link: {error}"
   },
   "Pay": {
     "readFromPdf": "read from the PDF",

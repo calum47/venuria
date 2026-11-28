@@ -54,14 +54,20 @@ export type PublicHotel = {
   bookingNote: string | null
   description: string | null
   imageUrl: string | null
+  /** The planner's Google Maps link for this hotel, if any. */
+  mapsUrl: string | null
+  /** Where the hotel is on the map; null = not found, so it is left off the map. */
+  position: { lat: number; lng: number } | null
 }
 
 export type PublicContent = {
   coverUrl: string | null
   details: { lines: string[]; dressCode: string | null; mapUrl: string | null } | null
   area: { text: string | null; photos: { url: string; caption: string | null }[] } | null
-  /** Empty = the hotels section is not shown. */
+  /** Empty (and no map) = the hotels section is not shown. */
   hotels: PublicHotel[]
+  /** The map of the venue and hotels; null = the planner has not switched it on, or nothing could be placed. */
+  map: { venue: { lat: number; lng: number } | null } | null
 }
 
 type CfgLike = {
@@ -73,6 +79,9 @@ type CfgLike = {
   show_details: boolean
   show_area: boolean
   show_hotels: boolean
+  show_map: boolean
+  map_lat: number | null
+  map_lng: number | null
 }
 
 /**
@@ -82,7 +91,7 @@ type CfgLike = {
 export function buildPublicContent(
   cfg: CfgLike,
   photos: { path: string; caption: string | null }[],
-  hotels: { id: string; name: string; address: string | null; url: string | null; booking_note: string | null; description: string | null; image_path: string | null }[],
+  hotels: { id: string; name: string; address: string | null; url: string | null; booking_note: string | null; description: string | null; image_path: string | null; maps_url: string | null; lat: number | null; lng: number | null }[],
   urls: Record<string, string>,
 ): PublicContent {
   const lines = scheduleLines(cfg.schedule)
@@ -91,20 +100,28 @@ export function buildPublicContent(
   const areaText = cfg.area_text?.trim() || null
   const areaPhotos = photos.filter((p) => urls[p.path]).map((p) => ({ url: urls[p.path], caption: p.caption?.trim() || null }))
 
+  const hotelList = cfg.show_hotels
+    ? hotels.map((h) => ({
+        id: h.id,
+        name: h.name,
+        address: h.address?.trim() || null,
+        url: h.url?.trim() || null,
+        bookingNote: h.booking_note?.trim() || null,
+        description: h.description?.trim() || null,
+        imageUrl: h.image_path ? urls[h.image_path] ?? null : null,
+        mapsUrl: h.maps_url?.trim() || null,
+        position: h.lat != null && h.lng != null ? { lat: h.lat, lng: h.lng } : null,
+      }))
+    : []
+  const venue = cfg.map_lat != null && cfg.map_lng != null ? { lat: cfg.map_lat, lng: cfg.map_lng } : null
+  // The map needs the hotels section to live in; it is shown when something can be placed on it.
+  const map = cfg.show_map && (venue || hotelList.some((h) => h.position)) ? { venue } : null
+
   return {
     coverUrl: cfg.cover_path ? urls[cfg.cover_path] ?? null : null,
     details: cfg.show_details && (lines.length > 0 || dressCode || mapUrl) ? { lines, dressCode, mapUrl } : null,
     area: cfg.show_area && (areaText || areaPhotos.length > 0) ? { text: areaText, photos: areaPhotos } : null,
-    hotels: cfg.show_hotels
-      ? hotels.map((h) => ({
-          id: h.id,
-          name: h.name,
-          address: h.address?.trim() || null,
-          url: h.url?.trim() || null,
-          bookingNote: h.booking_note?.trim() || null,
-          description: h.description?.trim() || null,
-          imageUrl: h.image_path ? urls[h.image_path] ?? null : null,
-        }))
-      : [],
+    hotels: hotelList,
+    map,
   }
 }

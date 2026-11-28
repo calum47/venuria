@@ -30,6 +30,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-map',
+    date: '2026-11-28',
+    title: 'RSVP page: an optional map of the venue and hotels',
+    roles: ['planner'],
+    items: [
+      'You can now show a map on the guests\' RSVP page with the venue and your recommended hotels. It is off by default: switch it on under Map in the RSVP page content.',
+      'Nothing to pin by hand: each place is found from its Google Maps link or, if there is none, from its address. Hotels have a new optional Google Maps link field, and the venue can have an optional address.',
+      'Guests tap a hotel on the map (or "Show on map" in its card) to see its details, the straight-line distance from the venue, and buttons to open it in Google Maps or visit its website, each in a new tab.',
+      'If a place cannot be found, you see a note next to it and it is simply left off the map.',
+    ],
+  },
+  {
     id: '2026-11-28-table-closeups',
     date: '2026-11-28',
     title: 'PDF export: table close-ups, plus smaller fixes',

@@ -31,6 +31,24 @@ function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
+type Located = { lat: number; lng: number } | null
+
+/**
+ * Asks the server where a place is, from its Google Maps link and/or address. Never throws: "found nothing"
+ * and "service unreachable" are results, so a failed lookup can never stop the planner saving their text.
+ */
+async function locatePlace(input: { mapsUrl: string | null; address: string | null; name?: string | null }): Promise<{ point: Located; unreachable: boolean }> {
+  if (!input.mapsUrl && !input.address) return { point: null, unreachable: false }
+  try {
+    const res = await fetch('/api/rsvp/locate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) })
+    const body = (await res.json()) as { ok: boolean; lat?: number; lng?: number; reason?: string }
+    if (body.ok && typeof body.lat === 'number' && typeof body.lng === 'number') return { point: { lat: body.lat, lng: body.lng }, unreachable: false }
+    return { point: null, unreachable: body.reason === 'unreachable' }
+  } catch {
+    return { point: null, unreachable: true }
+  }
+}
+
 type Props = {
   projectId: string
   teamId: string
@@ -85,6 +103,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const [schedule, setSchedule] = useState(cfg?.schedule ?? '')
   const [dress, setDress] = useState(cfg?.dress_code ?? '')
   const [mapUrl, setMapUrl] = useState(cfg?.map_url ?? '')
+  const [mapAddress, setMapAddress] = useState(cfg?.map_address ?? '')
+  const [notice, setNotice] = useState<string | null>(null)
   const [areaText, setAreaText] = useState(cfg?.area_text ?? '')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -94,6 +114,8 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const showDetails = cfg?.show_details ?? true
   const showArea = cfg?.show_area ?? true
   const showHotels = cfg?.show_hotels ?? true
+  const showMap = cfg?.show_map ?? false
+  const mapAddressDirty = (mapAddress.trim() || null) !== (cfg?.map_address ?? null)
 
   const detailsDirty =
     (schedule.trim() || null) !== (cfg?.schedule ?? null) || (dress.trim() || null) !== (cfg?.dress_code ?? null) || (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
@@ -101,6 +123,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const run = async (key: string, fn: () => Promise<void>) => {
     setError(null)
+    setNotice(null)
     setBusy(key)
     try {
       await fn()
@@ -118,8 +141,49 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
     run('details', async () => {
       const link = normalizeWebUrl(mapUrl, tg)
       if (!link.ok) throw new Error(t('mapLinkError', { error: link.error }))
-      await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url })
+      // The venue's position is looked up again whenever its map link changes (or was never found).
+      const linkChanged = (link.url ?? null) !== (cfg?.map_url ?? null)
+      let position: { map_lat: number | null; map_lng: number | null } | Record<string, never> = {}
+      if (linkChanged || cfg?.map_lat == null) {
+        const r = await locatePlace({ mapsUrl: link.url, address: cfg?.map_address ?? null })
+        position = { map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null }
+        if (!r.point && (link.url || cfg?.map_address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapVenueMissing'))
+      }
+      await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url, ...position })
       setMapUrl(link.url ?? '')
+    })
+
+  /** Saves the venue address and finds the venue on the map (link first, address if the link gives nothing). */
+  const saveMapAddress = () =>
+    run('map-address', async () => {
+      const address = mapAddress.trim() || null
+      const r = await locatePlace({ mapsUrl: cfg?.map_url ?? null, address })
+      await save({ map_address: address, map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null })
+      if (!r.point && (cfg?.map_url || address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapVenueMissing'))
+    })
+
+  /** Switching the map on: every place that has no position yet is looked up now. */
+  const toggleMap = (on: boolean) =>
+    run('toggle-map', async () => {
+      let patch: RsvpContentPatch = { show_map: on }
+      let unreachable = false
+      if (on) {
+        if (cfg?.map_lat == null && (cfg?.map_url || cfg?.map_address)) {
+          const r = await locatePlace({ mapsUrl: cfg?.map_url ?? null, address: cfg?.map_address ?? null })
+          unreachable ||= r.unreachable
+          patch = { ...patch, map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null }
+        }
+        const found: DbRsvpHotel[] = []
+        for (const h of hotels) {
+          if (h.lat != null || !(h.maps_url || h.address)) continue
+          const r = await locatePlace({ mapsUrl: h.maps_url, address: h.address, name: h.name })
+          unreachable ||= r.unreachable
+          if (r.point) found.push(await updateHotel(h.id, { name: h.name, address: h.address, url: h.url, booking_note: h.booking_note, description: h.description, maps_url: h.maps_url, lat: r.point.lat, lng: r.point.lng }))
+        }
+        if (found.length > 0) setHotels((prev) => prev.map((x) => found.find((f) => f.id === x.id) ?? x))
+      }
+      await save(patch)
+      if (unreachable) setNotice(t('mapLookupUnreachable'))
     })
 
   const saveArea = () => run('area', () => save({ area_text: areaText.trim() || null }))
@@ -162,8 +226,20 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       setPhotos((prev) => prev.filter((x) => x.id !== p.id))
     })
 
-  const saveHotel = (id: string | null, data: HotelInput) =>
+  const saveHotel = (id: string | null, form: Omit<HotelInput, 'lat' | 'lng'>) =>
     run('hotel', async () => {
+      // Looked up again when the link or address changed, or when it was never found; otherwise the saved position stays.
+      const before = id ? hotels.find((h) => h.id === id) : null
+      const changed = !before || before.maps_url !== form.maps_url || before.address !== form.address || before.name !== form.name
+      let lat = before?.lat ?? null
+      let lng = before?.lng ?? null
+      if (changed || lat == null) {
+        const r = await locatePlace({ mapsUrl: form.maps_url, address: form.address, name: form.name })
+        lat = r.point?.lat ?? null
+        lng = r.point?.lng ?? null
+        if (!r.point && (form.maps_url || form.address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapHotelNotFoundSaved', { name: form.name }))
+      }
+      const data: HotelInput = { ...form, lat, lng }
       if (id) {
         const u = await updateHotel(id, data)
         setHotels((prev) => prev.map((x) => (x.id === u.id ? u : x)))
@@ -219,6 +295,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       </p>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
+      {notice && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">{notice}</p>}
 
       <p className="text-xs text-gray-500">{t('coupleNamesNote')}</p>
 
@@ -296,6 +373,29 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         </div>
       </div>
 
+      {/* Map (optional) */}
+      <div className={section}>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-gray-900">{t('mapSection')}</p>
+          <label className="flex items-center gap-2 text-xs text-gray-700">
+            <input type="checkbox" checked={showMap} disabled={busy !== null} onChange={(e) => toggleMap(e.target.checked)} />
+            {t('mapShow')}
+          </label>
+        </div>
+        <p className="text-xs text-gray-500">{t('mapHelp')}</p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="min-w-0 flex-1 text-xs text-gray-600">
+            {t('mapVenueAddress')}
+            <input value={mapAddress} onChange={(e) => setMapAddress(e.target.value)} maxLength={200} className={input + ' mt-1 block w-full'} />
+          </label>
+          <button type="button" onClick={saveMapAddress} disabled={!mapAddressDirty || busy !== null} className={btnPrimary}>{busy === 'map-address' ? t('mapLookingUp') : t('mapFindVenue')}</button>
+        </div>
+        <p className="text-xs text-gray-500">{t('mapVenueAddressHelp')}</p>
+        {(cfg?.map_url || cfg?.map_address) && (
+          <p className={`text-xs ${cfg?.map_lat != null ? 'text-green-700' : 'text-amber-700'}`}>{cfg?.map_lat != null ? t('mapVenueFound') : t('mapVenueMissing')}</p>
+        )}
+      </div>
+
       {/* Hotels */}
       <div className={section}>
         <div className="flex items-center justify-between gap-2">
@@ -316,6 +416,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
                 {h.description && <p className="text-xs text-gray-700">{h.description}</p>}
                 {h.booking_note && <p className="text-xs text-gray-700">{t('bookingLine', { note: h.booking_note })}</p>}
                 {h.url && <p className="truncate text-xs text-gray-500">{h.url}</p>}
+                {showMap && <p className={`text-xs ${h.lat != null ? 'text-green-700' : 'text-amber-700'}`}>{h.lat != null ? t('mapHotelFound') : t('mapHotelMissing')}</p>}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <button type="button" className={btn} disabled={busy !== null} onClick={() => { setEditingHotel(h.id); setAddingHotel(false) }}>{t('edit')}</button>
                   <FilePick label={h.image_path ? t('replacePhoto') : t('addPhoto')} disabled={busy !== null} onFile={(f) => pickHotelImage(h, f)} />
@@ -337,12 +438,13 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   )
 }
 
-function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel | null; busy: boolean; onSave: (d: HotelInput) => void; onCancel: () => void }) {
+function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel | null; busy: boolean; onSave: (d: Omit<HotelInput, 'lat' | 'lng'>) => void; onCancel: () => void }) {
   const t = useTranslations('Rsvp')
   const tg = useTranslations('Guests')
   const [name, setName] = useState(initial?.name ?? '')
   const [address, setAddress] = useState(initial?.address ?? '')
   const [url, setUrl] = useState(initial?.url ?? '')
+  const [mapsLink, setMapsLink] = useState(initial?.maps_url ?? '')
   const [booking, setBooking] = useState(initial?.booking_note ?? '')
   const [desc, setDesc] = useState(initial?.description ?? '')
   const [err, setErr] = useState<string | null>(null)
@@ -352,8 +454,10 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
     if (!name.trim()) return setErr(t('hotelNeedsName'))
     const link = normalizeWebUrl(url, tg)
     if (!link.ok) return setErr(t('websiteError', { error: link.error }))
+    const maps = normalizeWebUrl(mapsLink, tg)
+    if (!maps.ok) return setErr(t('mapsLinkError', { error: maps.error }))
     setErr(null)
-    onSave({ name: name.trim(), address: address.trim() || null, url: link.url, booking_note: booking.trim() || null, description: desc.trim() || null })
+    onSave({ name: name.trim(), address: address.trim() || null, url: link.url, booking_note: booking.trim() || null, description: desc.trim() || null, maps_url: maps.url })
   }
 
   return (
@@ -363,6 +467,7 @@ function HotelForm({ initial, busy, onSave, onCancel }: { initial: DbRsvpHotel |
         <label className="block text-xs text-gray-600">{t('hotelName')}<input value={name} onChange={(e) => setName(e.target.value)} maxLength={120} className={input + ' mt-1 block w-full'} /></label>
         <label className="block text-xs text-gray-600">{t('hotelAddress')}<input value={address} onChange={(e) => setAddress(e.target.value)} maxLength={200} className={input + ' mt-1 block w-full'} /></label>
         <label className="block text-xs text-gray-600">{t('hotelWebsite')}<input value={url} onChange={(e) => setUrl(e.target.value)} maxLength={500} placeholder="www.hotel.com" className={input + ' mt-1 block w-full'} /></label>
+        <label className="block text-xs text-gray-600">{t('hotelMapsUrl')}<input value={mapsLink} onChange={(e) => setMapsLink(e.target.value)} maxLength={500} placeholder="https://maps.app.goo.gl/…" className={input + ' mt-1 block w-full'} /></label>
         <label className="block text-xs text-gray-600">{t('hotelBooking')}<input value={booking} onChange={(e) => setBooking(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} /></label>
       </div>
       <label className="block text-xs text-gray-600">{t('hotelDescription')}<textarea value={desc} onChange={(e) => setDesc(e.target.value)} maxLength={500} rows={2} className={input + ' mt-1 block w-full'} /></label>

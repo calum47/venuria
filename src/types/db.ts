@@ -125,6 +125,11 @@ export type DbProjectRsvp = {
   // Migration 030
   default_lang: 'es' | 'en' | 'fr'
   section_order: string[]
+  // Migration 054: optional map (off by default)
+  show_map: boolean
+  map_address: string | null
+  map_lat: number | null
+  map_lng: number | null
 }
 
 export type DbRsvpPhoto = {
@@ -147,6 +152,10 @@ export type DbRsvpHotel = {
   image_path: string | null
   position: number
   created_at: string
+  // Migration 054
+  maps_url: string | null
+  lat: number | null
+  lng: number | null
 }
 
 export type DbGuestFamily = {

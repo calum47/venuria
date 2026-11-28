@@ -84,6 +84,10 @@ export type RsvpContentPatch = Partial<{
   show_area: boolean
   show_hotels: boolean
   cover_path: string | null
+  show_map: boolean
+  map_address: string | null
+  map_lat: number | null
+  map_lng: number | null
 }>
 
 /** Upserts only the given content columns (creates the row, switched off, on first use). */
@@ -167,6 +171,9 @@ export type HotelInput = {
   url: string | null
   booking_note: string | null
   description: string | null
+  maps_url: string | null
+  lat: number | null
+  lng: number | null
 }
 
 export async function createHotel(projectId: string, input: HotelInput, position: number): Promise<DbRsvpHotel> {
