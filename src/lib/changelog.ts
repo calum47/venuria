@@ -30,6 +30,26 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-item-sources',
+    date: '2026-11-28',
+    title: 'Choose where each item is rented from',
+    roles: ['planner'],
+    items: [
+      'In the project summary you now pick how many of each item (chairs, tables, plates…) to rent from each vendor. Whatever you don\'t rent comes from the venue.',
+      'Each vendor shows how many are still free on your event date, after what it has already promised to other events on that same date.',
+    ],
+  },
+  {
+    id: '2026-11-28-map-fit-and-instagrams',
+    date: '2026-11-28',
+    title: 'The 2D map opens fitted to the screen; several Instagram accounts',
+    roles: ['planner', 'rental'],
+    items: [
+      'The 2D map now opens zoomed out so the whole room is centred on screen. The zoom percentage button fits it again.',
+      'Vendors can list several Instagram accounts in Settings and mark one as the main company account.',
+    ],
+  },
+  {
     id: '2026-11-28-vendor-contacts-planner',
     date: '2026-11-28',
     title: 'Vendors you add appear in your timetable with their contact details',
