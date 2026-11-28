@@ -7,6 +7,7 @@ import type { PlannerRole } from '@/lib/supabase/plannerContext'
 import type { PdfStyle } from '@/lib/pdfExport/style'
 import ExportStyleCard from './ExportStyleCard'
 import { passwordProblem, PASSWORD_HINT } from '@/lib/passwordPolicy'
+import StartTourButton from '@/components/tour/StartTourButton'
 
 type Props = {
   plannerName: string
@@ -24,6 +25,10 @@ export default function SettingsForms({ plannerName, email, plannerCode, role, t
       <div className="max-w-2xl space-y-6">
         <NameForm initial={plannerName} email={email} plannerCode={plannerCode} />
         <PasswordForm />
+        <Card title="Tutorial">
+          <p className="text-xs text-gray-500">A short guided tour of the main pages.</p>
+          <StartTourButton />
+        </Card>
         <TeamForm team={team} canEdit={role === 'manager'} />
       </div>
       {exports ? (

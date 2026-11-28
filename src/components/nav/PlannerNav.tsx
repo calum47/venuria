@@ -45,7 +45,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
         </Link>
 
         {/* On phones the links drop to their own scrollable row under the logo. */}
-        <nav aria-label="Main" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav aria-label="Main" data-tour="nav" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {lastProjectId ? (
             item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
           ) : (

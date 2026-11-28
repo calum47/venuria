@@ -128,12 +128,12 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
           )}
         </div>
 
-        <section>
+        <section data-tour="new-project">
           <h2 className="text-xl font-medium text-gray-900 mb-3">New project</h2>
           <NewProjectForm venues={venues ?? []} />
         </section>
 
-        <section>
+        <section data-tour="project-list">
           <h2 className="text-xl font-medium text-gray-900 mb-3">Mine <span className="font-sans text-sm text-gray-400">{mine.length}</span></h2>
           <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
             {mine.map(renderRow)}
@@ -165,7 +165,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
           </section>
         )}
 
-        <section>
+        <section data-tour="payments-overview">
           <h2 className="text-xl font-medium text-gray-900 mb-3">Payments <span className="font-sans text-sm text-gray-400">{payments.length}</span></h2>
           <PaymentsOverview payments={payments} currency={ctx.team.currency} />
         </section>

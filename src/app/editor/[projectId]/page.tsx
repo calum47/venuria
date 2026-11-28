@@ -399,7 +399,7 @@ export default function EditorPage() {
 
       {/* Left sidebar — item catalog (hidden in guest and zone modes) */}
       {!viewOnly && !isGuestMode && !zoneMode && (
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0" data-tour="catalog">
           <CatalogSidebar catalogItems={catalogItems} />
         </div>
       )}
@@ -421,6 +421,7 @@ export default function EditorPage() {
             <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800" title="You are not assigned to this project, so you can look but not change anything">View only</span>
           ) : (<>
           <button
+            data-tour="auto-arrange"
             onClick={() => setShowAutoArrange(true)}
             disabled={!currentRoom || isGuestMode}
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-30"
@@ -439,7 +440,7 @@ export default function EditorPage() {
           </button>
           <span className="text-gray-300">|</span>
           {/* Room tabs */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1" data-tour="rooms">
             {rooms.map((room) => (
               <button
                 key={room.id}
@@ -460,6 +461,7 @@ export default function EditorPage() {
 
           {/* Seating plan toggle (seat guests at tables) */}
           {!viewOnly && <button
+            data-tour="seating"
             onClick={() => { if (!isGuestMode) setZoneMode(false); setGuestMode(!isGuestMode) }}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
               isGuestMode
@@ -472,6 +474,7 @@ export default function EditorPage() {
 
           {/* Zone mode toggle */}
           {!viewOnly && <button
+            data-tour="zones"
             onClick={toggleZoneMode}
             disabled={!currentRoom}
             className={`px-3 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-30 ${
@@ -501,6 +504,7 @@ export default function EditorPage() {
           </span>
 
           <button
+            data-tour="view-3d"
             onClick={() => setShow3D(true)}
             className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors"
           >
@@ -517,7 +521,7 @@ export default function EditorPage() {
 
         {/* Canvas + side panels */}
         <div className="flex-1 flex min-w-0 min-h-0">
-          <div className="flex-1 overflow-hidden min-w-0">
+          <div className="flex-1 overflow-hidden min-w-0" data-tour="canvas">
             <FloorPlanCanvas
               exportRef={exportJpgRef}
               getExportBranding={() => loadExportBrandingForProject(supabase, projectId)}

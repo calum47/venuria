@@ -209,7 +209,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
       />
       </fieldset>
 
-      {!readOnly && <form onSubmit={add} className="flex flex-wrap items-center gap-2">
+      {!readOnly && <form onSubmit={add} data-tour="guests-add" className="flex flex-wrap items-center gap-2">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}

@@ -96,7 +96,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
     })
 
   return (
-    <section className="rounded-lg border border-gray-200 bg-white">
+    <section data-tour="rsvp-panel" className="rounded-lg border border-gray-200 bg-white">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
         <span>
           <span className="text-sm font-medium text-gray-900">Guest RSVP link</span>

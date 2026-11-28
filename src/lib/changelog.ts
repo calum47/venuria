@@ -28,6 +28,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-guided-tour',
+    date: '2026-11-28',
+    title: 'Guided tour for planners',
+    roles: ['planner'],
+    items: [
+      'A step-by-step tour now walks through the main pages: projects, the editor, guests and RSVP, payments, timetable, stock, team and settings. Start it any time from Settings → Tutorial.',
+    ],
+  },
+  {
     id: '2026-11-28-stronger-passwords',
     date: '2026-11-28',
     title: 'Stronger passwords',

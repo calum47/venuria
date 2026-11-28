@@ -132,7 +132,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
 
         {viewOnly && <ViewOnlyBanner />}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div data-tour="hub" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan, seating and 3D view" />
           <HubCard href={`/editor/${projectId}/summary`} icon="summary" title="Layout summary" hint="Everything placed, stock shortfalls and zones" />
           {!viewOnly && <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />}
@@ -141,7 +141,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
           <HubCard href={`/planner/projects/${projectId}/guests`} icon="guests" title="Guest list details" hint={guestsHint} hintClass={needSeat > 0 ? 'text-amber-700' : 'text-gray-500'} />
         </div>
 
-        <section className="space-y-2" aria-labelledby="areas-h">
+        <section data-tour="areas" className="space-y-2" aria-labelledby="areas-h">
           <h2 id="areas-h" className="text-xl font-medium text-gray-900">Areas of the venue</h2>
           {areas.length === 0 ? (
             <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center text-sm text-gray-500">This venue has no areas set up yet.</p>
