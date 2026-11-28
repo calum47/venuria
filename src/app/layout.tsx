@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 import localFont from "next/font/local";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import TourGuide from "@/components/tour/TourGuide";
@@ -62,6 +63,8 @@ export default async function RootLayout({
         {/* Applies the language saved on the account when this browser has no language cookie yet */}
         <LanguageRestore />
         </NextIntlClientProvider>
+        {/* Vercel Speed Insights — real-user performance metrics, no UI */}
+        <SpeedInsights />
       </body>
     </html>
   );
