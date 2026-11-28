@@ -11,6 +11,13 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-editor-back-and-settings': {
+    title: 'Volver al panel del proyecto desde el editor 2D',
+    items: [
+      'La barra del editor 2D tiene un enlace «← Proyecto» que te lleva directamente al panel del proyecto.',
+      'Si tu acceso también gestiona una empresa proveedora, sus datos de contacto (persona de contacto, teléfono, correo y cuentas de Instagram) están en tu página de Ajustes.',
+    ],
+  },
   '2026-11-28-item-sources': {
     title: 'Elige de dónde se alquila cada artículo',
     items: [

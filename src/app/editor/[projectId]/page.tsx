@@ -421,6 +421,8 @@ export default function EditorPage() {
           ) : (<>
           <EditorNavMenu />
           <span className="text-gray-300">|</span>
+          <Link href={`/planner/projects/${projectId}`} className="text-sm font-semibold text-gray-800 hover:text-gray-600">{te('backToProject')}</Link>
+          <span className="text-gray-300">|</span>
           <Link
             href={`/editor/${projectId}/summary`}
             data-tour="summary-link"

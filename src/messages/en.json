@@ -1718,6 +1718,7 @@
     "mainInstagram": "Main company account",
     "addInstagram": "+ Add another Instagram",
     "removeInstagram": "Remove this account",
-    "mainInstagramHelp": "Planners see the main account in their timetable. Mark exactly one."
+    "mainInstagramHelp": "Planners see the main account in their timetable. Mark exactly one.",
+    "vendorSectionTitle": "Vendor details: {company}"
   }
 }

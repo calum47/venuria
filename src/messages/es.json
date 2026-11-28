@@ -1718,6 +1718,7 @@
     "mainInstagram": "Cuenta principal de la empresa",
     "addInstagram": "+ Añadir otra cuenta de Instagram",
     "removeInstagram": "Quitar esta cuenta",
-    "mainInstagramHelp": "Los planificadores ven la cuenta principal en su cronograma. Marca solo una."
+    "mainInstagramHelp": "Los planificadores ven la cuenta principal en su cronograma. Marca solo una.",
+    "vendorSectionTitle": "Datos de proveedor: {company}"
   }
 }

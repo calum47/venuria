@@ -30,6 +30,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-editor-back-and-settings',
+    date: '2026-11-28',
+    title: 'Back to the project hub from the 2D editor',
+    roles: ['planner'],
+    items: [
+      'The 2D editor toolbar has a "← Project" link that takes you straight back to the project hub.',
+      'If your login also manages a vendor company, its contact details (contact person, phone, email, Instagram accounts) are in your Settings page.',
+    ],
+  },
+  {
     id: '2026-11-28-item-sources',
     date: '2026-11-28',
     title: 'Choose where each item is rented from',
