@@ -11,6 +11,14 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-readable-link': {
+    title: 'Enlace de confirmación: más corto y legible',
+    items: [
+      'Los nuevos enlaces de confirmación se ven así: venuria.app/rsvp/chloe-luke-21-05-2027-k7m2q9xd. Llevan los nombres de la pareja, la fecha de la boda y un código aleatorio corto, en lugar de 64 caracteres aleatorios. Los invitados ven que es la boda correcta.',
+      'El código aleatorio del final es lo que mantiene privado el enlace, por eso nunca se usa un enlace hecho solo con nombres y fecha. Quien conozca los nombres y la fecha sigue sin poder adivinar la página.',
+      'Los enlaces que ya enviaste siguen funcionando. Un proyecto recibe un enlace corto cuando se configura por primera vez su página de confirmación, o al pulsar «Crear enlace nuevo», que desactiva el enlace anterior.',
+    ],
+  },
   '2026-11-28-rsvp-wide-layout': {
     title: 'Página de confirmación: más ancha en pantallas grandes y ajustada a su contenido',
     items: [

@@ -1,6 +1,7 @@
 import { supabase } from './client'
 import type { DbGuest, DbProjectRsvp } from '@/types/db'
-import { newRsvpToken, type RsvpStatus } from '@/lib/rsvp'
+import type { RsvpStatus } from '@/lib/rsvp'
+import { newReadableToken, type RsvpLinkSeed } from '@/lib/rsvpLink'
 
 // RSVP data access for the planner side (migration 025). Browser client; RLS
 // (planner_can_access_project) is the real gate. Guests answering through the
@@ -15,8 +16,34 @@ export type RsvpSettings = {
   section_order: string[]
 }
 
-/** Creates the project's RSVP row on first use (the database generates the token), or updates it. */
+/** What the link's readable part is made of: the couple's names (or the venue's), and the wedding date. */
+async function linkSeed(projectId: string): Promise<RsvpLinkSeed> {
+  const { data } = await supabase.from('projects').select('couple_names, event_date, venues(name)').eq('id', projectId).maybeSingle()
+  const venue = (data?.venues as unknown as { name: string } | null) ?? null
+  return { coupleNames: data?.couple_names ?? null, eventDate: data?.event_date ?? null, venueName: venue?.name ?? null }
+}
+
+/**
+ * Makes sure the project has an RSVP row, creating it with a readable link (names, date, random code) when it has
+ * none. An existing row is never touched, so a link already sent keeps working. If this is skipped the database
+ * default still creates a row, with a long random token.
+ */
+async function ensureRsvpRow(projectId: string): Promise<void> {
+  const { data: existing } = await supabase.from('project_rsvp').select('project_id').eq('project_id', projectId).maybeSingle()
+  if (existing) return
+  const seed = await linkSeed(projectId)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { error } = await supabase
+      .from('project_rsvp')
+      .upsert({ project_id: projectId, token: newReadableToken(seed) }, { onConflict: 'project_id', ignoreDuplicates: true })
+    if (!error) return
+    if (error.code !== '23505') throw error // 23505 = that token is taken (practically never); try another code
+  }
+}
+
+/** Creates the project's RSVP row on first use (with a readable link), or updates it. */
 export async function saveRsvpSettings(projectId: string, s: RsvpSettings): Promise<DbProjectRsvp> {
+  await ensureRsvpRow(projectId)
   const { data, error } = await supabase
     .from('project_rsvp')
     .upsert(
@@ -39,14 +66,17 @@ export async function saveRsvpSettings(projectId: string, s: RsvpSettings): Prom
 
 /** The old link stops working immediately. Answers already given are kept. */
 export async function regenerateRsvpToken(projectId: string): Promise<DbProjectRsvp> {
-  const { data, error } = await supabase
-    .from('project_rsvp')
-    .update({ token: newRsvpToken() })
-    .eq('project_id', projectId)
-    .select('*')
-    .single()
-  if (error) throw error
-  return data as DbProjectRsvp
+  const seed = await linkSeed(projectId)
+  for (let attempt = 0; ; attempt++) {
+    const { data, error } = await supabase
+      .from('project_rsvp')
+      .update({ token: newReadableToken(seed) })
+      .eq('project_id', projectId)
+      .select('*')
+      .single()
+    if (!error) return data as DbProjectRsvp
+    if (error.code !== '23505' || attempt >= 2) throw error
+  }
 }
 
 /** The planner records or corrects an answer (status null = back to pending). */
@@ -91,8 +121,9 @@ export type RsvpContentPatch = Partial<{
   map_lng: number | null
 }>
 
-/** Upserts only the given content columns (creates the row, switched off, on first use). */
+/** Upserts only the given content columns (creates the row, switched off and with a readable link, on first use). */
 export async function saveRsvpContent(projectId: string, patch: RsvpContentPatch): Promise<DbProjectRsvp> {
+  await ensureRsvpRow(projectId)
   const { data, error } = await supabase
     .from('project_rsvp')
     .upsert({ project_id: projectId, ...patch }, { onConflict: 'project_id' })

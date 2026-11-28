@@ -6,10 +6,8 @@
 export type RsvpStatus = 'attending' | 'declined' | 'maybe'
 export const RSVP_STATUSES: RsvpStatus[] = ['attending', 'declined', 'maybe']
 
-/** The token is 64 hex characters (two UUIDs). Reject anything else before touching the database. */
-export function isPlausibleToken(t: unknown): t is string {
-  return typeof t === 'string' && /^[0-9a-f]{40,128}$/.test(t)
-}
+// Link tokens (readable "names-date-code" ones and the older 64-hex ones) live in rsvpLink.ts.
+export { isPlausibleToken } from './rsvpLink'
 
 // ── Name matching ───────────────────────────────────────────────────────────
 
@@ -112,11 +110,4 @@ export function rsvpSummary(guests: RsvpGuestLike[]): RsvpSummary {
 
 export function rsvpPath(token: string): string {
   return `/rsvp/${token}`
-}
-
-/** A fresh link token: 32 random bytes as 64 hex characters. Browser or Node (both have Web Crypto). */
-export function newRsvpToken(): string {
-  const bytes = new Uint8Array(32)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
 }

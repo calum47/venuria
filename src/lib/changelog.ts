@@ -30,6 +30,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-readable-link',
+    date: '2026-11-28',
+    title: 'RSVP link: shorter and readable',
+    roles: ['planner'],
+    items: [
+      'New RSVP links now look like venuria.app/rsvp/chloe-luke-21-05-2027-k7m2q9xd: the couple\'s names, the wedding date and a short random code, instead of 64 random characters. Guests can see it is the right wedding.',
+      'The random code at the end is what keeps the link private, so a link made only from names and date is never used. Anyone who knows the names and the date still cannot guess the page.',
+      'Links you already sent keep working. A project gets a short link when its RSVP page is set up for the first time, or when you press "Create new link", which switches the old link off.',
+    ],
+  },
+  {
     id: '2026-11-28-rsvp-wide-layout',
     date: '2026-11-28',
     title: 'RSVP page: wider on big screens, sized to its content',
