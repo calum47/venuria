@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-last-page-and-practice-project',
+    date: '2026-11-28',
+    title: '"Last project" remembers the page; tour gets a practice project',
+    roles: ['planner'],
+    items: [
+      '"Last project" in the menu now takes you back to the page you were last on in that project (editor, guests, payments, timetable, run-down or summary), not just the project overview.',
+      'The guided tour (Settings → Tutorial) now includes the editor. A planner with no projects gets a practice project, "Alex & Sam (sample)", to place a table and add guests in. Planners who already have projects only get explanations: the tour never changes real work.',
+    ],
+  },
+  {
     id: '2026-11-28-guided-tour',
     date: '2026-11-28',
     title: 'Guided tour for planners',

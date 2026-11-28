@@ -33,7 +33,7 @@ export default function EditorNavMenu() {
   const item = 'block px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 rounded-md'
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative" data-tour="editor-menu">
       <button
         onClick={() => setOpen((v) => !v)}
         className="text-sm font-semibold text-gray-800 hover:text-gray-600 flex items-center gap-1"

@@ -412,6 +412,7 @@ export default function EditorPage() {
           <span className="text-gray-300">|</span>
           <Link
             href={`/editor/${projectId}/summary`}
+            data-tour="summary-link"
             className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
           >
             📋 Summary
@@ -431,6 +432,7 @@ export default function EditorPage() {
           </>)}
           <span className="text-gray-300">|</span>
           <button
+            data-tour="export-jpg"
             onClick={() => exportJpgRef.current?.().catch((err) => console.error('JPG export failed:', err))}
             disabled={!currentRoom}
             title="Download the current room as a JPG image"
@@ -487,7 +489,7 @@ export default function EditorPage() {
           </button>}
 
           {/* Area capacity: seated / standing choice, load vs the venue's limit, over-the-limit warning */}
-          <fieldset disabled={viewOnly} className="m-0 min-w-0 border-0 p-0">
+          <fieldset disabled={viewOnly} data-tour="capacity" className="m-0 min-w-0 border-0 p-0">
           <RoomCapacity
             projectId={projectId}
             room={currentRoom}
@@ -512,7 +514,7 @@ export default function EditorPage() {
           </button>
 
           {/* Save status */}
-          <div className="text-xs text-gray-400">
+          <div className="text-xs text-gray-400" data-tour="save-status">
             {isSwitchingRoom && 'Switching room…'}
             {!isSwitchingRoom && isSaving && 'Saving…'}
             {!isSwitchingRoom && !isSaving && lastSaved && `Saved ${lastSaved.toLocaleTimeString()}`}

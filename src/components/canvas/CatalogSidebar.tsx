@@ -123,7 +123,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
 
       {/* Grid controls */}
       <div className="p-4 border-t border-gray-200 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between" data-tour="snap">
           <span className="text-sm text-gray-700">Snap to Grid</span>
           <button
             onClick={toggleSnapToGrid}

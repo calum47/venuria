@@ -1,20 +1,39 @@
 import type { PlannerRole } from '@/lib/supabase/plannerContext'
 
-/** What the tour needs to know to build its route: the planner's team role and a project they can open. */
-export type TourCtx = { role: PlannerRole; projectId: string | null }
+/**
+ * What the tour needs to know to build its route.
+ * `sample` is true only when the tour just created a practice project for a planner who had none:
+ * only then are "do it yourself" steps interactive. On a planner's real project they are explained, never performed.
+ */
+export type TourCtx = { role: PlannerRole; projectId: string | null; sample: boolean }
+
+/** What the planner has to do to finish an interactive step. */
+export type TourAction = {
+  /** object-placed: something new appears on the floor plan. guest-added: the project's guest count goes up. */
+  until: 'object-placed' | 'guest-added'
+  /** Shown instead of `body` while they do it (sample project only). */
+  instruction: string
+  /** Shown once they have done it. */
+  done: string
+}
 
 export type TourStep = {
   id: string
   /** Route this step lives on, or null to skip the step (e.g. it needs a project and there is none). */
   path: (c: TourCtx) => string | null
-  /** Value of a data-tour="…" attribute to spotlight. No target = a centred card. */
-  target?: string
+  /** data-tour="…" value(s) to spotlight; several are spotlighted as one area. No target = a centred card. */
+  target?: string | string[]
   /** With a target: show a centred card instead of skipping when the element isn't on the page. */
   centerIfMissing?: boolean
   title: string
+  /** The explanation. On the sample project, an interactive step shows `action.instruction` instead. */
   body: string
   /** Team roles that see this step. Default: all. */
   roles?: PlannerRole[]
+  /** Interactive step: only on the sample project; elsewhere it is shown as a plain explanation. */
+  action?: TourAction
+  /** Only shown for the practice project the tour created. */
+  sampleOnly?: boolean
 }
 
 const project = (rest = '') => (c: TourCtx) => (c.projectId ? `/planner/projects/${c.projectId}${rest}` : null)
@@ -34,7 +53,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'nav', path: fixed('/planner'), target: 'nav',
     title: 'Main menu',
-    body: 'Move between your projects, stock, team and settings. “Last project” takes you back to what you were working on.',
+    body: 'Move between your projects, stock, team and settings. “Last project” takes you back to the page you were last on.',
   },
   {
     id: 'new-project', path: fixed('/planner'), target: 'new-project',
@@ -52,6 +71,11 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'Payments across the projects you can edit, so nothing gets missed.',
   },
   {
+    id: 'sample-note', path: project(), sampleOnly: true,
+    title: 'Your practice project',
+    body: 'We created “Alex & Sam (sample)” so you can try things out without touching real work. Delete it any time from the bottom of its project page.',
+  },
+  {
     id: 'hub', path: project(), target: 'hub',
     title: 'Project hub',
     body: 'Everything for one event: the editor, a layout summary, payments and documents, the timetable, the run-down list and guest details.',
@@ -62,19 +86,34 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'Each room with its chair count and capacity. Click one to open it in the editor.',
   },
   {
-    id: 'catalog', path: editor(), target: 'catalog',
-    title: 'Catalogue',
-    body: 'Drag tables, chairs and decorations onto the floor plan. Sizes and availability come from the venue and rental catalogues.',
+    id: 'place-table', path: editor(), target: ['catalog', 'canvas'],
+    title: 'Place a table',
+    body: 'Drag a table from the catalogue onto the floor plan, then choose how many chairs it gets. Sizes and availability come from the venue and rental catalogues.',
+    action: {
+      until: 'object-placed',
+      instruction: 'Your turn: drag a table from the Tables section of the catalogue onto the floor plan, then choose how many chairs it gets.',
+      done: 'That’s how a layout is built. You can change the chair count later.',
+    },
   },
   {
     id: 'canvas', path: editor(), target: 'canvas',
-    title: 'Floor plan',
-    body: 'Drag to pan, scroll or pinch to zoom, Ctrl+drag to select several items. Click an item to see its properties.',
+    title: 'Move around the floor plan',
+    body: 'Click a table to select it: a panel on the right shows its size, rotation and chairs. Drag to move things, drag empty space to pan, scroll or pinch to zoom, Ctrl+drag to select several.',
+  },
+  {
+    id: 'snap', path: editor(), target: 'snap',
+    title: 'Snap to grid',
+    body: 'Keeps things neatly aligned while you drag. Turn it off for free placement.',
   },
   {
     id: 'rooms', path: editor(), target: 'rooms',
     title: 'Rooms',
     body: 'Switch between the venue’s rooms. Each has its own layout.',
+  },
+  {
+    id: 'capacity', path: editor(), target: 'capacity',
+    title: 'Capacity',
+    body: 'Choose whether the room is seated or standing and see how close you are to the venue’s limit.',
   },
   {
     id: 'auto-arrange', path: editor(), target: 'auto-arrange',
@@ -97,14 +136,34 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'See the room as guests will: walk through your layout in 3D.',
   },
   {
-    id: 'summary', path: editor('/summary'),
+    id: 'export-jpg', path: editor(), target: 'export-jpg',
+    title: 'Export an image',
+    body: 'Download the current room as a JPG to share with the couple or the venue.',
+  },
+  {
+    id: 'summary-link', path: editor(), target: 'summary-link',
     title: 'Layout summary',
     body: 'Everything placed in the project, any stock shortfalls to rent, and the PDF export for clients and vendors.',
   },
   {
-    id: 'guests', path: project('/guests'), target: 'guests-add',
-    title: 'Guest list',
-    body: 'Add guests one by one or import a list from a file. Open a guest for family, dietary needs, hotel and seat.',
+    id: 'save-status', path: editor(), target: 'save-status',
+    title: 'Saved automatically',
+    body: 'Changes save as you go. This shows when the last save happened.',
+  },
+  {
+    id: 'add-guests', path: project('/guests'), target: 'guests-add',
+    title: 'Add guests',
+    body: 'Add guests one at a time here, or import a list from a file.',
+    action: {
+      until: 'guest-added',
+      instruction: 'Your turn: type a guest’s name and press “Add guest”. Add one or two names.',
+      done: 'Added. Each guest gets their own row.',
+    },
+  },
+  {
+    id: 'guest-list', path: project('/guests'), target: 'guest-list', centerIfMissing: true,
+    title: 'Your guest list',
+    body: 'Open a guest to add family, dietary needs, hotel, a photo and their seat. Use the search and filters above the list to find people quickly.',
   },
   {
     id: 'rsvp', path: project('/guests'), target: 'rsvp-panel',
