@@ -134,7 +134,7 @@ export default function RsvpMap({ venue, venueName, venueMapUrl, hotels, selecte
 
   return (
     <div className="space-y-3">
-      <div ref={box} className="z-0 h-72 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 sm:h-96" role="region" aria-label={texts.mapHint} />
+      <div ref={box} className="z-0 h-72 w-full overflow-hidden rounded-2xl border border-gray-200 bg-gray-100 sm:h-96 lg:h-[30rem]" role="region" aria-label={texts.mapHint} />
       {!hotel && !showVenue && <p className="text-center text-xs text-gray-500">{texts.mapHint}</p>}
 
       {showVenue && (

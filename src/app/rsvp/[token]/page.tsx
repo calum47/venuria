@@ -82,8 +82,8 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   const controllerEmail = team?.contact_email?.trim() || null
 
   return (
-    <main className="flex min-h-screen w-full items-start justify-center bg-gradient-to-b from-brand-50 via-gray-50 to-gray-50 px-3 py-4 sm:px-4 sm:py-10">
-      <div className="w-full max-w-2xl">
+    <main className="flex min-h-screen w-full items-start justify-center bg-gradient-to-b from-brand-50 via-gray-50 to-gray-50 px-0 py-0 sm:py-8">
+      <div className="w-full sm:w-[90%]">
         <RsvpForm
           token={token}
           initialLang={lang}

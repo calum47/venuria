@@ -11,6 +11,13 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-wide-layout': {
+    title: 'Página de confirmación: más ancha en pantallas grandes y ajustada a su contenido',
+    items: [
+      'La página de confirmación de los invitados ahora ocupa cerca del 90 % del ancho en tabletas y ordenadores, y todo el ancho en el móvil (sin esquinas redondeadas ni márgenes laterales).',
+      'Cada bloque es tan ancho como lo que contiene: el mensaje de bienvenida, el formulario de respuesta y un programa corto se quedan en una columna centrada, mientras que un programa día a día largo, varias fotos u hoteles y el mapa se extienden. Cuantas más entradas, fotos u hoteles, más espacio ocupan.',
+    ],
+  },
   '2026-11-28-rsvp-big-day': {
     title: 'Página de confirmación: sección «El gran día» con el programa y el mapa',
     items: [

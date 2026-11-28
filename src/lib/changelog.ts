@@ -30,6 +30,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-wide-layout',
+    date: '2026-11-28',
+    title: 'RSVP page: wider on big screens, sized to its content',
+    roles: ['planner'],
+    items: [
+      'The guest RSVP page now uses about 90% of the width on tablets and computers, and the full width on phones (without rounded corners or side margins).',
+      'Each block is only as wide as what it holds: the welcome note, the answer form and a short schedule stay in a centred column, while a long day-by-day programme, several photos or hotels, and the map spread out. The more entries, photos or hotels, the more room they take.',
+    ],
+  },
+  {
     id: '2026-11-28-rsvp-big-day',
     date: '2026-11-28',
     title: 'RSVP page: "The big day" section with the schedule and the map',

@@ -164,7 +164,7 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
   const hero = content.coverUrl ? (
     <div className="relative">
       {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset */}
-      <img src={content.coverUrl} alt="" className="h-80 w-full object-cover sm:h-[28rem]" />
+      <img src={content.coverUrl} alt="" className="h-80 w-full object-cover sm:h-[28rem] lg:h-[34rem]" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-black/10" />
       {langPicker}
       <div className="absolute inset-x-0 bottom-0 space-y-2 px-6 pb-8 text-center text-white sm:px-10">
@@ -189,6 +189,10 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
       {deadline && <p className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-800">{fill(t.deadline, { date: longDate(deadline, lang) })}</p>}
     </div>
   )
+
+  const eventCount = content.details?.events.length ?? 0
+  const photoCount = content.area?.photos.length ?? 0
+  const hotelCount = content.hotels.length
 
   const details = content.details && (
     <section className="space-y-6">
@@ -243,11 +247,11 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
   const area = content.area && (
     <section className="space-y-4 border-t border-gray-100 pt-8">
       <h2 className="text-center text-3xl font-medium text-gray-900">{t.areaTitle}</h2>
-      {content.area.text && <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700">{content.area.text}</p>}
+      {content.area.text && <p className={`mx-auto max-w-2xl whitespace-pre-line text-sm leading-relaxed text-gray-700 ${content.area.text.length <= 240 ? 'text-center' : ''}`}>{content.area.text}</p>}
       {content.area.photos.length > 0 && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {content.area.photos.map((p, i) => (
-            <figure key={i} className="space-y-1">
+            <figure key={i} className={`space-y-1 ${photoCount === 1 ? 'w-full' : 'w-[calc(50%-0.375rem)] lg:w-[calc(33.333%-0.5rem)]'}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset */}
               <img src={p.url} alt={p.caption ?? ''} loading="lazy" className="aspect-[4/3] w-full rounded-xl object-cover" />
               {p.caption && <figcaption className="text-xs text-gray-500">{p.caption}</figcaption>}
@@ -283,9 +287,9 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
           />
         </div>
       )}
-      <div className="space-y-4">
+      <div className="flex flex-wrap justify-center gap-4">
         {content.hotels.map((h, i) => (
-          <div key={h.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div key={h.id} className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${hotelCount === 1 ? 'w-full max-w-xl' : 'w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(33.333%-0.7rem)]'}`}>
             {h.imageUrl && (
               // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL from a private bucket, not a local asset
               <img src={h.imageUrl} alt="" loading="lazy" className="aspect-[16/9] w-full object-cover" />
@@ -436,16 +440,25 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
           </div>
         )
 
+  // Each block is only as wide as what it holds: short text stays in a centred column, while a long programme, a
+  // handful of photos or several hotels get the room. Literal class names, so Tailwind can see them.
+  const sectionWidth: Record<RsvpSectionKey, string> = {
+    details: eventCount <= 1 ? 'max-w-2xl' : eventCount === 2 ? 'max-w-3xl' : 'max-w-5xl',
+    schedule: (content.schedule?.lines.length ?? 0) > 10 ? 'max-w-2xl' : 'max-w-xl',
+    form: 'max-w-xl',
+    area: photoCount <= 1 ? 'max-w-2xl' : photoCount === 2 ? 'max-w-3xl' : 'max-w-6xl',
+    hotels: content.map || hotelCount >= 3 ? 'max-w-6xl' : hotelCount === 2 ? 'max-w-3xl' : 'max-w-xl',
+  }
   const sections: Record<RsvpSectionKey, React.ReactNode> = { details, schedule, form: formBlock, area, hotels }
 
   return (
-    <article className="overflow-hidden rounded-3xl bg-white shadow-lg">
+    <article className="overflow-hidden bg-white shadow-lg sm:rounded-3xl">
       {hero}
-      <div className="space-y-8 px-5 pb-10 pt-8 sm:px-10">
-        {previewBanner}
-        {intro}
+      <div className="space-y-8 px-5 pb-10 pt-8 sm:px-10 lg:px-16">
+        {previewBanner && <div className="mx-auto w-full max-w-2xl">{previewBanner}</div>}
+        <div className="mx-auto w-full max-w-2xl">{intro}</div>
         {sectionOrder.map((k) => (
-          <Fragment key={k}>{sections[k]}</Fragment>
+          <Fragment key={k}>{sections[k] && <div className={`mx-auto w-full ${sectionWidth[k]}`}>{sections[k]}</div>}</Fragment>
         ))}
       </div>
     </article>
