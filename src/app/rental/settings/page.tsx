@@ -4,6 +4,13 @@ import { getVendorContext } from '@/lib/supabase/vendorContext'
 import VendorShell from '@/components/vendor/VendorShell'
 import VendorProfileForm from './VendorProfileForm'
 
+function parseHandles(raw: unknown, legacy: string | null | undefined): { handle: string; main: boolean }[] {
+  if (Array.isArray(raw) && raw.length > 0) {
+    return raw.map((x) => ({ handle: String((x as { handle?: string }).handle ?? ''), main: !!(x as { main?: boolean }).main }))
+  }
+  return legacy ? [{ handle: legacy, main: true }] : []
+}
+
 /** The vendor's own contact details: what planners see, filled in automatically, once they add the vendor to a project. */
 export default async function VendorSettingsPage() {
   const t = await getTranslations('VendorSettings')
@@ -19,7 +26,7 @@ export default async function VendorSettingsPage() {
   }
   const { data: co } = await supabase
     .from('rental_companies')
-    .select('contact_name, phone, contact_email, instagram')
+    .select('contact_name, phone, contact_email, instagram, instagram_handles')
     .eq('id', ctx.companyId)
     .maybeSingle()
 
@@ -36,7 +43,7 @@ export default async function VendorSettingsPage() {
               contactName: co?.contact_name ?? '',
               phone: co?.phone ?? '',
               email: co?.contact_email ?? '',
-              instagram: co?.instagram ?? '',
+              instagrams: parseHandles(co?.instagram_handles, co?.instagram),
             }}
           />
         </div>

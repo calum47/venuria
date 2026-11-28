@@ -230,7 +230,8 @@
     "chooseAnAccountAndType": "Choose an account and type a temporary password.",
     "thatLoginDoesNotBelong": "That login does not belong to a planner, venue manager or rental manager.",
     "vendorAccessNotSaved": "Could not save — only an admin can change this.",
-    "projectVendorNotAllowed": "Only people who can edit this project can add or remove vendors, and only vendors with the Vendor tag."
+    "projectVendorNotAllowed": "Only people who can edit this project can add or remove vendors, and only vendors with the Vendor tag.",
+    "sourceOverAvailable": "Only {count} are free from this company on the event date."
   },
   "Capacity": {
     "seated": "Seated",
@@ -1487,7 +1488,7 @@
     "colItem": "Item",
     "colPlaced": "Placed",
     "colVenueHas": "Venue has",
-    "colNeedRent": "Need to rent",
+    "colNeedRent": "Where it comes from",
     "onTables": "on tables",
     "nOnTables": "{count} on tables",
     "notTracked": "not tracked",
@@ -1498,7 +1499,11 @@
     "room": "Room",
     "title": "Project Summary — {title}",
     "backToEditor": "← Back to editor",
-    "intro": "Placed items compared against the venue's own stock. Only tables and chairs are stock-tracked right now — decorations show what's placed but aren't compared against anything yet."
+    "intro": "Placed items compared against the venue's own stock. Only tables and chairs are stock-tracked right now — decorations show what's placed but aren't compared against anything yet.",
+    "fromVenue": "From the venue: {count}",
+    "rentFrom": "Quantity to rent from {company}",
+    "availableOnDate": "{available} free on this date ({committed} of {stock} already booked by other events)",
+    "availableNoDate": "{stock} in stock. Set the event date to see what is free"
   },
   "ExportStyle": {
     "loadProjectFailed": "Could not load this project for the preview.",
@@ -1706,9 +1711,13 @@
     "contactName": "Contact person",
     "phone": "Phone",
     "email": "Email",
-    "instagram": "Instagram",
+    "instagram": "Instagram accounts",
     "save": "Save",
     "saved": "Saved. Planners see the new details now.",
-    "notAVendor": "No vendor account is linked to this login."
+    "notAVendor": "No vendor account is linked to this login.",
+    "mainInstagram": "Main company account",
+    "addInstagram": "+ Add another Instagram",
+    "removeInstagram": "Remove this account",
+    "mainInstagramHelp": "Planners see the main account in their timetable. Mark exactly one."
   }
 }

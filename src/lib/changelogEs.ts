@@ -11,6 +11,20 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-item-sources': {
+    title: 'Elige de dónde se alquila cada artículo',
+    items: [
+      'En el resumen del proyecto eliges cuántas unidades de cada artículo (sillas, mesas, platos…) alquilas a cada proveedor. Lo que no alquiles sale del local.',
+      'Cada proveedor muestra cuántas le quedan libres en la fecha de tu evento, descontando lo que ya ha comprometido para otros eventos ese mismo día.',
+    ],
+  },
+  '2026-11-28-map-fit-and-instagrams': {
+    title: 'El plano 2D se abre ajustado a la pantalla; varias cuentas de Instagram',
+    items: [
+      'El plano 2D se abre ahora alejado, con toda la sala centrada en pantalla. El botón del porcentaje de zoom lo vuelve a ajustar.',
+      'Los proveedores pueden indicar varias cuentas de Instagram en Ajustes y marcar una como la cuenta principal de la empresa.',
+    ],
+  },
   '2026-11-28-vendor-contacts-planner': {
     title: 'Los proveedores que añades aparecen en tu cronograma con sus datos de contacto',
     items: [

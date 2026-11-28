@@ -1,3 +1,4 @@
+import SourcingCell, { type SourceOption } from './SourcingCell'
 import { projectTitle } from '@/lib/projectTitle'
 import { createClient } from '@/lib/supabase/server'
 import { getAllLayoutObjectsForProject, getAllProjectZones } from '@/lib/supabase/queries'
@@ -85,14 +86,21 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     )
   }
 
-  const [{ data: catalogItems }, { data: rentalStockRows }] = await Promise.all([
+  const [{ data: catalogItems }, { data: rentalStockRows }, { data: committedRows }, { data: sourceRows }, { data: accessLevel }] = await Promise.all([
     supabase.from('catalog_items').select('*').in('id', usedItemIds),
     supabase
       .from('catalog_item_stock')
       .select('catalog_item_id, owner_id, quantity')
       .eq('owner_type', 'rental_company')
       .in('catalog_item_id', usedItemIds),
+    supabase.rpc('rental_committed_elsewhere', { p_project: projectId, p_items: usedItemIds }),
+    supabase.from('project_item_sources').select('catalog_item_id, rental_company_id, quantity').eq('project_id', projectId),
+    supabase.rpc('planner_project_access', { pid: projectId }),
   ])
+  const editable = accessLevel === 'edit'
+  const committedKey = (item: string, co: string) => `${item}:${co}`
+  const committedMap = new Map<string, number>((committedRows ?? []).map((r: { catalog_item_id: string; rental_company_id: string; committed: number }) => [committedKey(r.catalog_item_id, r.rental_company_id), r.committed]))
+  const chosenMap = new Map<string, number>((sourceRows ?? []).map((r) => [committedKey(r.catalog_item_id, r.rental_company_id), r.quantity]))
 
   const catalogById = new Map<string, DbCatalogItem>((catalogItems ?? []).map((c) => [c.id, c]))
 
@@ -104,12 +112,16 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   const rentalCompanyNameById = new Map<string, string>((rentalCompanies ?? []).map((rc) => [rc.id, rc.name]))
 
   // catalogItemId -> [{ companyName, quantity }]
-  const rentalAvailabilityByItem = new Map<string, { companyName: string; quantity: number }[]>()
+  const rentalAvailabilityByItem = new Map<string, SourceOption[]>()
   for (const row of rentalStockRows ?? []) {
     if (row.quantity <= 0 || !rentalCompanyNameById.has(row.owner_id)) continue
     const companyName = rentalCompanyNameById.get(row.owner_id) ?? tpdf('unknownRental')
     const list = rentalAvailabilityByItem.get(row.catalog_item_id) ?? []
-    list.push({ companyName, quantity: row.quantity })
+    list.push({
+      companyId: row.owner_id, companyName, stock: row.quantity,
+      committed: committedMap.get(committedKey(row.catalog_item_id, row.owner_id)) ?? 0,
+      chosen: chosenMap.get(committedKey(row.catalog_item_id, row.owner_id)) ?? 0,
+    })
     rentalAvailabilityByItem.set(row.catalog_item_id, list)
   }
 
@@ -124,7 +136,8 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       // of a false shortfall for categories that were never in scope for stock.
       const isStockTracked = !!item && STOCK_TRACKED_CATEGORIES.includes(item.category)
       const venueStock = venueStockById.get(id) ?? 0
-      const shortfall = isStockTracked ? Math.max(0, used - venueStock) : 0
+      const rentedQty = (rentalAvailabilityByItem.get(id) ?? []).reduce((a, o) => a + o.chosen, 0)
+      const shortfall = isStockTracked ? Math.max(0, used - rentedQty - venueStock) : 0
       return {
         id,
         name: item?.name ?? tpdf('unknownItem'),
@@ -175,24 +188,11 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
                 {row.isStockTracked ? row.venueStock : <span className="text-gray-300">{t('notTracked')}</span>}
               </td>
               <td className="px-4 py-2.5">
-                {row.shortfall > 0 ? (
-                  <div>
-                    <span className="font-medium text-amber-700">{t('short', { count: row.shortfall })}</span>
-                    {row.rentalAvailability.length > 0 ? (
-                      <span className="text-gray-500">
-                        {' '}
-                        — {t('available')}{' '}
-                        {row.rentalAvailability.map((a, i) => (
-                          <span key={a.companyName}>
-                            {i > 0 && ', '}
-                            {a.companyName} ({a.quantity})
-                          </span>
-                        ))}
-                      </span>
-                    ) : (
-                      <span className="text-red-500"> — {t('noRentalStock')}</span>
-                    )}
-                  </div>
+                {row.isStockTracked ? (
+                  <SourcingCell
+                    projectId={projectId} itemId={row.id} used={row.used} venueStock={row.venueStock}
+                    options={row.rentalAvailability} editable={editable} hasEventDate={!!project.event_date}
+                  />
                 ) : (
                   <span className="text-gray-300">—</span>
                 )}

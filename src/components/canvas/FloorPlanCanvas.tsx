@@ -18,7 +18,7 @@ import { findNearestValidAlongPath, getFootprintCorners, validateFootprint } fro
 
 const BASE_SCALE = 2
 const CANVAS_PADDING = 60
-const MIN_ZOOM = 0.2
+const MIN_ZOOM = 0.1
 const MAX_ZOOM = 3
 
 type Props = {
@@ -198,11 +198,31 @@ export default function FloorPlanCanvas({
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    setStageSize({ width: container.offsetWidth, height: container.offsetHeight })
-    const handleResize = () => setStageSize({ width: container.offsetWidth, height: container.offsetHeight })
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
+    const measure = () => setStageSize({ width: container.offsetWidth, height: container.offsetHeight })
+    measure()
+    // ResizeObserver, not only window resize: the side panels opening or closing resizes the canvas too.
+    const ro = new ResizeObserver(measure)
+    ro.observe(container)
+    return () => ro.disconnect()
   }, [])
+
+  // Zoom and position that show the whole room, centred and as large as the canvas allows.
+  const fitToScreen = useCallback(() => {
+    if (stageSize.width < 50 || stageSize.height < 50) return
+    const z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(stageSize.width / totalWidth, stageSize.height / totalHeight)))
+    setZoom(z)
+    setStagePos({ x: (stageSize.width - totalWidth * z) / 2, y: (stageSize.height - totalHeight * z) / 2 })
+    onZoomChange?.(z)
+  }, [stageSize.width, stageSize.height, totalWidth, totalHeight, onZoomChange])
+
+  // Fit once when a room is first shown (and again if the person switches room); after that the view is theirs.
+  const fittedKey = useRef<string | null>(null)
+  useEffect(() => {
+    const key = currentRoom?.id ?? null
+    if (!key || fittedKey.current === key || stageSize.width < 50) return
+    fittedKey.current = key
+    fitToScreen()
+  }, [currentRoom?.id, stageSize.width, fitToScreen])
 
   useEffect(() => {
     if (!transformerRef.current || !stageRef.current) return
@@ -269,7 +289,7 @@ export default function FloorPlanCanvas({
 
   const handleZoomIn    = () => { const z = Math.min(MAX_ZOOM, zoomRef.current + 0.1); setZoom(z); onZoomChange?.(z) }
   const handleZoomOut   = () => { const z = Math.max(MIN_ZOOM, zoomRef.current - 0.1); setZoom(z); onZoomChange?.(z) }
-  const handleZoomReset = () => { setZoom(1); setStagePos({ x: 0, y: 0 }); onZoomChange?.(1) }
+  const handleZoomReset = () => fitToScreen()
 
   // True when a Konva target belongs to a placed layout object (a table/chair Group
   // or one of its shapes, or the Transformer) rather than empty canvas/room floor.
