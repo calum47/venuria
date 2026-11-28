@@ -609,7 +609,7 @@ function EventForm({ initial, defaultDate, busy, onSave, onCancel }: { initial: 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return setErr(t('eventNeedsTitle'))
-    if (from && to && to < from) return setErr(t('eventTimesOrder'))
+    // An end time earlier than the start is fine: the event runs past midnight into the next morning.
     setErr(null)
     onSave({ event_date: date || null, starts_at: from || null, ends_at: to || null, title: title.trim(), location: location.trim() || null, description: desc.trim() || null, tag: tag.trim() || null })
   }
