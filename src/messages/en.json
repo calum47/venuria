@@ -531,7 +531,8 @@
     "vendorAccessOff": "Vendor access is switched off for this account. Contact an admin.",
     "stockTablesChairsHelp": "How many of each standard item you can rent out. Planners use the venue’s own stock first; yours covers the rest.",
     "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round.",
-    "projectsYouAreOn": "Projects you’re on →"
+    "projectsYouAreOn": "Projects you’re on →",
+    "contactSettings": "Contact details"
   },
   "Client": {
     "noProjectHasBeenSet": "No project has been set up for your account yet — check with your planner."
@@ -1209,7 +1210,9 @@
     "instagram": "Instagram",
     "vendorNotes": "Notes",
     "deleteKeepsBlocks": "Blocks keep their times and just lose the vendor tag",
-    "addBlockBtn": "Add block"
+    "addBlockBtn": "Add block",
+    "linkedVendor": "Venuria vendor",
+    "linkedVendorHint": "This vendor has a Venuria account. Its name and contact details come from the vendor and update automatically; you can still change the colour and notes."
   },
   "Editor": {
     "loadingProject": "Loading project...",
@@ -1665,7 +1668,7 @@
   },
   "ProjectVendors": {
     "title": "Vendors on this project",
-    "help": "Vendors you add can look at this project, read-only: the materials, the 2D map, the timetable and the run-down. They never see guests, payments or documents.",
+    "help": "Vendors you add can look at this project, read-only: the materials, the 2D map, the timetable and the run-down. They never see guests, payments or documents. They also appear in your vendor list for the timetable and run-down, with the contact details they entered. Vendors without a Venuria account are added there with “+ New vendor”.",
     "none": "No vendors added yet.",
     "remove": "Remove",
     "choose": "Choose a vendor…",
@@ -1694,6 +1697,18 @@
     "materialsIntro": "How many of each item the project uses: placed on the plans plus what the tables’ settings call for.",
     "nothingPlaced": "Nothing has been placed yet.",
     "unknownItem": "Unknown item",
-    "onTables": "{count} on tables"
+    "onTables": "{count} on tables",
+    "settings": "Settings"
+  },
+  "VendorSettings": {
+    "title": "Settings",
+    "intro": "Your contact details for {company}. When a planner adds you to a project, these fill in automatically wherever they list you in their timetable and run-down, and stay up to date when you change them here.",
+    "contactName": "Contact person",
+    "phone": "Phone",
+    "email": "Email",
+    "instagram": "Instagram",
+    "save": "Save",
+    "saved": "Saved. Planners see the new details now.",
+    "notAVendor": "No vendor account is linked to this login."
   }
 }

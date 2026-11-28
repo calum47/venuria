@@ -531,7 +531,8 @@
     "vendorAccessOff": "El acceso de proveedor está desactivado para esta cuenta. Contacta con un administrador.",
     "stockTablesChairsHelp": "Cuántas unidades de cada artículo estándar puedes alquilar. Los planificadores usan primero el inventario del propio espacio; el tuyo cubre el resto.",
     "stockProductsHelp": "El mismo inventario que <b>Mi inventario</b> en la parte de planificación ({team}): catálogo, compras y ventas. Un cambio hecho aquí se ve allí, y al revés.",
-    "projectsYouAreOn": "Proyectos en los que participas →"
+    "projectsYouAreOn": "Proyectos en los que participas →",
+    "contactSettings": "Datos de contacto"
   },
   "Client": {
     "noProjectHasBeenSet": "Todavía no se ha configurado ningún proyecto para tu cuenta: consúltalo con tu planificador."
@@ -1209,7 +1210,9 @@
     "instagram": "Instagram",
     "vendorNotes": "Notas",
     "deleteKeepsBlocks": "Los bloques conservan sus horas y solo pierden la etiqueta del proveedor",
-    "addBlockBtn": "Añadir bloque"
+    "addBlockBtn": "Añadir bloque",
+    "linkedVendor": "Proveedor de Venuria",
+    "linkedVendorHint": "Este proveedor tiene una cuenta de Venuria. Su nombre y sus datos de contacto vienen del propio proveedor y se actualizan solos; aun así puedes cambiar el color y las notas."
   },
   "Editor": {
     "loadingProject": "Cargando proyecto...",
@@ -1665,7 +1668,7 @@
   },
   "ProjectVendors": {
     "title": "Proveedores de este proyecto",
-    "help": "Los proveedores que añadas pueden consultar este proyecto, solo en lectura: los materiales, el plano 2D, el cronograma y el guion del día. Nunca ven invitados, pagos ni documentos.",
+    "help": "Los proveedores que añadas pueden consultar este proyecto, solo en lectura: los materiales, el plano 2D, el cronograma y el guion del día. Nunca ven invitados, pagos ni documentos. También aparecen en tu lista de proveedores del cronograma y del guion del día, con los datos de contacto que ellos han introducido. Los proveedores sin cuenta de Venuria se añaden allí con «+ Nuevo proveedor».",
     "none": "Todavía no has añadido proveedores.",
     "remove": "Quitar",
     "choose": "Elige un proveedor…",
@@ -1694,6 +1697,18 @@
     "materialsIntro": "Cuántas unidades de cada artículo usa el proyecto: las colocadas en los planos más las que piden los montajes de mesa.",
     "nothingPlaced": "Todavía no se ha colocado nada.",
     "unknownItem": "Artículo desconocido",
-    "onTables": "{count} en mesas"
+    "onTables": "{count} en mesas",
+    "settings": "Ajustes"
+  },
+  "VendorSettings": {
+    "title": "Ajustes",
+    "intro": "Tus datos de contacto de {company}. Cuando un planificador te añade a un proyecto, se rellenan automáticamente donde te incluya en su cronograma y su guion del día, y se mantienen al día cuando los cambias aquí.",
+    "contactName": "Persona de contacto",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "instagram": "Instagram",
+    "save": "Guardar",
+    "saved": "Guardado. Los planificadores ya ven los datos nuevos.",
+    "notAVendor": "Este acceso no está vinculado a ninguna cuenta de proveedor."
   }
 }

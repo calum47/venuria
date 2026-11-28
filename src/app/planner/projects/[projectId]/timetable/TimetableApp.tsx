@@ -548,6 +548,7 @@ function VendorManager(p: {
               {editingId === v.id ? (
                 <VendorForm
                   key={v.id}
+                  linked={!!v.rental_company_id}
                   initial={toInput(v)}
                   submitLabel={tr('save')}
                   onCancel={() => setEditingId(null)}
@@ -569,6 +570,7 @@ function VendorManager(p: {
                 <div className="flex items-center gap-2 text-sm">
                   <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: v.colour }} />
                   <span className="min-w-0 flex-1 truncate text-gray-900">{v.name}</span>
+                  {v.rental_company_id && <span className="shrink-0 rounded-full bg-brand-50 px-2 py-0.5 text-[11px] text-brand-800" title={tr('linkedVendorHint')}>{tr('linkedVendor')}</span>}
                   <button type="button" onClick={() => { setError(null); setEditingId(v.id) }} className={btn}>{tr('edit')}</button>
                 </div>
               )}
@@ -603,6 +605,8 @@ const toInput = (v: DbTeamVendor): VendorInput => ({
 })
 
 function VendorForm(p: {
+  /** A Venuria vendor account: name and contact details come from it and can't be edited here. */
+  linked?: boolean
   initial: VendorInput
   submitLabel: string
   onSubmit: (input: VendorInput) => Promise<void>
@@ -643,15 +647,16 @@ function VendorForm(p: {
 
   return (
     <div className="space-y-2 text-sm">
+      {p.linked && <p className="rounded-lg bg-brand-50 px-2 py-1.5 text-xs text-brand-800">{tr('linkedVendorHint')}</p>}
       <div className="flex gap-2">
-        <input value={f.name} onChange={set('name')} maxLength={80} placeholder={tr('vendorName')} aria-label={tr('vendorName')} className={input + ' min-w-0 flex-1'} />
+        <input value={f.name} onChange={set('name')} disabled={p.linked} maxLength={80} placeholder={tr('vendorName')} aria-label={tr('vendorName')} className={input + ' min-w-0 flex-1'} />
         <input type="color" value={f.colour} onChange={set('colour')} aria-label={tr('vendorColour')} className="h-8 w-10 cursor-pointer rounded-lg border border-gray-300 bg-white p-0.5" />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input value={f.contact_name} onChange={set('contact_name')} maxLength={120} placeholder={tr('contactName')} aria-label={tr('contactName')} className={input} />
-        <input value={f.phone} onChange={set('phone')} maxLength={40} placeholder={tr('phone')} aria-label={tr('phone')} className={input} />
-        <input value={f.email} onChange={set('email')} maxLength={120} placeholder={tr('email')} aria-label={tr('email')} className={input} />
-        <input value={f.instagram} onChange={set('instagram')} maxLength={60} placeholder={tr('instagramHandle')} aria-label={tr('instagram')} className={input} />
+        <input value={f.contact_name} onChange={set('contact_name')} disabled={p.linked} maxLength={120} placeholder={tr('contactName')} aria-label={tr('contactName')} className={input} />
+        <input value={f.phone} onChange={set('phone')} disabled={p.linked} maxLength={40} placeholder={tr('phone')} aria-label={tr('phone')} className={input} />
+        <input value={f.email} onChange={set('email')} disabled={p.linked} maxLength={120} placeholder={tr('email')} aria-label={tr('email')} className={input} />
+        <input value={f.instagram} onChange={set('instagram')} disabled={p.linked} maxLength={60} placeholder={tr('instagramHandle')} aria-label={tr('instagram')} className={input} />
       </div>
       <textarea value={f.notes} onChange={set('notes')} maxLength={500} rows={2} placeholder={tr('vendorNotes')} aria-label={tr('vendorNotes')} className={input + ' w-full'} />
       <div className="flex items-center gap-2">

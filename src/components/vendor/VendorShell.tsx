@@ -19,6 +19,7 @@ export default async function VendorShell({ ctx, children }: { ctx: VendorContex
           <nav className="flex items-center gap-1">
             <Link href="/rental/projects" className={pill}>{t('myProjects')}</Link>
             {ctx.hasVendorStock && <Link href="/rental" className={pill}>{t('vendorPage')}</Link>}
+            <Link href="/rental/settings" className={pill}>{t('settings')}</Link>
             {ctx.isPlanner && <Link href="/planner" className={pill}>{t('plannerSide')}</Link>}
           </nav>
           <div className="ml-auto flex items-center gap-3">

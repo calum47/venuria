@@ -30,6 +30,25 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-vendor-contacts-planner',
+    date: '2026-11-28',
+    title: 'Vendors you add appear in your timetable with their contact details',
+    roles: ['planner'],
+    items: [
+      'A vendor you add to a project now appears in your vendor list, ready to tag on timetable blocks. Their contact details are filled in from what the vendor entered in their own Settings, and update automatically when they change them.',
+      'Vendors who don\'t have a Venuria account are still added the same way as before, with "+ New vendor".',
+    ],
+  },
+  {
+    id: '2026-11-28-vendor-contacts-vendor',
+    date: '2026-11-28',
+    title: 'Settings: your contact details',
+    roles: ['rental'],
+    items: [
+      'The new Settings page holds your contact person, phone, email and Instagram. Planners who add you to a project see them automatically in their timetable and run-down, and they stay up to date when you change them.',
+    ],
+  },
+  {
     id: '2026-11-28-vendors-on-projects-planner',
     date: '2026-11-28',
     title: 'Add vendors to a project',
