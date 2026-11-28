@@ -28,6 +28,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-3d-hidden-shorter-tour',
+    date: '2026-11-28',
+    title: '3D view hidden for now; shorter tour',
+    roles: ['planner'],
+    items: [
+      '"View in 3D" has been removed from the editor while the feature is finished. It will come back later.',
+      'The guided tour is shorter (18 steps instead of 29), and the practice project now includes an example timetable and run-down so you can see how they look.',
+    ],
+  },
+  {
     id: '2026-11-28-last-page-and-practice-project',
     date: '2026-11-28',
     title: '"Last project" remembers the page; tour gets a practice project',

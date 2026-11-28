@@ -34,6 +34,8 @@ export type TourStep = {
   action?: TourAction
   /** Only shown for the practice project the tour created. */
   sampleOnly?: boolean
+  /** Replaces `body` on the practice project (e.g. to say the content is an example). */
+  sampleBody?: string
 }
 
 const project = (rest = '') => (c: TourCtx) => (c.projectId ? `/planner/projects/${c.projectId}${rest}` : null)
@@ -46,44 +48,20 @@ const fixed = (p: string) => () => p
  */
 export const TOUR_STEPS: TourStep[] = [
   {
-    id: 'welcome', path: fixed('/planner'),
+    id: 'welcome', path: fixed('/planner'), target: 'nav',
     title: 'Welcome to Venuria',
-    body: 'A short tour of the main pages. Use Next and Back, or press Esc to stop. You can replay it any time from Settings.',
-  },
-  {
-    id: 'nav', path: fixed('/planner'), target: 'nav',
-    title: 'Main menu',
-    body: 'Move between your projects, stock, team and settings. “Last project” takes you back to the page you were last on.',
+    body: 'A short tour. Use this menu to move between projects, stock, team and settings; “Last project” returns you to the page you were last on. Esc stops the tour, and you can replay it from Settings.',
   },
   {
     id: 'new-project', path: fixed('/planner'), target: 'new-project',
     title: 'Start a project',
-    body: 'Pick the venue, add the couple’s names and the event date. New projects are Public: your team can view them, and only people assigned to a project can edit it.',
-  },
-  {
-    id: 'project-list', path: fixed('/planner'), target: 'project-list',
-    title: 'Your projects',
-    body: 'Open a project to reach its floor plan, guests, payments and timetable.',
-  },
-  {
-    id: 'payments-overview', path: fixed('/planner'), target: 'payments-overview',
-    title: 'Payments overview',
-    body: 'Payments across the projects you can edit, so nothing gets missed.',
-  },
-  {
-    id: 'sample-note', path: project(), sampleOnly: true,
-    title: 'Your practice project',
-    body: 'We created “Alex & Sam (sample)” so you can try things out without touching real work. Its rooms are set to seated. Delete it any time from the bottom of its project page.',
+    body: 'Pick the venue, the couple’s names and the event date. New projects are Public: your team can view them, and only people assigned to a project can edit it. Open any project from the list below.',
   },
   {
     id: 'hub', path: project(), target: 'hub',
     title: 'Project hub',
-    body: 'Everything for one event: the editor, a layout summary, payments and documents, the timetable, the run-down list and guest details.',
-  },
-  {
-    id: 'areas', path: project(), target: 'areas',
-    title: 'Areas of the venue',
-    body: 'Each room with its chair count and capacity. Click one to open it in the editor.',
+    body: 'Everything for one event: the editor, summary, payments and documents, timetable, run-down list and guest details.',
+    sampleBody: 'This is a practice project we created for you, “Alex & Sam (sample)”; delete it any time from the bottom of this page. The hub holds everything for one event: the editor, summary, payments, timetable, run-down and guests.',
   },
   {
     id: 'place-table', path: editor(), target: ['catalog', 'canvas'],
@@ -101,19 +79,9 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'Click a table to select it: a panel on the right shows its size, rotation and chairs. Drag a table to move it; Ctrl+drag to select several. Sizes and availability come from the venue and rental catalogues.',
   },
   {
-    id: 'snap', path: editor(), target: 'snap',
-    title: 'Snap to grid',
-    body: 'Keeps things neatly aligned while you drag. Turn it off for free placement.',
-  },
-  {
-    id: 'rooms', path: editor(), target: 'rooms',
-    title: 'Rooms',
-    body: 'Switch between the venue’s rooms. Each has its own layout.',
-  },
-  {
-    id: 'capacity', path: editor(), target: 'capacity',
-    title: 'Capacity',
-    body: 'Choose whether the room is seated or standing and see how close you are to the venue’s limit.',
+    id: 'rooms-capacity', path: editor(), target: ['rooms', 'capacity'],
+    title: 'Rooms and capacity',
+    body: 'Switch between the venue’s rooms, and choose whether each is seated or standing to see how close you are to its limit.',
   },
   {
     id: 'auto-arrange', path: editor(), target: 'auto-arrange',
@@ -131,39 +99,19 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'Mark areas such as a dance floor. Auto-Arrange keeps tables out of them.',
   },
   {
-    id: 'view-3d', path: editor(), target: 'view-3d',
-    title: '3D view',
-    body: 'See the room as guests will: walk through your layout in 3D.',
-  },
-  {
-    id: 'export-jpg', path: editor(), target: 'export-jpg',
-    title: 'Export an image',
-    body: 'Download the current room as a JPG to share with the couple or the venue.',
-  },
-  {
-    id: 'summary-link', path: editor(), target: 'summary-link',
-    title: 'Layout summary',
-    body: 'Everything placed in the project, any stock shortfalls to rent, and the PDF export for clients and vendors.',
-  },
-  {
-    id: 'save-status', path: editor(), target: 'save-status',
-    title: 'Saved automatically',
-    body: 'Changes save as you go. This shows when the last save happened.',
+    id: 'export', path: editor(), target: ['summary-link', 'export-jpg'],
+    title: 'Summary and export',
+    body: 'Download the room as a JPG, or open the Summary for everything placed, stock shortfalls and the PDF export.',
   },
   {
     id: 'add-guests', path: project('/guests'), target: 'guests-add',
     title: 'Add guests',
-    body: 'Add guests one at a time here, or import a list from a file.',
+    body: 'Add guests one at a time, or import a list from a file. Open a guest to add family, dietary needs, hotel and seat.',
     action: {
       until: 'guest-added',
       instruction: 'Your turn: type a guest’s name and press “Add guest”. Add one or two names.',
-      done: 'Added. Each guest gets their own row.',
+      done: 'Added. Open a guest to add family, dietary needs, hotel and seat.',
     },
-  },
-  {
-    id: 'guest-list', path: project('/guests'), target: 'guest-list', centerIfMissing: true,
-    title: 'Your guest list',
-    body: 'Open a guest to add family, dietary needs, hotel, a photo and their seat. Use the search and filters above the list to find people quickly.',
   },
   {
     id: 'rsvp', path: project('/guests'), target: 'rsvp-panel',
@@ -176,14 +124,16 @@ export const TOUR_STEPS: TourStep[] = [
     body: 'Log each deposit, instalment and balance with its due date; reminders start 7 days before it falls due. Keep contracts and quotes alongside.',
   },
   {
-    id: 'timetable', path: project('/timetable'),
+    id: 'timetable', path: project('/timetable'), target: 'timetable-grid', centerIfMissing: true,
     title: 'Timetable',
-    body: 'Plan the day hour by hour, across several days if needed. Tag blocks with the vendor responsible.',
+    body: 'Plan the day hour by hour, across several days if needed, and tag blocks with the vendor responsible.',
+    sampleBody: 'An example day, so you can see how it looks. Plan the day hour by hour, across several days if needed, and tag blocks with the vendor responsible.',
   },
   {
-    id: 'rundown', path: project('/rundown'),
+    id: 'rundown', path: project('/rundown'), target: 'rundown-list', centerIfMissing: true,
     title: 'Run-down list',
     body: 'A day-of list for the team and vendors, built from the timetable. Print it or save it as a PDF.',
+    sampleBody: 'The same example day as a list for the team and vendors. Print it or save it as a PDF.',
   },
   {
     id: 'stock', path: fixed('/planner/stock'),

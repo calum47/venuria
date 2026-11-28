@@ -276,7 +276,9 @@ export default function TourGuide() {
 
   const last = run.index === run.steps.length - 1
   const waiting = interactive && !actionDone
-  const text = interactive && step.action ? (actionDone ? step.action.done : step.action.instruction) : step.body
+  const text = interactive && step.action
+    ? (actionDone ? step.action.done : step.action.instruction)
+    : run.ctx.sample && step.sampleBody ? step.sampleBody : step.body
   // Interactive steps keep the page clickable and sit under the app's own dialogs (z-50), e.g. the chair-count popup.
   const dimZ = interactive ? 'z-[45]' : 'z-[70]'
 

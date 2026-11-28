@@ -33,7 +33,7 @@ const cormorant = localFont({
 
 export const metadata: Metadata = {
   title: "Venuria",
-  description: "Design and manage event layouts in 2D and 3D.",
+  description: "Design and manage event layouts.",
 };
 
 export default function RootLayout({

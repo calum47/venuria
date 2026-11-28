@@ -9,7 +9,6 @@ import { supabase } from '@/lib/supabase/client'
 import { loadExportBrandingForProject } from '@/lib/pdfExport/assets'
 import CatalogSidebar from '@/components/canvas/CatalogSidebar'
 import PropertiesPanel from '@/components/canvas/PropertiesPanel'
-import ThreeSixtyViewer from '@/components/viewer3d/ThreeSixtyViewer'
 import ChairCountPopover from '@/components/canvas/ChairCountPopover'
 import GuestPanel from '@/components/canvas/GuestPanel'
 import ChairAssignmentPopover from '@/components/canvas/ChairAssignmentPopover'
@@ -93,7 +92,6 @@ export default function EditorPage() {
   // True for a Member opening a Public project they are not assigned to (migration 038): look, don't touch.
   const [viewOnly, setViewOnly] = useState(false)
   const viewOnlyRef = useRef(false)
-  const [show3D, setShow3D] = useState(false)
   const [showAutoArrange, setShowAutoArrange] = useState(false)
   // Table settings (plates, glasses, candles…): scoped catalog items + team-wide templates
   const [settingItems, setSettingItems] = useState<DbCatalogItem[]>([])
@@ -505,14 +503,6 @@ export default function EditorPage() {
               : 'Drag to pan · Ctrl+drag to select · Scroll or pinch to zoom'}
           </span>
 
-          <button
-            data-tour="view-3d"
-            onClick={() => setShow3D(true)}
-            className="text-xs bg-gray-800 text-white px-3 py-1.5 rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            View in 3D
-          </button>
-
           {/* Save status */}
           <div className="text-xs text-gray-400" data-tour="save-status">
             {isSwitchingRoom && 'Switching room…'}
@@ -582,14 +572,6 @@ export default function EditorPage() {
           )}
         </div>
       </div>
-
-      {/* 3D viewer overlay */}
-      {show3D && (
-        <ThreeSixtyViewer
-          imageUrl="/assets/360-placeholder.jpg"
-          onClose={() => setShow3D(false)}
-        />
-      )}
 
       {/* Chair count popover — shown after a table is dropped */}
       {pendingTableDrop && (

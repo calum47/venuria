@@ -67,6 +67,27 @@ export async function getOrCreateTourProject(): Promise<Result> {
     if (settingError) console.error('Tour: could not preset room modes:', settingError.message)
   }
 
+  // An example day for the timetable (and so the run-down, which is built from it), so those pages aren't empty
+  // in the tour. Deliberately no vendors: that would add entries to the team's real vendor list.
+  const { data: day } = await supabase
+    .from('project_days')
+    .insert({ project_id: project.id, label: 'Wedding day', day_date: eventDate, position: 0 })
+    .select('id')
+    .single()
+  if (day) {
+    const h = (hh: number, mm = 0) => hh * 60 + mm
+    const { error: blockError } = await supabase.from('timetable_blocks').insert([
+      { title: 'Getting ready', start_min: h(12), end_min: h(13, 30), notes: 'Photographer arrives at 12:30.' },
+      { title: 'Guests arrive', start_min: h(16, 30), end_min: h(17), materials: ['Welcome sign', 'Order of service'] },
+      { title: 'Ceremony', start_min: h(17), end_min: h(17, 45), person: 'Officiant' },
+      { title: 'Cocktail hour', start_min: h(17, 45), end_min: h(19) },
+      { title: 'Dinner', start_min: h(19), end_min: h(21) },
+      { title: 'First dance', start_min: h(21), end_min: h(21, 15) },
+      { title: 'Party', start_min: h(21, 15), end_min: h(23, 30) },
+    ].map((b) => ({ ...b, project_id: project.id, day_id: day.id })))
+    if (blockError) console.error('Tour: could not add example timetable blocks:', blockError.message)
+  }
+
   revalidatePath('/planner')
   return { projectId: project.id, sample: true }
 }

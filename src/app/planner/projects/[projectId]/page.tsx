@@ -133,7 +133,7 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
         {viewOnly && <ViewOnlyBanner />}
 
         <div data-tour="hub" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan, seating and 3D view" />
+          <HubCard href={`/editor/${projectId}`} icon="editor" title="Project editor" hint="Floor plan and seating" />
           <HubCard href={`/editor/${projectId}/summary`} icon="summary" title="Layout summary" hint="Everything placed, stock shortfalls and zones" />
           {!viewOnly && <HubCard href={`/planner/projects/${projectId}/payments`} icon="payments" title="Payments & documents" hint={paymentsHint} hintClass={overdue > 0 ? 'text-red-600' : 'text-gray-500'} />}
           <HubCard href={`/planner/projects/${projectId}/timetable`} icon="timetable" title="Timetable" hint={timetableHint} />

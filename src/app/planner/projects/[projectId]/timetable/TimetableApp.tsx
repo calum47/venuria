@@ -215,7 +215,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
             Click an empty slot to add a block. Drag a block up or down to shift it (snaps to {DRAG_SNAP_MIN} min), drag its bottom edge to change its length, or click it to type exact times.
           </p>}
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
+          <div data-tour="timetable-grid" className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
             <div className="flex" style={{ minWidth: 480 }}>
               <div className="relative w-20 shrink-0 border-r border-gray-100" style={{ height: heightPx }} aria-hidden>
                 {hours.map((m) => (

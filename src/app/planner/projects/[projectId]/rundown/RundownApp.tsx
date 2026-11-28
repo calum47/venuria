@@ -113,7 +113,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
         const rows = rundownRows(blocks.filter((b) => b.day_id === d.id), vendorById, filter)
         if (rows.length === 0 && filtered) return null
         return (
-          <section key={d.id} className="space-y-2 break-inside-avoid-page">
+          <section key={d.id} data-tour={d.id === shownDays[0]?.id ? 'rundown-list' : undefined} className="space-y-2 break-inside-avoid-page">
             <h2 className="text-base font-semibold text-gray-900">
               {d.label}{d.day_date ? ` · ${formatDate(d.day_date)}` : ''}
             </h2>
