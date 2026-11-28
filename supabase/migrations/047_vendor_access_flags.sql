@@ -8,7 +8,7 @@
 -- Switching off hides only; nothing is deleted, so ticking again restores everything.
 -- Existing companies keep today's behaviour (both on). Who may change them: admins only,
 -- through the existing admin_manage_rental_companies policy (002_auth_roles.sql).
--- NOT yet applied live: apply it BEFORE deploying the code that reads these columns.
+-- Applied live 2026-11-28.
 
 alter table public.rental_companies
   add column if not exists is_vendor        boolean not null default true,

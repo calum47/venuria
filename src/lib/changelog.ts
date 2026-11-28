@@ -135,7 +135,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     roles: ['planner'],
     items: [
       '"View in 3D" has been removed from the editor while the feature is finished. It will come back later.',
-      'The guided tour is shorter (18 steps instead of 29), and the practice project now includes an example timetable and run-down so you can see how they look.',
+      'The guided tour is shorter (17 steps instead of 29), and the practice project now includes an example timetable and run-down so you can see how they look.',
     ],
   },
   {

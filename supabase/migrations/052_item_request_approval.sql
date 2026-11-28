@@ -12,7 +12,7 @@
 --   respond_to_item_request()    the vendor's own login: accepts all / part / none
 -- Rows from 051 (written directly by planners, never seen by a vendor) become pending requests.
 --
--- NOT yet applied live.
+-- Applied live 2026-11-28.
 
 alter table public.project_item_sources
   add column if not exists status text not null default 'pending' check (status in ('pending', 'accepted', 'declined')),
