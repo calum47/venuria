@@ -18,6 +18,8 @@ type Props = {
   lastPath: string | null
   /** Set when this login is also a Vendor: shows the Planner / Vendor switch. */
   vendorName: string | null
+  /** The login is a Vendor (tag on): show its "Vendor projects" link even without a Vendor page. */
+  vendorTag?: boolean
 }
 
 /**
@@ -27,7 +29,7 @@ type Props = {
  *
  * "My Stock" links to Phase 23's inventory page, added once that existed.
  */
-export default function PlannerNav({ plannerName, role, teamName, lastProjectId, lastPath, vendorName }: Props) {
+export default function PlannerNav({ plannerName, role, teamName, lastProjectId, lastPath, vendorName, vendorTag = false }: Props) {
   const pathname = usePathname()
   const t = useTranslations('Nav')
   const tRoles = useTranslations('Roles')
@@ -61,6 +63,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
           {item('/planner/stock', t('myStock'), pathname.startsWith('/planner/stock'))}
           {item('/planner/team', t('myTeam'), pathname.startsWith('/planner/team'))}
           {item('/planner/settings', t('settings'), pathname.startsWith('/planner/settings'))}
+          {vendorTag && item('/rental/projects', t('vendorProjects'), false)}
         </nav>
 
         <div className="ml-auto flex items-center gap-3">

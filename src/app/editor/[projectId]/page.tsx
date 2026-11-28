@@ -96,6 +96,8 @@ export default function EditorPage() {
   // True for a Member opening a Public project they are not assigned to (migration 038): look, don't touch.
   const [viewOnly, setViewOnly] = useState(false)
   const viewOnlyRef = useRef(false)
+  // A vendor the planner added to this project: sees the map read-only, without guests, summary or planner menus.
+  const [vendorMode, setVendorMode] = useState(false)
   const [showAutoArrange, setShowAutoArrange] = useState(false)
   // Table settings (plates, glasses, candles…): scoped catalog items + team-wide templates
   const [settingItems, setSettingItems] = useState<DbCatalogItem[]>([])
@@ -143,6 +145,10 @@ export default function EditorPage() {
         // Only an explicit 'view' switches editing off; any other answer leaves the editor as it was.
         const { data: access } = await supabase.rpc('planner_project_access', { pid: projectId })
         if (access === 'view') { viewOnlyRef.current = true; setViewOnly(true) }
+        else if (access !== 'edit') {
+          const { data: asVendor } = await supabase.rpc('vendor_can_view_project', { pid: projectId })
+          if (asVendor === true) { viewOnlyRef.current = true; setViewOnly(true); setVendorMode(true) }
+        }
 
         const [items, venueRooms, guestList, assignments] = await Promise.all([
           getCatalogItems(project.venue_id),
@@ -410,6 +416,9 @@ export default function EditorPage() {
 
         {/* Toolbar */}
         <div className="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-4">
+          {vendorMode ? (
+            <Link href={`/rental/projects/${projectId}`} className="text-sm font-semibold text-gray-800 hover:text-gray-600">{te('backToProject')}</Link>
+          ) : (<>
           <EditorNavMenu />
           <span className="text-gray-300">|</span>
           <Link
@@ -419,6 +428,7 @@ export default function EditorPage() {
           >
             {te('summary')}
           </Link>
+          </>)}
           <span className="text-gray-300">|</span>
           {viewOnly ? (
             <span className="rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800" title={te('viewOnlyHint')}>{te('viewOnly')}</span>

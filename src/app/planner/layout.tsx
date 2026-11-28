@@ -21,6 +21,7 @@ export default async function PlannerLayout({ children }: { children: React.Reac
           lastProjectId={ctx.lastProjectId}
           lastPath={ctx.lastPath}
           vendorName={ctx.vendor?.companyName ?? null}
+          vendorTag={ctx.vendorTag}
         />
       )}
       <div className="flex-1">{children}</div>

@@ -14,6 +14,7 @@ import { areaHint, summariseAreas } from '@/lib/hubAreas'
 import { capacityLine } from '@/lib/capacity'
 import type { DbProjectRoomSetting } from '@/types/db'
 import ProjectOrders from './ProjectOrders'
+import ProjectVendors from './ProjectVendors'
 import { getProjectAccess } from '@/lib/projectAccess'
 import ViewOnlyBanner from '@/components/ViewOnlyBanner'
 import { HubCard, hubCardClass as card } from '@/components/brand/HubCard'
@@ -56,6 +57,11 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
     .eq('id', projectId)
     .maybeSingle()
   if (!project) notFound()
+  // Vendors (rental companies with the Vendor tag) that can be added to this project, and who already is.
+  const [{ data: vendorOptions }, { data: vendorRows }] = await Promise.all([
+    supabase.from('rental_companies').select('id, name').eq('is_vendor', true).order('name'),
+    supabase.from('project_vendors').select('rental_company_id').eq('project_id', projectId),
+  ])
   // 'view' = a Member looking at a Public project they are not assigned to (migration 038).
   const viewOnly = (await getProjectAccess(supabase, projectId)) === 'view'
 
@@ -175,6 +181,14 @@ export default async function ProjectHubPage({ params }: { params: Promise<Param
             </div>
           )}
         </section>
+
+        {!viewOnly && (
+          <ProjectVendors
+            projectId={projectId}
+            options={(vendorOptions ?? []) as { id: string; name: string }[]}
+            addedIds={(vendorRows ?? []).map((r) => r.rental_company_id as string)}
+          />
+        )}
 
         {!viewOnly && <ProjectOrders
           projectId={projectId}
