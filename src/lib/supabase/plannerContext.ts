@@ -59,10 +59,10 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
 
   const { data: vendorRow } = await supabase
     .from('rental_managers')
-    .select('rental_companies(name, is_vendor)')
+    .select('rental_companies(name, is_vendor, has_vendor_stock)')
     .eq('user_id', user.id)
     .maybeSingle()
-  const vendorCo = (vendorRow as { rental_companies: { name: string; is_vendor: boolean } | null } | null)?.rental_companies
+  const vendorCo = (vendorRow as { rental_companies: { name: string; is_vendor: boolean; has_vendor_stock: boolean } | null } | null)?.rental_companies
   const vendorCompany = vendorCo?.name
 
   return {
@@ -78,8 +78,9 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
     team,
     lastProjectId: lastPage?.project_id ?? lastVisit?.project_id ?? null,
     lastPath: lastPage?.path ?? null,
-    // The admin can switch the Vendor tag off: then this login is a plain planner (no switch, no Vendor page).
-    vendor: vendorRow && vendorCo?.is_vendor !== false ? { companyName: vendorCompany ?? 'Vendor' } : null,
+    // The Planner ⇄ Vendor switch and the Vendor page exist only for a vendor with Vendor stock switched on
+    // (admin → Vendor access). A tag-only vendor is a plain planner here: nothing to switch to.
+    vendor: vendorRow && vendorCo?.is_vendor !== false && vendorCo?.has_vendor_stock !== false ? { companyName: vendorCompany ?? 'Vendor' } : null,
   }
 }
 
