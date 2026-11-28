@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import WhatsNewModal from "@/components/changelog/WhatsNewModal";
 import TourGuide from "@/components/tour/TourGuide";
+import LastPageTracker from "@/components/nav/LastPageTracker";
 
 // All fonts are self-hosted from src/app/fonts (Latin subset, which covers the accents ES/EN/FR need) so a
 // production build never has to fetch anything from Google. Licences: SIL Open Font License 1.1, see the
@@ -51,6 +52,8 @@ export default function RootLayout({
         <WhatsNewModal />
         {/* Guided tour for planners — renders nothing unless offered or started from Settings */}
         <TourGuide />
+        {/* Remembers the last project page for the nav's "Last project" link */}
+        <LastPageTracker />
       </body>
     </html>
   );

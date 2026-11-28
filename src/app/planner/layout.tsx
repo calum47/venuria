@@ -19,6 +19,7 @@ export default async function PlannerLayout({ children }: { children: React.Reac
           role={ctx.planner.role}
           teamName={ctx.team.name}
           lastProjectId={ctx.lastProjectId}
+          lastPath={ctx.lastPath}
           vendorName={ctx.vendor?.companyName ?? null}
         />
       )}

@@ -8,6 +8,8 @@ export type PlannerContext = {
   planner: { id: string; name: string; plannerCode: string | null; role: PlannerRole; teamId: string }
   team: { id: string; name: string; currency: string; companyName: string | null; contactEmail: string | null }
   lastProjectId: string | null
+  /** The last project page they had open (validated against known pages), or null. */
+  lastPath: string | null
   /** Set when this login is also a Vendor (a rental company manager): the company to switch to. */
   vendor: { companyName: string } | null
 }
@@ -39,13 +41,21 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
   if (!t) return null
   const team = { id: t.id, name: t.name, currency: t.currency, companyName: t.company_name, contactEmail: t.contact_email }
 
-  const { data: lastVisit } = await supabase
-    .from('project_visits')
-    .select('project_id')
+  // Newest source first: the last project page they opened; older accounts fall back to the last editor visit.
+  const { data: lastPage } = await supabase
+    .from('user_last_page')
+    .select('project_id, path')
     .eq('user_id', user.id)
-    .order('last_opened_at', { ascending: false })
-    .limit(1)
     .maybeSingle()
+  const { data: lastVisit } = lastPage
+    ? { data: null }
+    : await supabase
+        .from('project_visits')
+        .select('project_id')
+        .eq('user_id', user.id)
+        .order('last_opened_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
   const { data: vendorRow } = await supabase
     .from('rental_managers')
@@ -65,7 +75,8 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
       teamId: planner.team_id,
     },
     team,
-    lastProjectId: lastVisit?.project_id ?? null,
+    lastProjectId: lastPage?.project_id ?? lastVisit?.project_id ?? null,
+    lastPath: lastPage?.path ?? null,
     vendor: vendorRow ? { companyName: vendorCompany ?? 'Vendor' } : null,
   }
 }

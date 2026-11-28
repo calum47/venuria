@@ -6,12 +6,15 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 import NotificationBell from '@/components/nav/NotificationBell'
 import { Rings } from '@/components/brand/Rings'
 import { ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
+import { lastPageHref } from '@/lib/lastPage'
 
 type Props = {
   plannerName: string
   role: PlannerRole
   teamName: string
   lastProjectId: string | null
+  /** Last project page they had open; null = open the project hub. */
+  lastPath: string | null
   /** Set when this login is also a Vendor: shows the Planner / Vendor switch. */
   vendorName: string | null
 }
@@ -23,7 +26,7 @@ type Props = {
  *
  * "My Stock" links to Phase 23's inventory page, added once that existed.
  */
-export default function PlannerNav({ plannerName, role, teamName, lastProjectId, vendorName }: Props) {
+export default function PlannerNav({ plannerName, role, teamName, lastProjectId, lastPath, vendorName }: Props) {
   const pathname = usePathname()
   const item = (href: string, label: string, active: boolean) => (
     <Link
@@ -47,7 +50,7 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
         {/* On phones the links drop to their own scrollable row under the logo. */}
         <nav aria-label="Main" data-tour="nav" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {lastProjectId ? (
-            item(`/planner/projects/${lastProjectId}`, '↩ Last project', false)
+            item(lastPageHref(lastProjectId, lastPath), '↩ Last project', false)
           ) : (
             <span className="shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
           )}
