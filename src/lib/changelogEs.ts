@@ -11,6 +11,12 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-vendor-in-timetable-fix': {
+    title: 'Los proveedores que añades aparecen siempre en la lista del cronograma',
+    items: [
+      'Corregido: un proveedor añadido a un proyecto podía faltar en la lista de proveedores del cronograma y del guion del día. Ahora la lista se rellena a partir del equipo del propio proyecto.',
+    ],
+  },
   '2026-11-28-editor-back-and-settings': {
     title: 'Volver al panel del proyecto desde el editor 2D',
     items: [

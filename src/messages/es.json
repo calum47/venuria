@@ -231,7 +231,10 @@
     "thatLoginDoesNotBelong": "Ese acceso no pertenece a ningún planificador, responsable de espacio ni responsable de alquiler.",
     "vendorAccessNotSaved": "No se pudo guardar: solo un administrador puede cambiar esto.",
     "projectVendorNotAllowed": "Solo quien puede editar este proyecto puede añadir o quitar proveedores, y solo los que tienen la etiqueta de proveedor.",
-    "sourceOverAvailable": "Solo quedan {count} libres de esta empresa en la fecha del evento."
+    "sourceOverAvailable": "Solo quedan {count} libres de esta empresa en la fecha del evento.",
+    "chooseTheVendorLogin": "Elige el acceso de proveedor.",
+    "thatVendorLoginWasNotFound": "No se ha encontrado ese acceso de proveedor.",
+    "nameIsAlreadyAPlanner": "{name} ya es planificador."
   },
   "Capacity": {
     "seated": "Sentados",
@@ -464,7 +467,14 @@
     "vendorTag": "Proveedor",
     "vendorStock": "Inventario de proveedor",
     "vendorStockNeedsTag": "Requiere la etiqueta de proveedor",
-    "makeVendorHelp": "Crea la empresa proveedora y la vincula al acceso del propio planificador: mismo correo y contraseña, con un cambio entre Planificación y Proveedor. El proveedor recibe lo que tiene una empresa de alquiler (mesas y sillas alquilables) más el inventario del equipo, compartido con Mi inventario. Después, usa «Acceso de proveedores» arriba para activar o desactivar la etiqueta de proveedor o el inventario de proveedor."
+    "makeVendorHelp": "Crea la empresa proveedora y la vincula al acceso del propio planificador: mismo correo y contraseña, con un cambio entre Planificación y Proveedor. El proveedor recibe lo que tiene una empresa de alquiler (mesas y sillas alquilables) más el inventario del equipo, compartido con Mi inventario. Después, usa «Acceso de proveedores» arriba para activar o desactivar la etiqueta de proveedor o el inventario de proveedor.",
+    "makeAVendorAlsoAPlanner": "Hacer que un proveedor sea también planificador",
+    "makePlannerHelp": "Da a un acceso de proveedor existente también una cuenta de planificador (con su propio equipo de una persona, como responsable), para que el mismo acceso pueda cambiar entre Planificador y Proveedor y añadir proveedores a sus propios proyectos.",
+    "alreadyPlanners": "Ya son también planificadores: {names}",
+    "vendorLogin": "Acceso de proveedor",
+    "selectAVendorLogin": "Selecciona un acceso de proveedor",
+    "makePlanner": "Hacer planificador",
+    "doneThatLoginIsNowAlsoAPlanner": "Hecho. Ese acceso ya es también planificador."
   },
   "Venue": {
     "notSignedIn": "No has iniciado sesión.",

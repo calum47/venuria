@@ -231,7 +231,10 @@
     "thatLoginDoesNotBelong": "That login does not belong to a planner, venue manager or rental manager.",
     "vendorAccessNotSaved": "Could not save — only an admin can change this.",
     "projectVendorNotAllowed": "Only people who can edit this project can add or remove vendors, and only vendors with the Vendor tag.",
-    "sourceOverAvailable": "Only {count} are free from this company on the event date."
+    "sourceOverAvailable": "Only {count} are free from this company on the event date.",
+    "chooseTheVendorLogin": "Choose the vendor login.",
+    "thatVendorLoginWasNotFound": "That vendor login was not found.",
+    "nameIsAlreadyAPlanner": "{name} is already a planner."
   },
   "Capacity": {
     "seated": "Seated",
@@ -464,7 +467,14 @@
     "vendorTag": "Vendor",
     "vendorStock": "Vendor stock",
     "vendorStockNeedsTag": "Needs the Vendor tag",
-    "makeVendorHelp": "Creates the vendor company and links it to the planner’s own login: same email and password, with a switch between Planner and Vendor. The vendor gets what a rental company has (rentable tables and chairs) plus the team’s stock, shared with My stock. Afterwards, use “Vendor access” above to switch the Vendor tag or Vendor stock on and off."
+    "makeVendorHelp": "Creates the vendor company and links it to the planner’s own login: same email and password, with a switch between Planner and Vendor. The vendor gets what a rental company has (rentable tables and chairs) plus the team’s stock, shared with My stock. Afterwards, use “Vendor access” above to switch the Vendor tag or Vendor stock on and off.",
+    "makeAVendorAlsoAPlanner": "Make a vendor also a planner",
+    "makePlannerHelp": "Gives an existing vendor login a planner account too (its own team of one, as manager), so the same login can switch between Planner and Vendor and add vendors to its own projects.",
+    "alreadyPlanners": "Already planners too: {names}",
+    "vendorLogin": "Vendor login",
+    "selectAVendorLogin": "Select a vendor login",
+    "makePlanner": "Make planner",
+    "doneThatLoginIsNowAlsoAPlanner": "Done. That login is now also a planner."
   },
   "Venue": {
     "notSignedIn": "Not signed in.",

@@ -30,6 +30,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-vendor-in-timetable-fix',
+    date: '2026-11-28',
+    title: 'Vendors you add now always appear in the timetable vendor list',
+    roles: ['planner'],
+    items: [
+      'Fixed: a vendor added to a project could be missing from the timetable and run-down vendor list. The list is now filled in from the project\'s own team.',
+    ],
+  },
+  {
     id: '2026-11-28-editor-back-and-settings',
     date: '2026-11-28',
     title: 'Back to the project hub from the 2D editor',
