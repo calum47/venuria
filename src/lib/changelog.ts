@@ -30,6 +30,27 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-item-requests-planner',
+    date: '2026-11-28',
+    title: 'Items you rent from a vendor are now requests the vendor answers',
+    roles: ['planner'],
+    items: [
+      'When you choose how many chairs, tables or plates to rent from a vendor, it becomes a request. The vendor accepts it, accepts only part of the quantity, or declines.',
+      'The project summary shows the answer next to each vendor: waiting, confirmed (or confirmed N of M), or declined. Pending and confirmed quantities both count as booked, so the same items are not promised twice on one date.',
+      'Asking a vendor for items also tags it on the project and adds it to your timetable vendor list.',
+    ],
+  },
+  {
+    id: '2026-11-28-item-requests-vendor',
+    date: '2026-11-28',
+    title: 'Requests: answer what planners ask you for',
+    roles: ['rental'],
+    items: [
+      'The new Requests page lists what planners ask you for, with the project, the date and how many you still have free that day. Accept all, accept part, or decline.',
+      'Inside a project, the Materials page shows what was requested from you and your answer.',
+    ],
+  },
+  {
     id: '2026-11-28-vendor-in-timetable-fix',
     date: '2026-11-28',
     title: 'Vendors you add now always appear in the timetable vendor list',

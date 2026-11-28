@@ -234,7 +234,9 @@
     "sourceOverAvailable": "Only {count} are free from this company on the event date.",
     "chooseTheVendorLogin": "Choose the vendor login.",
     "thatVendorLoginWasNotFound": "That vendor login was not found.",
-    "nameIsAlreadyAPlanner": "{name} is already a planner."
+    "nameIsAlreadyAPlanner": "{name} is already a planner.",
+    "requestAcceptedTooMany": "You can't accept more than was requested.",
+    "requestNotFound": "That request no longer exists."
   },
   "Capacity": {
     "seated": "Seated",
@@ -543,7 +545,8 @@
     "stockTablesChairsHelp": "How many of each standard item you can rent out. Planners use the venue’s own stock first; yours covers the rest.",
     "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round.",
     "projectsYouAreOn": "Projects you’re on →",
-    "contactSettings": "Contact details"
+    "contactSettings": "Contact details",
+    "requestsLink": "Requests"
   },
   "Client": {
     "noProjectHasBeenSet": "No project has been set up for your account yet — check with your planner."
@@ -1513,7 +1516,11 @@
     "fromVenue": "From the venue: {count}",
     "rentFrom": "Quantity to rent from {company}",
     "availableOnDate": "{available} free on this date ({committed} of {stock} already booked by other events)",
-    "availableNoDate": "{stock} in stock. Set the event date to see what is free"
+    "availableNoDate": "{stock} in stock. Set the event date to see what is free",
+    "requestPending": "Waiting for the vendor",
+    "requestAccepted": "Confirmed",
+    "requestAcceptedPart": "Confirmed {granted} of {asked}",
+    "requestDeclined": "Declined"
   },
   "ExportStyle": {
     "loadProjectFailed": "Could not load this project for the preview.",
@@ -1713,7 +1720,14 @@
     "nothingPlaced": "Nothing has been placed yet.",
     "unknownItem": "Unknown item",
     "onTables": "{count} on tables",
-    "settings": "Settings"
+    "settings": "Settings",
+    "requests": "Requests",
+    "requestedFromYou": "Requested from you",
+    "answerRequests": "Answer requests",
+    "requestPending": "Waiting for your answer",
+    "requestAccepted": "You accepted",
+    "requestAcceptedPart": "You accepted {granted} of {asked}",
+    "requestDeclined": "You declined"
   },
   "VendorSettings": {
     "title": "Settings",
@@ -1730,5 +1744,23 @@
     "removeInstagram": "Remove this account",
     "mainInstagramHelp": "Planners see the main account in their timetable. Mark exactly one.",
     "vendorSectionTitle": "Vendor details: {company}"
+  },
+  "VendorRequests": {
+    "title": "Requests",
+    "intro": "Planners ask you for items (chairs, tables, plates…) for their events. Accept all, accept only part of the quantity, or decline. The planner sees your answer in their project summary.",
+    "waiting": "Waiting for your answer ({count})",
+    "nothingWaiting": "No requests waiting.",
+    "answered": "Answered",
+    "statusPending": "Waiting for your answer",
+    "statusAccepted": "Accepted",
+    "statusAcceptedPart": "Accepted {granted} of {asked}",
+    "statusDeclined": "Declined",
+    "availability": "In stock: {stock}. Already promised to other events that day: {booked}. Free: {free}.",
+    "noDate": "In stock: {stock}. This project has no event date yet.",
+    "quantityToAccept": "Quantity to accept",
+    "accept": "Accept",
+    "acceptPart": "Accept {count} of {asked}",
+    "decline": "Decline",
+    "overFree": "Only {free} are free that day."
   }
 }
