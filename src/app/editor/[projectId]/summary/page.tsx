@@ -8,12 +8,16 @@ import type { DbCatalogItem } from '@/types/db'
 import type { PdfExportData } from '@/lib/pdfExport/types'
 import { loadPdfExportData } from '@/lib/pdfExport/loadData'
 import ExportPanel from './ExportPanel'
+import { getTranslations } from 'next-intl/server'
+import { useTranslations } from 'next-intl'
 import { STOCK_TRACKED_CATEGORIES, tableSettingDemand } from '@/lib/tableSetting'
 
 type Params = { projectId: string }
 
 export default async function ProjectSummaryPage({ params }: { params: Promise<Params> }) {
   const { projectId } = await params
+  const t = await getTranslations('Summary')
+  const tpdf = await getTranslations('Pdf')
   const supabase = await createClient()
   const {
     data: { user },
@@ -22,7 +26,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   if (!user) {
     return (
       <main className="min-h-screen bg-gray-50 p-8">
-        <p className="text-sm text-gray-500">Not signed in.</p>
+        <p className="text-sm text-gray-500">{t('notSignedIn')}</p>
       </main>
     )
   }
@@ -36,12 +40,12 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   if (projectError || !project) {
     return (
       <main className="min-h-screen bg-gray-50 p-8">
-        <p className="text-sm text-red-600">Project not found, or you don&apos;t have access to it.</p>
+        <p className="text-sm text-red-600">{t('notFound')}</p>
       </main>
     )
   }
 
-  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? tpdf('unknownVenue')
   const title = projectTitle(project.couple_names, venueName)
 
   const [layoutObjects, { data: venueStockRows }, { data: rentalCompanies }, zones, { data: roomRows }] = await Promise.all([
@@ -54,7 +58,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   const roomNameById = new Map<string, string>((roomRows ?? []).map((r) => [r.id, r.name]))
 
   // PDF export data (planner team only; null for anyone else). RLS on the tables it reads is the real gate.
-  const exportData: PdfExportData | null = await loadPdfExportData(supabase, projectId)
+  const exportData: PdfExportData | null = await loadPdfExportData(supabase, projectId, tpdf)
 
   const zoneLegend = <ZoneLegend zones={zones} roomNameById={roomNameById} />
 
@@ -75,7 +79,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     return (
       <SummaryShell projectId={projectId} title={title}>
         {exportData && <ExportPanel data={exportData} />}
-        <p className="text-sm text-gray-400">Nothing placed in this project yet.</p>
+        <p className="text-sm text-gray-400">{t('nothingPlaced')}</p>
         {zoneLegend}
       </SummaryShell>
     )
@@ -103,7 +107,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
   const rentalAvailabilityByItem = new Map<string, { companyName: string; quantity: number }[]>()
   for (const row of rentalStockRows ?? []) {
     if (row.quantity <= 0) continue
-    const companyName = rentalCompanyNameById.get(row.owner_id) ?? 'Unknown rental company'
+    const companyName = rentalCompanyNameById.get(row.owner_id) ?? tpdf('unknownRental')
     const list = rentalAvailabilityByItem.get(row.catalog_item_id) ?? []
     list.push({ companyName, quantity: row.quantity })
     rentalAvailabilityByItem.set(row.catalog_item_id, list)
@@ -123,7 +127,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       const shortfall = isStockTracked ? Math.max(0, used - venueStock) : 0
       return {
         id,
-        name: item?.name ?? 'Unknown item',
+        name: item?.name ?? tpdf('unknownItem'),
         category: item?.category ?? 'other',
         used,
         onTables: onTablesCounts.get(id) ?? 0,
@@ -142,18 +146,17 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       {exportData && <ExportPanel data={exportData} />}
       {totalShortfallItems > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {totalShortfallItems} item{totalShortfallItems === 1 ? '' : 's'} exceed {venueName}&apos;s stock —
-          highlighted rows show what to rent.
+          {t('exceed', { count: totalShortfallItems, venue: venueName })}
         </div>
       )}
 
       <table className="w-full text-sm bg-white rounded-xl border border-gray-100 overflow-hidden">
         <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
           <tr>
-            <th className="text-left px-4 py-2 font-medium">Item</th>
-            <th className="text-right px-4 py-2 font-medium">Placed</th>
-            <th className="text-right px-4 py-2 font-medium">Venue has</th>
-            <th className="text-left px-4 py-2 font-medium">Need to rent</th>
+            <th className="text-left px-4 py-2 font-medium">{t('colItem')}</th>
+            <th className="text-right px-4 py-2 font-medium">{t('colPlaced')}</th>
+            <th className="text-right px-4 py-2 font-medium">{t('colVenueHas')}</th>
+            <th className="text-left px-4 py-2 font-medium">{t('colNeedRent')}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
@@ -163,22 +166,22 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
                 {row.name}
                 {row.onTables > 0 && (
                   <span className="ml-2 text-xs text-gray-400">
-                    {row.onTables === row.used ? 'on tables' : `${row.onTables} on tables`}
+                    {row.onTables === row.used ? t('onTables') : t('nOnTables', { count: row.onTables })}
                   </span>
                 )}
               </td>
               <td className="px-4 py-2.5 text-right text-gray-700">{row.used}</td>
               <td className="px-4 py-2.5 text-right text-gray-700">
-                {row.isStockTracked ? row.venueStock : <span className="text-gray-300">not tracked</span>}
+                {row.isStockTracked ? row.venueStock : <span className="text-gray-300">{t('notTracked')}</span>}
               </td>
               <td className="px-4 py-2.5">
                 {row.shortfall > 0 ? (
                   <div>
-                    <span className="font-medium text-amber-700">{row.shortfall} short</span>
+                    <span className="font-medium text-amber-700">{t('short', { count: row.shortfall })}</span>
                     {row.rentalAvailability.length > 0 ? (
                       <span className="text-gray-500">
                         {' '}
-                        — available:{' '}
+                        — {t('available')}{' '}
                         {row.rentalAvailability.map((a, i) => (
                           <span key={a.companyName}>
                             {i > 0 && ', '}
@@ -187,7 +190,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
                         ))}
                       </span>
                     ) : (
-                      <span className="text-red-500"> — no rental company has stock for this yet</span>
+                      <span className="text-red-500"> — {t('noRentalStock')}</span>
                     )}
                   </div>
                 ) : (
@@ -205,16 +208,17 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
 
 /** Phase 4b: zone legend per room. Renders nothing when the project has no zones. */
 function ZoneLegend({ zones, roomNameById }: { zones: ProjectZone[]; roomNameById: Map<string, string> }) {
+  const t = useTranslations('Summary')
   if (zones.length === 0) return null
   const byRoom = new Map<string, ProjectZone[]>()
   for (const z of zones) byRoom.set(z.roomId, [...(byRoom.get(z.roomId) ?? []), z])
   return (
     <section className="mt-8">
-      <h2 className="text-sm font-semibold text-gray-900 mb-2">Zones</h2>
+      <h2 className="text-sm font-semibold text-gray-900 mb-2">{t('zones')}</h2>
       <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100">
         {[...byRoom.entries()].map(([roomId, roomZones]) => (
           <div key={roomId} className="px-4 py-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{roomNameById.get(roomId) ?? 'Room'}</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{roomNameById.get(roomId) ?? t('room')}</p>
             <ul className="space-y-1">
               {roomZones.map((z) => (
                 <li key={z.id} className="flex items-center gap-2 text-sm">
@@ -240,18 +244,18 @@ function SummaryShell({
   title: string
   children: React.ReactNode
 }) {
+  const t = useTranslations('Summary')
   return (
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-semibold text-gray-900">Project Summary — {title}</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('title', { title })}</h1>
           <Link href={`/editor/${projectId}`} className="text-sm text-blue-600 hover:underline">
-            ← Back to editor
+            {t('backToEditor')}
           </Link>
         </div>
         <p className="text-sm text-gray-500 mb-6">
-          Placed items compared against the venue&apos;s own stock. Only tables and chairs are stock-tracked
-          right now — decorations show what&apos;s placed but aren&apos;t compared against anything yet.
+          {t('intro')}
         </p>
         {children}
       </div>

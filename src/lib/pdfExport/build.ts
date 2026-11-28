@@ -1,15 +1,15 @@
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { zoneAreaM2 } from '@/lib/zones'
+import { INTL_TAG } from '@/i18n/config'
 import { drawPlan, tableHeading, tablesOfRoom } from './plan'
-import { formatDateEn, pdfText } from './text'
+import { formatDateLong, pdfText } from './text'
 import type { PdfExportData, PdfGuest, PdfOptions } from './types'
 import { BRAND_HEIGHT_PT, DEFAULT_PDF_STYLE, LOGO_HEIGHT_PT, LOGO_MAX_ASPECT, SPACING_FACTOR, fontOption, hexToRgb } from './style'
 
 const M = 36 // page margin, pt
 const TOP = 52 // first content line under the running header
 const BOTTOM = 790 // last text line on a portrait page; the footer band (logo) sits below it
-const AGE_LABEL = { adult: 'Adult', child: 'Child', baby: 'Baby' } as const
 
 type Doc = jsPDF & { lastAutoTable?: { finalY: number } }
 
@@ -24,6 +24,8 @@ function hexRgb(hex: string): [number, number, number] {
 
 /** Builds the PDF in memory. Works in the browser and in Node (used by the tests). */
 export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
+  const { t, locale } = opts
+  const AGE_LABEL = { adult: t('ageAdult'), child: t('ageChild'), baby: t('ageBaby') } as const
   const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' }) as Doc
   const style = opts.style ?? DEFAULT_PDF_STYLE
   const fontInfo = fontOption(style.font)
@@ -69,7 +71,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   /** table object id → heading, per room numbering (matches the plan labels). */
   const headingByTableId = new Map<string, string>()
   for (const room of data.rooms) {
-    tablesOfRoom(room.id, data.objects, catalog).forEach((t, i) => headingByTableId.set(t.id, tableHeading(t, i)))
+    tablesOfRoom(room.id, data.objects, catalog).forEach((tb, i) => headingByTableId.set(tb.id, tableHeading(tb, i, t)))
   }
   const tableOfChair = (chairId: string): string | null => {
     const chair = objectById.get(chairId)
@@ -78,8 +80,8 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
   const tableNameForGuest = (g: PdfGuest): string => {
     const seat = seatOfGuest.get(g.id)
     if (!seat) return ''
-    const t = tableOfChair(seat)
-    return t ? (headingByTableId.get(t) ?? '') : ''
+    const tb = tableOfChair(seat)
+    return tb ? (headingByTableId.get(tb) ?? '') : ''
   }
 
   // ── 1. Floor plans ─────────────────────────────────────────────────────────
@@ -103,14 +105,14 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       doc.setFont(F, 'normal')
       doc.setFontSize(B(9))
       doc.setTextColor(60, 60, 60)
-      doc.text(`${tables.length} table${tables.length === 1 ? '' : 's'} · ${chairs} chairs`, sideX, y)
+      doc.text(t('tablesChairs', { tables: tables.length, chairs }), sideX, y)
       y += LH(18)
 
       if (zones.length > 0) {
         doc.setFont(F, 'bold')
         doc.setFontSize(B(9))
         doc.setTextColor(20, 20, 20)
-        doc.text('Zones', sideX, y)
+        doc.text(t('zones'), sideX, y)
         y += LH(12)
         doc.setFont(F, 'normal')
         for (const z of zones) {
@@ -118,7 +120,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
           doc.setFillColor(r, g, b)
           doc.rect(sideX, y - 7, 9, 9, 'F')
           doc.setTextColor(20, 20, 20)
-          const area = `${zoneAreaM2(z).toFixed(1)} sq m`
+          const area = t('sqm', { area: zoneAreaM2(z).toFixed(1) })
           doc.text(doc.splitTextToSize(pdfText(z.name), sideW - 60)[0] ?? '', sideX + 14, y)
           doc.setTextColor(110, 110, 110)
           doc.text(area, sideX + sideW, y, { align: 'right' })
@@ -128,13 +130,13 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       }
 
       const notes = tables
-        .map((t, i) => ({ h: tableHeading(t, i), note: t.tableNote?.trim() ?? '' }))
+        .map((tb, i) => ({ h: tableHeading(tb, i, t), note: tb.tableNote?.trim() ?? '' }))
         .filter((n) => n.note)
       if (notes.length > 0) {
         doc.setFont(F, 'bold')
         doc.setFontSize(B(9))
         doc.setTextColor(20, 20, 20)
-        doc.text('Table notes', sideX, y)
+        doc.text(t('tableNotes'), sideX, y)
         y += LH(12)
         let continued = false
         let cx = sideX
@@ -149,7 +151,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
               doc.setFont(F, 'bold')
               doc.setFontSize(T(12))
               doc.setTextColor(...accent)
-              doc.text(`${pdfText(room.name)} — table notes (continued)`, M, TOP + 8)
+              doc.text(t('tableNotesContinued', { room: pdfText(room.name) }), M, TOP + 8)
               cx = M
               cw = 842 - 2 * M
               limit = 595 - 40
@@ -174,13 +176,13 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setFont(F, 'bold')
     doc.setFontSize(T(15))
     doc.setTextColor(...accent)
-    doc.text('Items and stock', M, TOP + 8)
+    doc.text(t('itemsTitle'), M, TOP + 8)
     doc.setFont(F, 'normal')
     doc.setFontSize(B(8.5))
     doc.setTextColor(100, 100, 100)
     doc.text(
       doc.splitTextToSize(
-        `Whole project, all rooms. Compared with ${pdfText(data.venueName)}'s own stock; only tables and chairs are stock-tracked.`,
+        t('itemsIntro', { venue: pdfText(data.venueName) }),
         595 - 2 * M,
       ),
       M,
@@ -189,21 +191,21 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     const rows = data.itemRows
     if (rows.length === 0) {
       doc.setFontSize(B(10))
-      doc.text('Nothing placed in this project yet.', M, TOP + 52 + TG)
+      doc.text(t('nothingPlaced'), M, TOP + 52 + TG)
     } else {
       autoTable(doc, {
         startY: TOP + 40 + TG + SUB,
         margin: { left: M, right: M, top: TOP, bottom: 40 },
-        head: [['Item', 'Placed', 'Venue has', 'To rent']],
+        head: [[t('colItem'), t('colPlaced'), t('colVenueHas'), t('colToRent')]],
         body: rows.map((r) => [
           pdfText(r.name),
           String(r.used),
-          r.isStockTracked ? String(r.venueStock) : 'not tracked',
+          r.isStockTracked ? String(r.venueStock) : t('notTracked'),
           r.shortfall > 0
-            ? `${r.shortfall} short — ` +
+            ? t('shortage', { count: r.shortfall }) +
               (r.rentalAvailability.length > 0
-                ? 'available: ' + r.rentalAvailability.map((a) => `${pdfText(a.companyName)} (${a.quantity})`).join(', ')
-                : 'no rental company has stock yet')
+                ? t('availableFrom') + r.rentalAvailability.map((a) => `${pdfText(a.companyName)} (${a.quantity})`).join(', ')
+                : t('noRentalStock'))
             : '—',
         ]),
         styles: { font: F, fontSize: B(9), cellPadding: PAD(4) },
@@ -222,7 +224,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setFont(F, 'bold')
     doc.setFontSize(T(15))
     doc.setTextColor(...accent)
-    doc.text('Seating chart', M, TOP + 8)
+    doc.text(t('seatingTitle'), M, TOP + 8)
     let y = TOP + 24 + TG
     let any = false
     for (const room of rooms) {
@@ -236,10 +238,10 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
         totalByTable.set(o.isChairFor, (totalByTable.get(o.isChairFor) ?? 0) + 1)
       }
       for (const a of data.assignments) {
-        const t = tableOfChair(a.layoutObjectId)
+        const tb = tableOfChair(a.layoutObjectId)
         const g = guestById.get(a.guestId)
-        if (!t || !g || objectById.get(t)?.roomId !== room.id) continue
-        seatsByTable.set(t, [...(seatsByTable.get(t) ?? []), g.name])
+        if (!tb || !g || objectById.get(tb)?.roomId !== room.id) continue
+        seatsByTable.set(tb, [...(seatsByTable.get(tb) ?? []), g.name])
       }
       if (y > 700) {
         doc.addPage('a4', 'p')
@@ -252,15 +254,15 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       autoTable(doc, {
         startY: y + 14,
         margin: { left: M, right: M, top: TOP, bottom: 40 },
-        head: [['Table', 'Seats', 'Guests', 'Note']],
-        body: tables.map((t, i) => {
-          const guests = (seatsByTable.get(t.id) ?? []).sort((a, b) => a.localeCompare(b))
-          const total = totalByTable.get(t.id) ?? 0
+        head: [[t('colTable'), t('colSeats'), t('colGuests'), t('colNote')]],
+        body: tables.map((tb, i) => {
+          const guests = (seatsByTable.get(tb.id) ?? []).sort((a, b) => a.localeCompare(b, INTL_TAG[locale]))
+          const total = totalByTable.get(tb.id) ?? 0
           return [
-            tableHeading(t, i),
+            tableHeading(tb, i, t),
             total > 0 ? `${guests.length}/${total}` : String(guests.length),
             guests.map(pdfText).join(', ') || '—',
-            pdfText(t.tableNote),
+            pdfText(tb.tableNote),
           ]
         }),
         styles: { font: F, fontSize: B(9), cellPadding: PAD(4), valign: 'top' },
@@ -272,7 +274,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     if (!any) {
       doc.setFont(F, 'normal')
       doc.setFontSize(B(10))
-      doc.text('No tables in the selected rooms.', M, TOP + 32 + TG)
+      doc.text(t('noTables'), M, TOP + 32 + TG)
     }
     const seated = new Set(data.assignments.map((a) => a.guestId))
     const unseated = data.guests.filter((g) => !seated.has(g.id) && !g.seatDismissed)
@@ -284,14 +286,14 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
       doc.setFont(F, 'bold')
       doc.setFontSize(T(11))
       doc.setTextColor(...accent)
-      doc.text(`Not seated yet (${unseated.length}, whole project)`, M, y + 8)
+      doc.text(t('notSeated', { count: unseated.length }), M, y + 8)
       doc.setFont(F, 'normal')
       doc.setFontSize(B(9))
       doc.setTextColor(60, 60, 60)
       const lines = doc.splitTextToSize(
         unseated
           .map((g) => pdfText(g.name))
-          .sort((a, b) => a.localeCompare(b))
+          .sort((a, b) => a.localeCompare(b, INTL_TAG[locale]))
           .join(', '),
         595 - 2 * M,
       ) as string[]
@@ -313,30 +315,35 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setFont(F, 'bold')
     doc.setFontSize(T(15))
     doc.setTextColor(...accent)
-    doc.text('Guest list', M, TOP + 8)
+    doc.text(t('guestListTitle'), M, TOP + 8)
     const g = data.guests
     const count = (f: (x: PdfGuest) => boolean) => g.filter(f).length
     doc.setFont(F, 'normal')
     doc.setFontSize(B(9))
     doc.setTextColor(80, 80, 80)
     doc.text(
-      `${g.length} guests · ${count((x) => x.vip)} VIP · ${count((x) => x.speech)} speeches · ` +
-        `${count((x) => x.ageGroup === 'child')} children · ${count((x) => x.ageGroup === 'baby')} babies · ` +
-        `${count((x) => !!x.dietary?.trim())} with dietary needs`,
+      t('guestSummary', {
+        total: g.length,
+        vip: count((x) => x.vip),
+        speeches: count((x) => x.speech),
+        children: count((x) => x.ageGroup === 'child'),
+        babies: count((x) => x.ageGroup === 'baby'),
+        dietary: count((x) => !!x.dietary?.trim()),
+      }),
       M,
       TOP + 22 + TG,
     )
     autoTable(doc, {
       startY: TOP + 34 + TG,
       margin: { left: M, right: M, top: TOP, bottom: 40 },
-      head: [['Name', 'Family', 'Group', 'VIP', 'Dietary', 'Notes', 'Table']],
+      head: [[t('colName'), t('colFamily'), t('colGroup'), t('colVip'), t('colDietary'), t('colNotes'), t('colTable')]],
       body: [...g]
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => a.name.localeCompare(b.name, INTL_TAG[locale]))
         .map((x) => [
           pdfText(x.name),
           pdfText(x.family),
           AGE_LABEL[x.ageGroup],
-          [x.vip ? 'VIP' : '', x.speech ? 'Speech' : ''].filter(Boolean).join(' + '),
+          [x.vip ? t('vip') : '', x.speech ? t('speech') : ''].filter(Boolean).join(' + '),
           pdfText(x.dietary),
           pdfText(x.notes),
           tableNameForGuest(x),
@@ -363,7 +370,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.text(pdfText(data.projectTitle), M, 26)
     doc.setFont(F, 'normal')
     doc.setTextColor(100, 100, 100)
-    doc.text(`${pdfText(data.teamName)} · ${formatDateEn(data.eventDate)}`, w - M, 26, { align: 'right' })
+    doc.text(`${pdfText(data.teamName)} · ${formatDateLong(data.eventDate, locale, t)}`, w - M, 26, { align: 'right' })
     doc.setDrawColor(...accent)
     doc.setLineWidth(0.75)
     doc.line(M, 33, w - M, 33)
@@ -389,7 +396,7 @@ export function buildProjectPdf(data: PdfExportData, opts: PdfOptions): jsPDF {
     doc.setFont(F, 'normal')
     doc.setFontSize(8)
     doc.setTextColor(100, 100, 100)
-    doc.text(`Page ${p} of ${total}`, brandLeft - 12, h - 20, { align: 'right' })
+    doc.text(t('pageOf', { page: p, total }), brandLeft - 12, h - 20, { align: 'right' })
 
     const logoSlot = logo ? (style.logoPosition === 'bottom-left' ? 'left' : 'center') : null
     const textSlot = logoSlot === 'left' ? 'center' : 'left'

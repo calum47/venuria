@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { Stage, Layer, Image as KonvaImage, Line, Circle, Rect, Group } from 'react-konva'
 import Konva from 'konva'
 import { ObstacleShape, Point2D } from '@/types'
@@ -34,6 +35,7 @@ const MAX_ZOOM = 3
  * back an explicit reset path.
  */
 export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props) {
+  const t = useTranslations('Venue')
   const [tool, setTool] = useState<Tool>('view')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,7 +81,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       const file = e.target.files?.[0]
       if (!file) return
       if (file.type !== 'image/png') {
-        setError('Floor plans must be a PNG file.')
+        setError(t('fpPngOnly'))
         return
       }
       setError(null)
@@ -88,7 +90,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
         const dims = await new Promise<{ w: number; h: number }>((resolve, reject) => {
           const img = new window.Image()
           img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight })
-          img.onerror = () => reject(new Error('Could not read image dimensions.'))
+          img.onerror = () => reject(new Error(t('fpImageDims')))
           img.src = URL.createObjectURL(file)
         })
         await uploadRoomFloorPlan(venueId, room.id, file, dims.w, dims.h)
@@ -105,13 +107,13 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
         setObstaclesDraft([])
         setTool('calibrate')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed.')
+        setError(err instanceof Error ? err.message : t('fpUploadFailed'))
       } finally {
         setUploading(false)
         if (fileInputRef.current) fileInputRef.current.value = ''
       }
     },
-    [venueId, room, onRoomUpdated],
+    [venueId, room, onRoomUpdated, t],
   )
 
   // ─── Stage click handling per active tool ───────────────────────────────────
@@ -196,7 +198,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
     }
     const { start, current } = dragPreview
     if (!cmPerPx) {
-      setError('Calibrate the scale before adding obstacles.')
+      setError(t('fpCalibrateFirstObstacles'))
     } else if (tool === 'obstacle-rect') {
       const widthPx = Math.abs(current.x - start.x)
       const depthPx = Math.abs(current.y - start.y)
@@ -244,7 +246,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
   const confirmCalibration = async () => {
     const lengthCm = parseFloat(calibrationInputCm)
     if (calibrationLine.length !== 2 || !lengthCm || lengthCm <= 0) {
-      setError('Draw a reference line and enter its real-world length in cm.')
+      setError(t('fpNeedReference'))
       return
     }
     const pxLength = distanceCm(calibrationLine[0], calibrationLine[1])
@@ -258,7 +260,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       setError(null)
       setTool('boundary')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save calibration.')
+      setError(err instanceof Error ? err.message : t('fpCalibrationFailed'))
     } finally {
       setSaving(false)
     }
@@ -272,7 +274,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       await updateRoomBoundary(room.id, boundaryDraft)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save the wall boundary.')
+      setError(err instanceof Error ? err.message : t('fpBoundaryFailed'))
     } finally {
       setSaving(false)
     }
@@ -284,7 +286,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
       await updateRoomObstacles(room.id, obstaclesDraft)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save obstacles.')
+      setError(err instanceof Error ? err.message : t('fpObstaclesFailed'))
     } finally {
       setSaving(false)
     }
@@ -311,13 +313,13 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
           htmlFor="floor-plan-upload"
           className="cursor-pointer rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700"
         >
-          {uploading ? 'Uploading…' : room.floor_plan_image_url ? 'Replace floor plan PNG' : 'Upload floor plan PNG'}
+          {uploading ? t('fpUploading') : room.floor_plan_image_url ? t('fpReplace') : t('fpUpload')}
         </label>
 
         {room.floor_plan_image_url && (
           <>
             <ToolButton active={tool === 'calibrate'} onClick={() => setTool('calibrate')} disabled={saving}>
-              📏 Calibrate scale
+              {t('fpCalibrate')}
             </ToolButton>
             <ToolButton
               active={tool === 'boundary'}
@@ -327,21 +329,21 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
               }}
               disabled={!cmPerPx || saving}
             >
-              🧱 Trace walls
+              {t('fpTraceWalls')}
             </ToolButton>
             <ToolButton
               active={tool === 'obstacle-rect'}
               onClick={() => setTool('obstacle-rect')}
               disabled={!cmPerPx || saving}
             >
-              ▭ Rect obstacle
+              {t('fpRectObstacle')}
             </ToolButton>
             <ToolButton
               active={tool === 'obstacle-circle'}
               onClick={() => setTool('obstacle-circle')}
               disabled={!cmPerPx || saving}
             >
-              ⬤ Circle obstacle
+              {t('fpCircleObstacle')}
             </ToolButton>
             <ToolButton
               active={tool === 'obstacle-polygon'}
@@ -351,7 +353,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
               }}
               disabled={!cmPerPx || saving}
             >
-              ⬠ Freeform obstacle
+              {t('fpFreeformObstacle')}
             </ToolButton>
           </>
         )}
@@ -359,15 +361,15 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {!cmPerPx && room.floor_plan_image_url && (
-        <p className="text-sm text-amber-600">Calibrate the scale before tracing walls or adding obstacles.</p>
+        <p className="text-sm text-amber-600">{t('fpCalibrateFirst')}</p>
       )}
 
       {tool === 'calibrate' && (
         <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-2 text-sm">
-          <span className="text-gray-700">Click two points on a wall of known length, then:</span>
+          <span className="text-gray-700">{t('fpClickTwoPoints')}</span>
           <input
             type="number"
-            placeholder="length in cm"
+            placeholder={t('fpLengthCm')}
             value={calibrationInputCm}
             onChange={(e) => setCalibrationInputCm(e.target.value)}
             className="w-28 rounded-lg border bg-white px-2 py-1 text-gray-900"
@@ -377,14 +379,14 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             disabled={calibrationLine.length !== 2 || saving}
             className="rounded-lg bg-blue-600 px-2 py-1 text-white disabled:opacity-40"
           >
-            Set scale
+            {t('fpSetScale')}
           </button>
         </div>
       )}
 
       {(tool === 'boundary' || tool === 'obstacle-polygon') && (
         <p className="text-sm text-gray-500">
-          Click to add points, double-click to close the shape ({inProgressPolygon.length} points so far).
+          {t('fpClickPoints', { count: inProgressPolygon.length })}
         </p>
       )}
 
@@ -394,7 +396,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             <button
               onClick={() => setZoom((z) => Math.max(MIN_ZOOM, Math.round((z - 0.1) * 100) / 100))}
               className="rounded-lg bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
-              aria-label="Zoom out"
+              aria-label={t('fpZoomOut')}
             >
               −
             </button>
@@ -402,7 +404,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             <button
               onClick={() => setZoom((z) => Math.min(MAX_ZOOM, Math.round((z + 0.1) * 100) / 100))}
               className="rounded-lg bg-gray-100 px-2 py-1 text-sm text-gray-700 hover:bg-gray-200"
-              aria-label="Zoom in"
+              aria-label={t('fpZoomIn')}
             >
               +
             </button>
@@ -410,7 +412,7 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
               onClick={() => setZoom(1)}
               className="rounded-lg bg-gray-100 px-2 py-1 text-xs text-gray-600 hover:bg-gray-200"
             >
-              Reset
+              {t('fpReset')}
             </button>
           </div>
           <div className="overflow-auto rounded-lg border" style={{ maxHeight: 600 }}>
@@ -575,16 +577,16 @@ export default function FloorPlanEditor({ venueId, room, onRoomUpdated }: Props)
             disabled={saving || boundaryDraft.length < 3}
             className="rounded-lg bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
-            Save wall boundary
+            {t('fpSaveBoundary')}
           </button>
           <button
             onClick={saveObstacles}
             disabled={saving}
             className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm text-white disabled:opacity-40"
           >
-            Save obstacles ({obstaclesDraft.length})
+            {t('fpSaveObstacles', { count: obstaclesDraft.length })}
           </button>
-          <span className="self-center text-xs text-gray-400">Double-click a saved obstacle to remove it.</span>
+          <span className="self-center text-xs text-gray-400">{t('fpRemoveHint')}</span>
         </div>
       )}
     </div>

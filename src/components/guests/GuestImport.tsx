@@ -1,8 +1,10 @@
 'use client'
 
 import { useMemo, useRef, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { DbGuest, DbGuestFamily } from '@/types/db'
 import { importGuests } from '@/lib/supabase/guestQueries'
+import { ageLabel } from '@/lib/guests'
 import {
   IMPORT_ACCEPT,
   MAX_IMPORT_NAMES,
@@ -20,8 +22,8 @@ const cell = 'w-full rounded-lg border border-gray-300 bg-white px-1.5 py-0.5 te
 
 const fold = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
-function msg(e: unknown): string {
-  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+function msg(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
 type Row = ImportGuest & { include: boolean }
@@ -42,6 +44,7 @@ export default function GuestImport({
   onImported: (added: DbGuest[], families: DbGuestFamily[]) => void
   onClose: () => void
 }) {
+  const t = useTranslations('Guests')
   const fileInput = useRef<HTMLInputElement>(null)
   const [rows, setRows] = useState<Row[]>([])
   const [families, setFamilies] = useState<ImportFamily[]>([])
@@ -66,13 +69,13 @@ export default function GuestImport({
     setError(null)
     setReading(true)
     try {
-      const res = await readGuestFile(file)
+      const res = await readGuestFile(file, t)
       setRows(res.guests.map((g) => ({ ...g, include: true })))
       setFamilies(res.families)
       setSource(file.name)
-      if (res.guests.length === 0) setError('No guests were found in that file. You can paste names below.')
+      if (res.guests.length === 0) setError(t('importNoGuests'))
     } catch (err) {
-      setError(msg(err))
+      setError(msg(err, t('somethingWrong')))
     } finally {
       setReading(false)
     }
@@ -109,7 +112,7 @@ export default function GuestImport({
       onImported(res.guests, res.families)
       onClose()
     } catch (err) {
-      setError(msg(err))
+      setError(msg(err, t('somethingWrong')))
       setSaving(false)
     }
   }
@@ -120,17 +123,16 @@ export default function GuestImport({
   const famN = new Set(chosen.filter((r) => r.family && chosen.filter((x) => x.family === r.family).length >= 2).map((r) => r.family)).size
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Import guests">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={t('importTitle')}>
       <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white p-4 shadow-xl">
-        <h3 className="text-sm font-semibold text-gray-900">Import guests</h3>
+        <h3 className="text-sm font-semibold text-gray-900">{t('importTitle')}</h3>
         <p className="mt-1 text-xs text-gray-500">
-          Choose a .txt, .csv or .pdf file, or paste names. Files can also carry VIP, speeches, age group, dietary needs, notes and
-          families. Review below; nothing is saved until you press Import.
+          {t('importIntro')}
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button type="button" onClick={() => fileInput.current?.click()} disabled={reading || saving} className={btn}>
-            {reading ? 'Reading file…' : 'Choose file'}
+            {reading ? t('readingFile') : t('chooseFile')}
           </button>
           {source && !reading && <span className="truncate text-xs text-gray-500">{source}</span>}
           <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={pick} />
@@ -143,14 +145,14 @@ export default function GuestImport({
             <table className="w-full text-left text-xs">
               <thead className="sticky top-0 bg-gray-50 text-gray-600">
                 <tr>
-                  <th className="px-2 py-1.5 font-medium"><span className="sr-only">Include</span></th>
-                  <th className="px-2 py-1.5 font-medium">Name</th>
-                  <th className="px-2 py-1.5 font-medium">VIP</th>
-                  <th className="px-2 py-1.5 font-medium">Speech</th>
-                  <th className="px-2 py-1.5 font-medium">Age</th>
-                  <th className="px-2 py-1.5 font-medium">Family</th>
-                  <th className="px-2 py-1.5 font-medium">Dietary</th>
-                  <th className="px-2 py-1.5 font-medium">Notes</th>
+                  <th className="px-2 py-1.5 font-medium"><span className="sr-only">{t('colInclude')}</span></th>
+                  <th className="px-2 py-1.5 font-medium">{t('name')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('vip')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('speech')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('age')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('colFamily')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('colDietary')}</th>
+                  <th className="px-2 py-1.5 font-medium">{t('notes')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,29 +161,29 @@ export default function GuestImport({
                   return (
                     <tr key={i} className={`border-t border-gray-100 ${dup || !r.include ? 'bg-gray-50 text-gray-400' : ''}`}>
                       <td className="px-2 py-1">
-                        <input type="checkbox" checked={r.include && !dup} disabled={dup} onChange={(e) => patch(i, { include: e.target.checked })} aria-label={`Import ${r.name}`} />
+                        <input type="checkbox" checked={r.include && !dup} disabled={dup} onChange={(e) => patch(i, { include: e.target.checked })} aria-label={t('importRow', { name: r.name })} />
                       </td>
                       <td className="min-w-40 px-2 py-1">
-                        <input value={r.name} onChange={(e) => patch(i, { name: e.target.value })} maxLength={120} className={cell} aria-label="Name" />
-                        {dup && <span className="text-[10px]">already in the list</span>}
+                        <input value={r.name} onChange={(e) => patch(i, { name: e.target.value })} maxLength={120} className={cell} aria-label={t('name')} />
+                        {dup && <span className="text-[10px]">{t('alreadyInList')}</span>}
                       </td>
-                      <td className="px-2 py-1"><input type="checkbox" checked={r.vip} onChange={(e) => patch(i, { vip: e.target.checked })} aria-label={`${r.name} VIP`} /></td>
-                      <td className="px-2 py-1"><input type="checkbox" checked={r.speech} onChange={(e) => patch(i, { speech: e.target.checked })} aria-label={`${r.name} gives a speech`} /></td>
+                      <td className="px-2 py-1"><input type="checkbox" checked={r.vip} onChange={(e) => patch(i, { vip: e.target.checked })} aria-label={t('rowVip', { name: r.name })} /></td>
+                      <td className="px-2 py-1"><input type="checkbox" checked={r.speech} onChange={(e) => patch(i, { speech: e.target.checked })} aria-label={t('rowSpeech', { name: r.name })} /></td>
                       <td className="px-2 py-1">
-                        <select value={r.age} onChange={(e) => patch(i, { age: e.target.value as ImportAge })} className={cell} aria-label={`${r.name} age group`}>
-                          <option value="adult">Adult</option>
-                          <option value="child">Child</option>
-                          <option value="baby">Baby</option>
+                        <select value={r.age} onChange={(e) => patch(i, { age: e.target.value as ImportAge })} className={cell} aria-label={t('rowAge', { name: r.name })}>
+                          <option value="adult">{ageLabel('adult', t)}</option>
+                          <option value="child">{ageLabel('child', t)}</option>
+                          <option value="baby">{ageLabel('baby', t)}</option>
                         </select>
                       </td>
                       <td className="min-w-32 px-2 py-1">
-                        <select value={r.family} onChange={(e) => patch(i, { family: e.target.value })} className={cell} aria-label={`${r.name} family`}>
-                          <option value="">None</option>
+                        <select value={r.family} onChange={(e) => patch(i, { family: e.target.value })} className={cell} aria-label={t('rowFamily', { name: r.name })}>
+                          <option value="">{t('none')}</option>
                           {families.map((f) => <option key={f.key} value={f.key}>{f.name}</option>)}
                         </select>
                       </td>
-                      <td className="min-w-28 px-2 py-1"><input value={r.dietary} onChange={(e) => patch(i, { dietary: e.target.value })} maxLength={500} className={cell} aria-label={`${r.name} dietary`} /></td>
-                      <td className="min-w-32 px-2 py-1"><input value={r.notes} onChange={(e) => patch(i, { notes: e.target.value })} maxLength={300} className={cell} aria-label={`${r.name} notes`} /></td>
+                      <td className="min-w-28 px-2 py-1"><input value={r.dietary} onChange={(e) => patch(i, { dietary: e.target.value })} maxLength={500} className={cell} aria-label={t('rowDietary', { name: r.name })} /></td>
+                      <td className="min-w-32 px-2 py-1"><input value={r.notes} onChange={(e) => patch(i, { notes: e.target.value })} maxLength={300} className={cell} aria-label={t('rowNotes', { name: r.name })} /></td>
                     </tr>
                   )
                 })}
@@ -196,25 +198,25 @@ export default function GuestImport({
             onChange={(e) => setPaste(e.target.value)}
             rows={rows.length ? 2 : 6}
             disabled={reading}
-            placeholder="Or paste names here, one per line…"
-            aria-label="Paste guest names, one per line"
+            placeholder={t('pastePlaceholder')}
+            aria-label={t('pasteAria')}
             className="min-w-0 flex-1 rounded-lg border border-gray-300 p-2 text-sm text-gray-900"
           />
-          <button type="button" onClick={addPasted} disabled={!paste.trim() || reading} className={btn}>Add names</button>
+          <button type="button" onClick={addPasted} disabled={!paste.trim() || reading} className={btn}>{t('addNames')}</button>
         </div>
 
         <p className="mt-2 text-xs text-gray-500">
-          {chosen.length} to import
-          {chosen.length > 0 && ` · ${vipN} VIP · ${speechN} speeches · ${kidsN} children/babies · ${famN} ${famN === 1 ? 'family' : 'families'}`}
-          {dupCount > 0 && ` · ${dupCount} already in the list (skipped)`}
-          {rows.length >= MAX_IMPORT_NAMES && ` · only the first ${MAX_IMPORT_NAMES} are read`}
-          {families.length > 0 && chosen.some((r) => r.family) && ` · families: ${families.filter((f) => chosen.some((r) => r.family === f.key)).map((f) => famName(f.key)).join(', ')}`}
+          {t('toImport', { count: chosen.length })}
+          {chosen.length > 0 && t('importSummary', { vip: vipN, speech: speechN, kids: kidsN, fam: famN })}
+          {dupCount > 0 && t('importDupes', { count: dupCount })}
+          {rows.length >= MAX_IMPORT_NAMES && t('importLimit', { max: MAX_IMPORT_NAMES })}
+          {families.length > 0 && chosen.some((r) => r.family) && t('importFamilies', { names: families.filter((f) => chosen.some((r) => r.family === f.key)).map((f) => famName(f.key)).join(', ') })}
         </p>
 
         <div className="mt-3 flex justify-end gap-2">
-          <button type="button" onClick={onClose} disabled={saving} className={btn + ' !py-1.5 !text-sm'}>Cancel</button>
+          <button type="button" onClick={onClose} disabled={saving} className={btn + ' !py-1.5 !text-sm'}>{t('cancel')}</button>
           <button type="button" onClick={save} disabled={saving || reading || chosen.length === 0} className={btnPrimary}>
-            {saving ? 'Importing…' : `Import ${chosen.length} ${chosen.length === 1 ? 'guest' : 'guests'}`}
+            {saving ? t('importing') : t('importN', { count: chosen.length })}
           </button>
         </div>
       </div>

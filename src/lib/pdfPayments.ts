@@ -6,6 +6,11 @@
 import { MAX_AMOUNT, parseAmount } from '@/lib/payments'
 import { applyDueRule, describeDueRule, formatDate, isIsoDate, type DueRule, type DueUnit } from '@/lib/projectDates'
 import type { PaymentInput } from '@/lib/supabase/paymentQueries'
+import type { Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
+
+/** Translators for draftFromExtracted: `t` is the "Pay" namespace, `tDates` the "Dates" one. */
+export type DraftI18n = { t: Tr; tDates: Tr; locale: Locale }
 
 export const MAX_EXTRACTED_PAYMENTS = 12
 
@@ -127,10 +132,11 @@ export type FromPdf = Partial<Record<DraftField, string>>
 
 export function draftFromExtracted(
   p: ExtractedPayment,
-  eventDate: string | null = null,
+  eventDate: string | null,
+  i18n: DraftI18n,
 ): { draft: PaymentDraft; from: FromPdf; dueCalc: string | null } {
   const from: FromPdf = {}
-  const hint = p.evidence ?? 'read from the PDF'
+  const hint = p.evidence ?? i18n.t('readFromPdf')
   if (p.vendor) from.vendor = hint
   if (p.label) from.label = hint
   if (p.amount) from.amount = hint
@@ -141,13 +147,13 @@ export function draftFromExtracted(
   } else if (p.dueRule) {
     // "1 month before the event" + the project's event date = a real date. Done here, in code, so the
     // calendar arithmetic is exact; the person still checks it like every other field read from a PDF.
-    const rule = describeDueRule(p.dueRule)
+    const rule = describeDueRule(p.dueRule, i18n.tDates)
     if (eventDate && isIsoDate(eventDate)) {
       dueDate = applyDueRule(eventDate, p.dueRule)
       from.dueDate = hint
-      dueCalc = `Due date calculated from the PDF (“${p.dueText ?? rule}”) and the event date ${formatDate(eventDate)}: ${rule} = ${formatDate(dueDate)}. Check it.`
+      dueCalc = i18n.t('dueCalculated', { text: p.dueText ?? rule, eventDate: formatDate(eventDate, i18n.locale), rule, dueDate: formatDate(dueDate, i18n.locale) })
     } else {
-      dueCalc = `The PDF says ${rule}, but this project has no event date yet, so the due date can't be calculated. Set the event date on the project, or enter the date by hand.`
+      dueCalc = i18n.t('dueNoEventDate', { rule })
     }
   }
   return {
@@ -158,12 +164,12 @@ export function draftFromExtracted(
 }
 
 /** Same rules as the payment form, in one place so the review window and the form cannot drift apart. */
-export function validateDraft(d: PaymentDraft): { input: PaymentInput } | { error: string } {
+export function validateDraft(d: PaymentDraft, t: Tr): { input: PaymentInput } | { error: string } {
   const amount = parseAmount(d.amount)
-  if (!d.vendor.trim()) return { error: 'Enter the vendor or supplier.' }
-  if (!d.label.trim()) return { error: 'Enter what the payment is for, e.g. Deposit.' }
-  if (amount === null) return { error: 'Enter an amount like 1500 or 1500,50 (no thousands separators).' }
-  if (!isIsoDate(d.dueDate)) return { error: 'Enter a due date.' }
+  if (!d.vendor.trim()) return { error: t('enterVendor') }
+  if (!d.label.trim()) return { error: t('enterLabel') }
+  if (amount === null) return { error: t('enterAmount') }
+  if (!isIsoDate(d.dueDate)) return { error: t('enterDueDate') }
   return {
     input: { vendorName: d.vendor.trim(), label: d.label.trim(), amount, dueDate: d.dueDate, notes: d.notes.trim() || null },
   }
@@ -175,8 +181,8 @@ export function currencyMismatch(pdfCurrency: string | null, teamCurrency: strin
 }
 
 /** "30% deposit — 1500.00 — due 2027-03-01" for a picker. */
-export function describeExtracted(p: ExtractedPayment, i: number): string {
-  const bits = [p.label ?? `Payment ${i + 1}`, p.amount, p.dueDate ?? p.dueText].filter(Boolean)
+export function describeExtracted(p: ExtractedPayment, i: number, t: Tr): string {
+  const bits = [p.label ?? t('paymentN', { n: i + 1 }), p.amount, p.dueDate ?? p.dueText].filter(Boolean)
   return bits.join(' — ')
 }
 

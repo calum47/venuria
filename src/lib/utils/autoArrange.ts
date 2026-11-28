@@ -9,6 +9,7 @@ import {
 } from './geometry'
 import { generateChairObjects, getTableChairConfig } from './seating'
 import { generateId } from './coordinates'
+import type { Tr } from '@/i18n/types'
 
 // Minimum walking-space gap enforced between any two tables (and between a new
 // table and anything already in the room) — measured from each unit's outer
@@ -60,6 +61,8 @@ export type AutoArrangeParams = {
   // not onto either side. See the 16 Sep 2026 decision — confirmed against
   // two planner-drawn diagrams, not guessed.
   balanceAroundSweetheart?: boolean
+  /** Translator for the "AutoArrange" namespace (failure reasons are shown to the planner). */
+  t: Tr
 }
 
 export type AutoArrangeResult =
@@ -330,10 +333,11 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
     chairCatalogItem,
     tableSelections,
     balanceAroundSweetheart,
+    t,
   } = params
 
   if (tableSelections.length === 0) {
-    return { success: false, reason: 'Select at least one table to arrange.' }
+    return { success: false, reason: t('selectOne') }
   }
 
   // Sweetheart-balance setup — resolved once, before any placement work.
@@ -344,8 +348,7 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
     if (!sweetheart) {
       return {
         success: false,
-        reason:
-          'Balance Around Sweetheart Table is on, but no Sweetheart Table is placed in this room yet. Add one at your desired position first, then run Auto-Arrange again.',
+        reason: t('noSweetheart'),
       }
     }
     sweetheartOrigin = sweetheart.positionCm
@@ -484,7 +487,7 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
     [...points].sort((a, b) => distanceCm(a, target) - distanceCm(b, target))
   const failure = (unit: Unit, where = ''): AutoArrangeResult => ({
     success: false,
-    reason: `Couldn't find room for a "${unit.catalogItem.name}"${where} — the venue's boundary/obstacles/existing furniture don't leave enough space for this mix. Try fewer tables, a smaller mix, or a different Sweetheart Table position.`,
+    reason: t('noRoom', { name: unit.catalogItem.name, where }),
   })
 
   /** Snaps a single table to the nearest valid spot around `target`. */
@@ -550,7 +553,7 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
       }
       if (placed) break
     }
-    if (!placed) return failure(unit, ' on the centre line of the Sweetheart Table')
+    if (!placed) return failure(unit, t('whereCentreLine'))
   }
 
   // 2) Mirrored pairs: spread over the left half wherever the mirror point is
@@ -564,7 +567,7 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
   for (let i = 0; i < pairUnits.length; i++) {
     const unit = pairUnits[i]
     const target = targets[i] ?? leftFree[0] ?? leftAll[0]
-    if (!target) return failure(unit, ' pair')
+    if (!target) return failure(unit, t('wherePair'))
     let placed = false
     for (const point of nearestFirst(leftAll, target)) {
       const twin = mirrorPoint(point)
@@ -583,7 +586,7 @@ export function autoArrangeRoom(params: AutoArrangeParams): AutoArrangeResult {
       }
       if (placed) break
     }
-    if (!placed) return failure(unit, ' pair')
+    if (!placed) return failure(unit, t('wherePair'))
   }
 
   return { success: true, objects: placedObjects }

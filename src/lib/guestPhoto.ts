@@ -8,18 +8,19 @@
  * bytes, not its name or the browser-claimed MIME type.
  */
 import { MAX_PHOTO_BYTES, MAX_SOURCE_PHOTO_BYTES, PHOTO_MAX_EDGE, fitWithin, sniffImage } from '@/lib/guests'
+import type { Tr } from '@/i18n/types'
 
-export async function prepareGuestPhoto(file: File, maxEdge: number = PHOTO_MAX_EDGE): Promise<Blob> {
-  if (file.size > MAX_SOURCE_PHOTO_BYTES) throw new Error('That photo is over 20 MB — pick a smaller one.')
+export async function prepareGuestPhoto(file: File, t: Tr, maxEdge: number = PHOTO_MAX_EDGE): Promise<Blob> {
+  if (file.size > MAX_SOURCE_PHOTO_BYTES) throw new Error(t('photoTooBig'))
 
   const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
-  if (!sniffImage(head)) throw new Error('Use a JPEG, PNG or WebP photo (iPhone HEIC files are not supported).')
+  if (!sniffImage(head)) throw new Error(t('photoBadType'))
 
   let bitmap: ImageBitmap
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' })
   } catch {
-    throw new Error('Could not read that image — it may be damaged.')
+    throw new Error(t('photoUnreadable'))
   }
 
   const { width, height } = fitWithin(bitmap.width, bitmap.height, maxEdge)
@@ -29,7 +30,7 @@ export async function prepareGuestPhoto(file: File, maxEdge: number = PHOTO_MAX_
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     bitmap.close()
-    throw new Error('This browser cannot resize images.')
+    throw new Error(t('photoNoResize'))
   }
   ctx.fillStyle = '#ffffff' // JPEG has no transparency — a transparent PNG would turn black
   ctx.fillRect(0, 0, width, height)
@@ -37,7 +38,7 @@ export async function prepareGuestPhoto(file: File, maxEdge: number = PHOTO_MAX_
   bitmap.close()
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
-  if (!blob) throw new Error('Could not process that image.')
-  if (blob.size > MAX_PHOTO_BYTES) throw new Error('The resized photo is still over 5 MB — try another one.')
+  if (!blob) throw new Error(t('photoProcess'))
+  if (blob.size > MAX_PHOTO_BYTES) throw new Error(t('photoStillBig'))
   return blob
 }

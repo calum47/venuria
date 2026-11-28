@@ -3,6 +3,7 @@
  * so the request/response handling can be tested with a fake `fetch` (no network, no API key).
  */
 import { cleanImport, type ImportResult } from '@/lib/guestImport'
+import type { Tr } from '@/i18n/types'
 
 export const DEFAULT_MODEL = 'claude-sonnet-5-5'
 export const MAX_TEXT_CHARS = 200_000
@@ -64,6 +65,7 @@ export type NamesOutcome =
 export async function extractGuestsWithClaude(
   source: GuestSource,
   opts: { apiKey: string; model?: string; fetchFn?: typeof fetch; timeoutMs?: number },
+  t: Tr,
 ): Promise<NamesOutcome> {
   const fetchFn = opts.fetchFn ?? fetch
   const content =
@@ -96,26 +98,26 @@ export async function extractGuestsWithClaude(
     })
   } catch (e) {
     console.error('[guests/extract] request failed:', e instanceof Error ? e.message : e)
-    return { ok: false, status: 504, code: 'upstream_unreachable', message: 'Reading the file took too long or could not start. Paste the names instead.' }
+    return { ok: false, status: 504, code: 'upstream_unreachable', message: t('extractTimeout') }
   }
 
   if (!res.ok) {
     // Provider's reason is logged server-side only — it can include account details.
     console.error('[guests/extract] Anthropic API error', res.status, (await res.text()).slice(0, 500))
-    return { ok: false, status: 502, code: 'upstream_error', message: 'The file reader returned an error. Paste the names instead.' }
+    return { ok: false, status: 502, code: 'upstream_error', message: t('extractError') }
   }
 
   const body = (await res.json().catch(() => null)) as
     | { stop_reason?: string; content?: { type: string; name?: string; input?: unknown }[] }
     | null
   if (body?.stop_reason === 'max_tokens') {
-    return { ok: false, status: 502, code: 'too_long', message: 'That list is too long to read in one go. Split it into smaller files.' }
+    return { ok: false, status: 502, code: 'too_long', message: t('extractTooLong') }
   }
   const block = body?.content?.find((b) => b.type === 'tool_use' && b.name === TOOL.name)
   const input = block?.input as { guests?: unknown } | undefined
   if (!block || !Array.isArray(input?.guests)) {
     console.error('[guests/extract] no report_guests tool call; stop_reason =', body?.stop_reason, 'blocks =', body?.content?.map((b) => b.type).join(','))
-    return { ok: false, status: 502, code: 'upstream_error', message: 'The file reader gave no answer. Paste the names instead.' }
+    return { ok: false, status: 502, code: 'upstream_error', message: t('extractNoAnswer') }
   }
   return { ok: true, ...cleanImport(input) }
 }

@@ -1,5 +1,7 @@
 import { projectTitle } from '@/lib/projectTitle'
 import Link from 'next/link'
+import { getLocale, getTranslations } from 'next-intl/server'
+import type { Locale } from '@/i18n/config'
 import { notFound, redirect } from 'next/navigation'
 import { getProjectAccess } from '@/lib/projectAccess'
 import { createClient } from '@/lib/supabase/server'
@@ -25,11 +27,13 @@ export default async function PaymentsPage({
   const { projectId } = await params
   const { view } = await searchParams
   const supabase = await createClient()
+  const t = await getTranslations('Pay')
+  const locale = (await getLocale()) as Locale
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
     return (
       <main className="p-8">
-        <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
+        <p className="text-sm text-red-600">{(await getTranslations('Planner'))('noPlannerAccountLinkedTo')}</p>
       </main>
     )
   }
@@ -50,7 +54,7 @@ export default async function PaymentsPage({
     supabase.from('team_vendors').select('id, name').eq('team_id', ctx.team.id).order('name'),
   ])
 
-  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? (await getTranslations('Common'))('unknownVenue')
   const title = projectTitle(project.couple_names, venueName)
 
   return (
@@ -58,16 +62,16 @@ export default async function PaymentsPage({
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
           <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {title}</Link>
-          <h1 className="mt-2 text-3xl font-semibold text-gray-900">Payments &amp; documents</h1>
+          <h1 className="mt-2 text-3xl font-semibold text-gray-900">{t('pageTitle')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {venueName}
-            {project.event_date ? ` · ${formatDate(project.event_date)}` : ''} · amounts in {ctx.team.currency} · visible to your team only
+            {project.event_date ? ` · ${formatDate(project.event_date, locale)}` : ''}{t('subtitle', { currency: ctx.team.currency })}
           </p>
         </div>
 
         {(pErr || dErr) && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            Could not load everything: {pErr?.message ?? dErr?.message}
+            {t('loadError', { message: pErr?.message ?? dErr?.message ?? '' })}
           </p>
         )}
 

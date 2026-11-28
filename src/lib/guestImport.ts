@@ -1,3 +1,4 @@
+import type { Tr } from '@/i18n/types'
 /**
  * Guest-list import helpers shared by the editor's guest panel and the Guests page.
  * Pure functions first (easy to test), then the browser-side file reader.
@@ -124,11 +125,11 @@ export function cleanImport(raw: unknown): ImportResult {
 }
 
 /** Browser side. Resolves to the guests found; rejects with a message that is safe to show. */
-export async function readGuestFile(file: File): Promise<ImportResult> {
+export async function readGuestFile(file: File, t: Tr): Promise<ImportResult> {
   const kind = importKind(file)
-  if (!kind) throw new Error('Unsupported file. Use a .txt, .csv or .pdf file.')
-  if (file.size === 0) throw new Error('That file is empty.')
-  if (file.size > GUEST_IMPORT_MAX_BYTES) throw new Error('That file is too large (limit 3 MB).')
+  if (!kind) throw new Error(t('importUnsupported'))
+  if (file.size === 0) throw new Error(t('importEmptyFile'))
+  if (file.size > GUEST_IMPORT_MAX_BYTES) throw new Error(t('importTooLarge'))
 
   if (kind === 'text') return { guests: namesFromText(await file.text()).map(blankGuest), families: [] }
 
@@ -138,11 +139,11 @@ export async function readGuestFile(file: File): Promise<ImportResult> {
   try {
     res = await fetch('/api/guests/extract', { method: 'POST', body })
   } catch {
-    throw new Error('Could not reach the server. Check your connection and try again.')
+    throw new Error(t('importNetwork'))
   }
   const json = (await res.json().catch(() => null)) as { ok?: boolean; guests?: unknown; families?: unknown; message?: string } | null
   if (!res.ok || !json?.ok || !Array.isArray(json.guests)) {
-    throw new Error(json?.message || 'Could not read that file. Paste the names instead.')
+    throw new Error(json?.message || t('importUnreadable'))
   }
   return cleanImport(json)
 }

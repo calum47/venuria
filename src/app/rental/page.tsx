@@ -4,8 +4,11 @@ import StockManager from '@/components/stock/StockManager'
 import Link from 'next/link'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import StockSection from '@/app/planner/stock/StockSection'
+import { getTranslations } from 'next-intl/server'
 
 export default async function RentalPage() {
+  const t = await getTranslations('Rental')
+  const tc = await getTranslations('Common')
   const supabase = await createClient()
   const {
     data: { user },
@@ -14,7 +17,7 @@ export default async function RentalPage() {
   if (!user) {
     return (
       <main className="min-h-screen bg-gray-50 p-8">
-        <p className="text-sm text-gray-500">Not signed in.</p>
+        <p className="text-sm text-gray-500">{t('notSignedIn')}</p>
       </main>
     )
   }
@@ -37,28 +40,28 @@ export default async function RentalPage() {
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-semibold text-gray-900">
-            {plannerCtx ? 'Vendor' : 'Rental Manager'}{rentalCompanyName ? ` — ${rentalCompanyName}` : ''}
+            {plannerCtx ? t('vendor') : t('rentalManager')}{rentalCompanyName ? ` — ${rentalCompanyName}` : ''}
           </h1>
           <div className="flex items-center gap-3">
             {plannerCtx && (
               <Link href="/planner" className="rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs text-brand-800 hover:bg-brand-100">
-                Planner ⇄ Vendor
+                {t('plannerVendor')}
               </Link>
             )}
             <SignOutButton />
           </div>
         </div>
         <p className="text-sm text-gray-500 mb-6">
-          Logged in as <span className="font-medium text-gray-900">{user.email}</span>.
+          {tc('loggedInAs')} <span className="font-medium text-gray-900">{user.email}</span>.
         </p>
 
         {!rentalCompanyId ? (
           <p className="text-sm text-red-600">
-            No rental company is linked to this account — contact an admin.
+            {t('noRentalCompanyIsLinked')}
           </p>
         ) : (
           <section>
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Stock — tables &amp; chairs</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockTablesChairs')}</h2>
             <p className="text-sm text-gray-500 mb-4">
               How many of each standard item you can rent out. Planners use the venue&apos;s own stock first; yours covers the rest.
             </p>
@@ -68,9 +71,9 @@ export default async function RentalPage() {
 
         {plannerCtx && (
           <section className="mt-10">
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Stock — products you sell</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockProductsYouSell')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              The same stock as <span className="font-medium">My stock</span> on the planner side ({plannerCtx.team.name}): catalogue, purchases and sales. A change made here shows there, and the other way round.
+              The same stock as <span className="font-medium">{t('myStock')}</span> on the planner side ({plannerCtx.team.name}): catalogue, purchases and sales. A change made here shows there, and the other way round.
             </p>
             <StockSection supabase={supabase} ctx={plannerCtx} />
           </section>

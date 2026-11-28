@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { useGuestStore } from '@/stores/guestStore'
 import { addGuest, deleteGuest } from '@/lib/supabase/queries'
 import GuestImport from '@/components/guests/GuestImport'
@@ -12,6 +13,8 @@ type Props = {
 }
 
 export default function GuestPanel({ projectId, onDragStart }: Props) {
+  const t = useTranslations('GuestPanel')
+  const tc = useTranslations('Common')
   const { guests, seatAssignments, addGuest: addGuestLocal, removeGuest } = useGuestStore()
   const [search, setSearch] = useState('')
   const [newName, setNewName] = useState('')
@@ -49,14 +52,14 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
       {/* Header */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-800">Guest List</h2>
-          <span className="text-xs text-gray-400">{guests.filter(g => seatAssignments.some(a => a.guestId === g.id)).length}/{totalCount} guests seated</span>
+          <h2 className="text-sm font-semibold text-gray-800">{t('title')}</h2>
+          <span className="text-xs text-gray-400">{t('seatedCount', { seated: guests.filter(g => seatAssignments.some(a => a.guestId === g.id)).length, total: totalCount })}</span>
         </div>
 
         {/* Search */}
         <input
           type="text"
-          placeholder="Search guests..."
+          placeholder={t('search')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-300"
@@ -67,7 +70,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
       <div className="flex-1 overflow-y-auto">
         {filtered.length === 0 && (
           <p className="text-xs text-gray-400 text-center mt-8 px-4">
-            {guests.length === 0 ? 'No guests yet. Add some below.' : 'No guests match your search.'}
+            {guests.length === 0 ? t('none') : t('noMatch')}
           </p>
         )}
         {filtered.map((guest) => {
@@ -91,7 +94,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
                 )}
                 {assignmentCount > 0 && (
                   <p className="text-[10px] text-green-500">
-                    Seated in {assignmentCount} room{assignmentCount > 1 ? 's' : ''}
+                    {t('seatedIn', { count: assignmentCount })}
                   </p>
                 )}
               </div>
@@ -101,10 +104,10 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
                 target="_blank"
                 rel="noopener noreferrer"
                 draggable={false}
-                title="Edit details (photo, family, dietary, hotel…) in a new tab"
+                title={t('editHint')}
                 className="opacity-0 group-hover:opacity-100 focus:opacity-100 text-[10px] text-gray-400 hover:text-gray-800 underline px-1 whitespace-nowrap"
               >
-                Edit details
+                {t('editDetails')}
               </a>
               <button
                 onClick={() => handleDelete(guest.id)}
@@ -122,7 +125,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Guest name..."
+            placeholder={t('guestName')}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleAddGuest() }}
@@ -133,7 +136,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
             disabled={isAdding || !newName.trim()}
             className="text-xs bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-40"
           >
-            Add
+            {tc('add')}
           </button>
         </div>
 
@@ -142,7 +145,7 @@ export default function GuestPanel({ projectId, onDragStart }: Props) {
           onClick={() => setShowImport(true)}
           className="w-full text-xs text-gray-500 border border-gray-200 rounded-lg py-2 hover:bg-gray-50 transition-colors"
         >
-          📎 Import from file
+          {t('importFile')}
         </button>
       </div>
 

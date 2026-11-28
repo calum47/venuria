@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { passwordProblem } from '@/lib/passwordPolicy'
+import { getTranslations } from 'next-intl/server'
 
 function generatePlannerCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase()
@@ -21,15 +22,16 @@ function generatePlannerCode() {
  * auth user is deleted and the token is released again.
  */
 export async function acceptInvite(formData: FormData): Promise<{ error?: string }> {
+  const t = await getTranslations('Errors')
   const token = ((formData.get('token') as string | null) ?? '').trim()
   const name = ((formData.get('name') as string | null) ?? '').trim()
   const email = ((formData.get('email') as string | null) ?? '').trim().toLowerCase()
   const password = (formData.get('password') as string | null) ?? ''
 
-  if (!token) return { error: 'Missing invite.' }
-  if (name.length < 2) return { error: 'Enter your name.' }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid email.' }
-  const passwordIssue = passwordProblem(password)
+  if (!token) return { error: t('missingInvite') }
+  if (name.length < 2) return { error: t('enterYourName') }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: t('enterAValidEmail') }
+  const passwordIssue = passwordProblem(password, await getTranslations('Password'))
   if (passwordIssue) return { error: passwordIssue }
 
   const admin = createAdminClient()
@@ -46,7 +48,7 @@ export async function acceptInvite(formData: FormData): Promise<{ error?: string
     .maybeSingle()
 
   if (consumeError) return { error: consumeError.message }
-  if (!invite) return { error: 'This invite link has already been used or has expired.' }
+  if (!invite) return { error: t('thisInviteLinkHasAlready') }
 
   const release = () => admin.from('team_invites').update({ used_at: null }).eq('id', invite.id)
 
@@ -58,8 +60,8 @@ export async function acceptInvite(formData: FormData): Promise<{ error?: string
   })
   if (createError || !created.user) {
     await release()
-    const msg = createError?.message ?? 'Failed to create the login.'
-    return { error: /already|exists|registered/i.test(msg) ? 'An account with that email already exists. Sign in instead.' : msg }
+    const msg = createError?.message ?? t('failedToCreateTheLogin')
+    return { error: /already|exists|registered/i.test(msg) ? t('anAccountWithThatEmail') : msg }
   }
 
   // 3. Planner row in the invite's team, with the invite's role.
@@ -79,7 +81,7 @@ export async function acceptInvite(formData: FormData): Promise<{ error?: string
   if (plannerError || !planner) {
     await admin.auth.admin.deleteUser(created.user.id)
     await release()
-    return { error: plannerError?.message ?? 'Failed to create the planner profile.' }
+    return { error: plannerError?.message ?? t('failedToCreateThePlanner') }
   }
 
   await admin.from('team_invites').update({ used_by_planner_id: planner.id }).eq('id', invite.id)

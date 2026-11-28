@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { LayoutObject, Point2D, ProjectZone } from '@/types'
 import { DbCatalogItem, DbRoom } from '@/types/db'
 import {
@@ -31,6 +32,8 @@ export default function AutoArrangeModal({
   onClose,
   onArranged,
 }: Props) {
+  const t = useTranslations('AutoArrange')
+  const tc = useTranslations('Common')
   const tableItems = useMemo(
     () => catalogItems.filter((i) => i.category === 'tables' && isDiningTable(i)),
     [catalogItems],
@@ -69,7 +72,7 @@ export default function AutoArrangeModal({
         catalogItems.find((i) => i.name.toLowerCase().includes('chair'))
 
       if (!chairCatalogItem) {
-        setError('No chair catalog item found — cannot seat any tables.')
+        setError(t('noChairItem'))
         return
       }
 
@@ -102,6 +105,7 @@ export default function AutoArrangeModal({
         tableSelections: selections,
         guestCount,
         balanceAroundSweetheart,
+        t,
       })
 
       if (!result.success) {
@@ -119,16 +123,15 @@ export default function AutoArrangeModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl p-6 w-[28rem] max-h-[85vh] overflow-y-auto space-y-4">
         <div>
-          <h3 className="font-semibold text-gray-900">✨ Auto-Arrange</h3>
+          <h3 className="font-semibold text-gray-900">{t('title')}</h3>
           <p className="text-sm text-gray-500 mt-0.5">{currentRoom.name}</p>
           <p className="text-xs text-gray-400 mt-1">
-            Dining tables only. Adds tables inside the room, avoiding obstacles and anything already placed; nothing existing is moved
-            or removed. Each table gets its maximum chairs, so remove extras afterwards.
+            {t('intro')}
           </p>
         </div>
 
         {tableItems.length === 0 ? (
-          <p className="text-sm text-gray-500">No table catalog items available.</p>
+          <p className="text-sm text-gray-500">{t('noTables')}</p>
         ) : (
           <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
             {tableItems.map((item) => {
@@ -139,7 +142,7 @@ export default function AutoArrangeModal({
                   <div>
                     <span className="text-gray-900">{item.name}</span>
                     <span className="text-gray-400 ml-2 text-xs">
-                      {acceptsChairs ? `seats ${maxChairs}` : 'standing'}
+                      {acceptsChairs ? t('seatsN', { n: maxChairs }) : t('standing')}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -174,16 +177,16 @@ export default function AutoArrangeModal({
             }}
             className="rounded-lg border-gray-300"
           />
-          Balance around Sweetheart Table (mirrored pairs; an odd table sits centred on the aisle)
+          {t('balance')}
         </label>
         {balanceAroundSweetheart && (
           <p className="text-xs text-gray-400 px-1 -mt-2">
-            Place a Sweetheart Table first, where you want it. Auto-Arrange works around it and never moves it.
+            {t('balanceHint')}
           </p>
         )}
 
         <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm flex items-center justify-between">
-          <span className="text-gray-500">Guest list</span>
+          <span className="text-gray-500">{t('guestList')}</span>
           <span className="text-gray-900 font-medium">{guestCount}</span>
         </div>
 
@@ -192,23 +195,23 @@ export default function AutoArrangeModal({
             delta === 0 ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
           }`}
         >
-          <span>Selected seats</span>
+          <span>{t('selectedSeats')}</span>
           <span className="font-medium">
             {capacity}
-            {delta !== 0 && (delta > 0 ? ` (${delta} short)` : ` (${-delta} spare)`)}
+            {delta !== 0 && (delta > 0 ? t('short', { n: delta }) : t('spare', { n: -delta }))}
           </span>
         </div>
         {delta !== 0 && selections.length > 0 && (
           <p className="text-xs text-gray-400 px-1 -mt-2">
             {delta > 0
-              ? 'Fewer seats than guests — you can still arrange and add more tables later.'
-              : 'More seats than guests — you can still arrange, then remove chairs from the tables you want.'}
+              ? t('fewerSeats')
+              : t('moreSeats')}
           </p>
         )}
 
         <p className="text-xs text-gray-400">
-          ~{AUTO_ARRANGE_CLEARANCE_CM}cm walking-space clearance between tables.
-          {zones.length > 0 && ` Keeps clear of ${zones.length} zone${zones.length === 1 ? '' : 's'} in this room.`}
+          {t('clearance', { cm: AUTO_ARRANGE_CLEARANCE_CM })}
+          {zones.length > 0 && t('keepsClear', { count: zones.length })}
         </p>
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -218,14 +221,14 @@ export default function AutoArrangeModal({
             onClick={onClose}
             className="flex-1 py-2 text-sm text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {tc('cancel')}
           </button>
           <button
             onClick={handleRun}
             disabled={!canRun}
             className="flex-1 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg disabled:opacity-30 hover:bg-brand-700 transition-colors"
           >
-            {isRunning ? 'Arranging…' : 'Arrange'}
+            {isRunning ? t('arranging') : t('arrange')}
           </button>
         </div>
       </div>

@@ -1,3 +1,6 @@
+import { INTL_TAG, type Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
+
 /**
  * jsPDF's built-in fonts only cover WinAnsi (Latin-1 plus a few symbols).
  * Accented ES/FR text is fine; anything else (Cyrillic, CJK, emoji…) would
@@ -18,12 +21,13 @@ export function pdfText(s: string | null | undefined): string {
   return out
 }
 
-export function formatDateEn(iso: string | null): string {
-  if (!iso) return 'Date not set'
+/** "7 June 2026" / "7 de junio de 2026". `t` = translator for "Pdf". */
+export function formatDateLong(iso: string | null, locale: Locale, t: Tr): string {
+  if (!iso) return t('dateNotSet')
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
   if (!m) return iso
-  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  return `${parseInt(m[3], 10)} ${months[parseInt(m[2], 10) - 1] ?? ''} ${m[1]}`
+  const d = new Date(Date.UTC(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10)))
+  return pdfText(d.toLocaleDateString(INTL_TAG[locale], { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }))
 }
 
 export function safeFilePart(s: string): string {

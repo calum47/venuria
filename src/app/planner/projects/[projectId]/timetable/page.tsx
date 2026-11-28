@@ -1,5 +1,7 @@
 import { projectTitle } from '@/lib/projectTitle'
 import Link from 'next/link'
+import { getLocale, getTranslations } from 'next-intl/server'
+import type { Locale } from '@/i18n/config'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
@@ -18,11 +20,13 @@ type Params = { projectId: string }
 export default async function TimetablePage({ params }: { params: Promise<Params> }) {
   const { projectId } = await params
   const supabase = await createClient()
+  const t = await getTranslations('Timetable')
+  const locale = (await getLocale()) as Locale
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
     return (
       <main className="p-8">
-        <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
+        <p className="text-sm text-red-600">{(await getTranslations('Planner'))('noPlannerAccountLinkedTo')}</p>
       </main>
     )
   }
@@ -41,7 +45,7 @@ export default async function TimetablePage({ params }: { params: Promise<Params
     supabase.from('team_vendors').select('*').eq('team_id', ctx.team.id).order('name'),
   ])
   const loadError = daysRes.error ?? blocksRes.error ?? vendorsRes.error
-  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? (await getTranslations('Common'))('unknownVenue')
   const title = projectTitle(project.couple_names, venueName)
 
   return (
@@ -50,20 +54,20 @@ export default async function TimetablePage({ params }: { params: Promise<Params
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
             <Link href={`/planner/projects/${projectId}`} className="text-sm text-gray-500 hover:text-gray-900">← {title}</Link>
-            <h1 className="mt-2 text-3xl font-semibold text-gray-900">Timetable</h1>
+            <h1 className="mt-2 text-3xl font-semibold text-gray-900">{t('pageTitle')}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
               {venueName}
-              {project.event_date ? ` · ${formatDate(project.event_date)}` : ''} · visible to your team only
+              {project.event_date ? ` · ${formatDate(project.event_date, locale)}` : ''} · {t('teamOnly')}
             </p>
           </div>
           <Link href={`/planner/projects/${projectId}/rundown`} className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
-            Open the run-down list →
+            {t('openRundown')}
           </Link>
         </div>
 
         {loadError && (
           <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            Could not load everything: {loadError.message}
+            {t('loadError', { message: loadError.message })}
           </p>
         )}
 

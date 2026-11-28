@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { projectTitle } from '@/lib/projectTitle'
+import { getTranslations } from 'next-intl/server'
 
 /** Private buckets whose files live under `{team_id}/{project_id}/…` and are not removed by the database cascade. */
 const PROJECT_BUCKETS = ['guest-photos', 'project-documents', 'rsvp-media'] as const
@@ -35,30 +36,31 @@ async function listAll(storage: StorageAdmin, bucket: string, prefix: string, de
  * not a security check.
  */
 export async function deleteProject(formData: FormData): Promise<{ error?: string; warning?: string; ok?: boolean }> {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated.' }
+  if (!user) return { error: t('notAuthenticated') }
 
   const projectId = formData.get('projectId') as string
   const typed = ((formData.get('confirm') as string | null) ?? '').trim().toLowerCase()
-  if (!projectId) return { error: 'Missing project.' }
+  if (!projectId) return { error: t('missingProject') }
 
   const { data: project } = await supabase
     .from('projects')
     .select('id, team_id, couple_names, venues(name)')
     .eq('id', projectId)
     .maybeSingle()
-  if (!project) return { error: 'Project not found, or you do not have access to it.' }
+  if (!project) return { error: t('projectNotFoundOrYou2') }
 
   const title = projectTitle(project.couple_names, (project.venues as unknown as { name: string } | null)?.name ?? '')
-  if (!typed || typed !== title.trim().toLowerCase()) return { error: 'The name you typed does not match the project title.' }
+  if (!typed || typed !== title.trim().toLowerCase()) return { error: t('theNameYouTypedDoes') }
 
   const { data: deleted, error } = await supabase.from('projects').delete().eq('id', projectId).select('id')
   if (error) return { error: error.message }
   if (!deleted || deleted.length === 0) {
-    return { error: 'Only the planner who created this project, or a manager or lead of your team, can delete it.' }
+    return { error: t('onlyThePlannerWhoCreated') }
   }
 
   // The row is gone; now remove the files. A failure here must not undo or hide the delete.
@@ -78,5 +80,5 @@ export async function deleteProject(formData: FormData): Promise<{ error?: strin
 
   revalidatePath('/planner')
   revalidatePath('/planner/stock')
-  return leftover === 0 ? { ok: true } : { ok: true, warning: 'The project was deleted, but some uploaded files could not be removed.' }
+  return leftover === 0 ? { ok: true } : { ok: true, warning: t('theProjectWasDeletedBut') }
 }

@@ -5,11 +5,6 @@
 
 export type RsvpStatus = 'attending' | 'declined' | 'maybe'
 export const RSVP_STATUSES: RsvpStatus[] = ['attending', 'declined', 'maybe']
-export const RSVP_LABEL: Record<RsvpStatus, string> = {
-  attending: 'Attending',
-  declined: 'Declined',
-  maybe: 'Maybe',
-}
 
 /** The token is 64 hex characters (two UUIDs). Reject anything else before touching the database. */
 export function isPlausibleToken(t: unknown): t is string {

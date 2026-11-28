@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase/client'
 
 /**
@@ -11,6 +12,8 @@ import { supabase } from '@/lib/supabase/client'
  * dashboard except the browser's back button.
  */
 export default function EditorNavMenu() {
+  const t = useTranslations('Nav')
+  const tc = useTranslations('Common')
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -37,18 +40,18 @@ export default function EditorNavMenu() {
       <button
         onClick={() => setOpen((v) => !v)}
         className="text-sm font-semibold text-gray-800 hover:text-gray-600 flex items-center gap-1"
-        title="Menu"
+        title={t('menu')}
       >
         ☰ Venuria
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded-lg shadow-lg p-1 z-50">
-          <Link href="/planner" className={item} onClick={() => setOpen(false)}>My projects</Link>
-          <Link href="/planner/stock" className={item} onClick={() => setOpen(false)}>My stock</Link>
-          <Link href="/planner/team" className={item} onClick={() => setOpen(false)}>My team</Link>
-          <Link href="/planner/settings" className={item} onClick={() => setOpen(false)}>Settings</Link>
+          <Link href="/planner" className={item} onClick={() => setOpen(false)}>{t('myProjects')}</Link>
+          <Link href="/planner/stock" className={item} onClick={() => setOpen(false)}>{t('myStock')}</Link>
+          <Link href="/planner/team" className={item} onClick={() => setOpen(false)}>{t('myTeam')}</Link>
+          <Link href="/planner/settings" className={item} onClick={() => setOpen(false)}>{t('settings')}</Link>
           <div className="my-1 border-t border-gray-100" />
-          <button onClick={signOut} className={`${item} w-full text-left text-gray-500`}>Sign out</button>
+          <button onClick={signOut} className={`${item} w-full text-left text-gray-500`}>{tc('signOut')}</button>
         </div>
       )}
     </div>

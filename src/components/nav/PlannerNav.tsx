@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import NotificationBell from '@/components/nav/NotificationBell'
 import { Rings } from '@/components/brand/Rings'
-import { ROLE_LABEL, type PlannerRole } from '@/lib/supabase/plannerContext'
+import type { PlannerRole } from '@/lib/supabase/plannerContext'
 import { lastPageHref } from '@/lib/lastPage'
 
 type Props = {
@@ -28,6 +29,8 @@ type Props = {
  */
 export default function PlannerNav({ plannerName, role, teamName, lastProjectId, lastPath, vendorName }: Props) {
   const pathname = usePathname()
+  const t = useTranslations('Nav')
+  const tRoles = useTranslations('Roles')
   const item = (href: string, label: string, active: boolean) => (
     <Link
       href={href}
@@ -42,38 +45,38 @@ export default function PlannerNav({ plannerName, role, teamName, lastProjectId,
   return (
     <header className="bg-white border-b border-brand-100">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-2 md:py-0 md:h-14 flex flex-wrap md:flex-nowrap items-center gap-x-2 gap-y-1">
-        <Link href="/planner" className="mr-2 md:mr-4 flex items-center gap-2 text-gray-900" aria-label="Venuria home">
+        <Link href="/planner" className="mr-2 md:mr-4 flex items-center gap-2 text-gray-900" aria-label={t('home')}>
           <Rings className="h-5 w-7 text-brand-500" />
           <span className="font-serif text-2xl font-semibold leading-none tracking-tight">Venuria</span>
         </Link>
 
         {/* On phones the links drop to their own scrollable row under the logo. */}
-        <nav aria-label="Main" data-tour="nav" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <nav aria-label={t('main')} data-tour="nav" className="order-last md:order-none w-full md:w-auto flex items-center gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {lastProjectId ? (
-            item(lastPageHref(lastProjectId, lastPath), '↩ Last project', false)
+            item(lastPageHref(lastProjectId, lastPath), t('lastProject'), false)
           ) : (
-            <span className="shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-gray-300" title="Open a project and it will appear here">↩ Last project</span>
+            <span className="shrink-0 whitespace-nowrap px-3 py-1.5 text-sm text-gray-300" title={t('lastProjectHint')}>{t('lastProject')}</span>
           )}
-          {item('/planner', 'My projects', pathname === '/planner')}
-          {item('/planner/stock', 'My stock', pathname.startsWith('/planner/stock'))}
-          {item('/planner/team', 'My team', pathname.startsWith('/planner/team'))}
-          {item('/planner/settings', 'Settings', pathname.startsWith('/planner/settings'))}
+          {item('/planner', t('myProjects'), pathname === '/planner')}
+          {item('/planner/stock', t('myStock'), pathname.startsWith('/planner/stock'))}
+          {item('/planner/team', t('myTeam'), pathname.startsWith('/planner/team'))}
+          {item('/planner/settings', t('settings'), pathname.startsWith('/planner/settings'))}
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
           {vendorName && (
             <Link
               href="/rental"
-              title={`Switch to your Vendor account — ${vendorName}`}
+              title={t('switchToVendor', { name: vendorName })}
               className="hidden sm:inline-flex shrink-0 whitespace-nowrap rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs text-brand-800 hover:bg-brand-100"
             >
-              Planner ⇄ Vendor
+              {t('plannerVendor')}
             </Link>
           )}
           <NotificationBell />
           <div className="hidden xl:block text-right leading-tight">
             <p className="text-sm text-gray-900">{plannerName}</p>
-            <p className="text-[11px] text-gray-400">{ROLE_LABEL[role]} · {teamName}</p>
+            <p className="text-[11px] text-gray-400">{tRoles(role)} · {teamName}</p>
           </div>
           <SignOutButton />
         </div>

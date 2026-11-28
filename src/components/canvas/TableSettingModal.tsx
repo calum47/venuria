@@ -1,9 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { categoryLabel } from '@/lib/categories'
 import type { DbCatalogItem, DbTableSettingTemplate } from '@/types/db'
 import { createTemplate, deleteTemplate, updateTemplate } from '@/lib/supabase/tableSettingQueries'
-import { groupByCategory, TABLE_SETTING_CATEGORY_LABELS } from '@/lib/tableSetting'
+import { groupByCategory } from '@/lib/tableSetting'
 
 // Team-wide table-setting templates: create, edit, delete. Quantity 0 (or blank)
 // leaves an item out. Changing a template never changes tables that already used
@@ -27,15 +29,18 @@ function quantitiesOf(template: DbTableSettingTemplate | undefined): Record<stri
 }
 
 export default function TableSettingModal({ items, templates, onClose, onChanged }: Props) {
+  const t = useTranslations('TemplateModal')
+  const tc = useTranslations('Common')
+  const tcat = useTranslations('Categories')
   const [selectedId, setSelectedId] = useState<string>(templates[0]?.id ?? NEW)
-  const selected = templates.find((t) => t.id === selectedId)
+  const selected = templates.find((tpl) => tpl.id === selectedId)
   const [name, setName] = useState(selected?.name ?? '')
   const [quantities, setQuantities] = useState<Record<string, number>>(quantitiesOf(selected))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const select = (id: string) => {
-    const template = templates.find((t) => t.id === id)
+    const template = templates.find((tpl) => tpl.id === id)
     setSelectedId(id)
     setName(template?.name ?? '')
     setQuantities(quantitiesOf(template))
@@ -45,14 +50,14 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
   const chosen = Object.entries(quantities).filter(([, q]) => q >= 1)
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Give the template a name.'); return }
-    if (chosen.length === 0) { setError('Add at least one item.'); return }
+    if (!name.trim()) { setError(t('needName')); return }
+    if (chosen.length === 0) { setError(t('needItem')); return }
     setBusy(true)
     setError(null)
     try {
       const lines = chosen.map(([catalogItemId, quantity]) => ({ catalogItemId, quantity }))
       if (selectedId === NEW) {
-        const id = await createTemplate(name, lines)
+        const id = await createTemplate(name, lines, t)
         await onChanged()
         setSelectedId(id)
       } else {
@@ -60,8 +65,8 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
         await onChanged()
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not save.'
-      setError(message.includes('duplicate key') ? 'A template with that name already exists.' : message)
+      const message = err instanceof Error ? err.message : t('saveError')
+      setError(message.includes('duplicate key') ? t('duplicate') : message)
     } finally {
       setBusy(false)
     }
@@ -69,7 +74,7 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
 
   const handleDelete = async () => {
     if (selectedId === NEW) return
-    if (!window.confirm(`Delete "${selected?.name}"? Tables that already use it keep their items.`)) return
+    if (!window.confirm(t('deleteConfirm', { name: selected?.name ?? '' }))) return
     setBusy(true)
     setError(null)
     try {
@@ -79,7 +84,7 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
       setName('')
       setQuantities({})
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not delete.')
+      setError(err instanceof Error ? err.message : t('deleteError'))
     } finally {
       setBusy(false)
     }
@@ -90,24 +95,24 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
       <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[85vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
-            <h2 className="font-semibold text-gray-800">Table setting templates</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Shared with your team. Per-seat items scale with the number of chairs.</p>
+            <h2 className="font-semibold text-gray-800">{t('title')}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{t('subtitle')}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none" aria-label="Close">×</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none" aria-label={tc('close')}>×</button>
         </div>
 
         <div className="flex flex-1 min-h-0">
           {/* Template list */}
           <div className="w-52 border-r border-gray-200 p-3 space-y-1 overflow-y-auto">
-            {templates.map((t) => (
+            {templates.map((tpl) => (
               <button
-                key={t.id}
-                onClick={() => select(t.id)}
+                key={tpl.id}
+                onClick={() => select(tpl.id)}
                 className={`w-full text-left text-sm px-2.5 py-1.5 rounded-lg truncate ${
-                  selectedId === t.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+                  selectedId === tpl.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                {t.name}
+                {tpl.name}
               </button>
             ))}
             <button
@@ -116,7 +121,7 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
                 selectedId === NEW ? 'border-blue-400 text-blue-700 bg-blue-50' : 'border-gray-300 text-gray-500 hover:bg-gray-50'
               }`}
             >
-              + New template
+              {t('newTemplate')}
             </button>
           </div>
 
@@ -127,23 +132,23 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
               value={name}
               maxLength={80}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Rustic dinner, Formal 3-glass"
+              placeholder={t('namePlaceholder')}
               className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-400"
             />
 
-            {items.length === 0 && <p className="text-sm text-gray-400">No table-setting items in the catalog yet.</p>}
+            {items.length === 0 && <p className="text-sm text-gray-400">{t('noItems')}</p>}
 
             {groupByCategory(items).map(({ category, items: categoryItems }) => (
               <div key={category}>
                 <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">
-                  {TABLE_SETTING_CATEGORY_LABELS[category] ?? category}
+                  {categoryLabel(tcat, category)}
                 </p>
                 <ul className="divide-y divide-gray-100 border border-gray-100 rounded-lg">
                   {categoryItems.map((item) => (
                     <li key={item.id} className="flex items-center justify-between gap-3 px-3 py-1.5 text-sm">
                       <div className="min-w-0">
                         <span className="text-gray-800">{item.name}</span>
-                        <span className="text-xs text-gray-400 ml-2">{item.scope === 'per_seat' ? 'per seat' : 'per table'}</span>
+                        <span className="text-xs text-gray-400 ml-2">{item.scope === 'per_seat' ? t('perSeat') : t('perTable')}</span>
                       </div>
                       <input
                         type="number"
@@ -165,19 +170,19 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
 
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-gray-200">
           <div className="text-sm">
-            {error ? <span className="text-red-600">{error}</span> : <span className="text-gray-400">{chosen.length} item{chosen.length === 1 ? '' : 's'} selected</span>}
+            {error ? <span className="text-red-600">{error}</span> : <span className="text-gray-400">{t('itemsSelected', { count: chosen.length })}</span>}
           </div>
           <div className="flex gap-2">
             {selectedId !== NEW && (
               <button onClick={handleDelete} disabled={busy} className="text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-40">
-                Delete
+                {tc('delete')}
               </button>
             )}
             <button onClick={onClose} className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
-              Close
+              {tc('close')}
             </button>
             <button onClick={handleSave} disabled={busy} className="text-sm text-white bg-blue-600 rounded-lg px-3 py-1.5 hover:bg-blue-700 disabled:opacity-40">
-              {busy ? 'Saving…' : selectedId === NEW ? 'Create template' : 'Save changes'}
+              {busy ? tc('saving') : selectedId === NEW ? t('create') : t('saveChanges')}
             </button>
           </div>
         </div>

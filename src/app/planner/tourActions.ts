@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 import { suggestDueBy } from '@/lib/projectDates'
 
 type Result = { projectId: string; sample: boolean } | { error: string }
@@ -19,11 +20,12 @@ type Result = { projectId: string; sample: boolean } | { error: string }
  */
 export async function getOrCreateTourProject(): Promise<Result> {
   const supabase = await createClient()
+  const t = await getTranslations('Tour')
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return { error: 'Not authenticated.' }
+  if (!user) return { error: t('errNotAuth') }
 
   const { data: planner } = await supabase.from('planners').select('id').eq('user_id', user.id).maybeSingle()
-  if (!planner) return { error: 'No planner account linked to this login.' }
+  if (!planner) return { error: t('errNoPlanner') }
 
   const { data: own } = await supabase
     .from('projects')
@@ -41,7 +43,7 @@ export async function getOrCreateTourProject(): Promise<Result> {
   if (venueError) return { error: venueError.message }
   const venuesWithRooms = new Set((roomRows ?? []).map((r) => r.venue_id as string))
   const withRooms = (venues ?? []).filter((v) => venuesWithRooms.has(v.id))
-  if (withRooms.length === 0) return { error: 'No venue with a room is set up yet, so there is nothing to practise on.' }
+  if (withRooms.length === 0) return { error: t('errNoVenue') }
   const preferred = withRooms.filter((v) => /\b(test|demo|sample)\b/i.test(v.name))
   const pool = preferred.length > 0 ? preferred : withRooms
   const venue = pool[Math.floor(Math.random() * pool.length)]
@@ -52,10 +54,10 @@ export async function getOrCreateTourProject(): Promise<Result> {
 
   const { data: project, error } = await supabase
     .from('projects')
-    .insert({ planner_id: planner.id, venue_id: venue.id, event_date: eventDate, due_by: suggestDueBy(eventDate), couple_names: 'Alex & Sam (sample)' })
+    .insert({ planner_id: planner.id, venue_id: venue.id, event_date: eventDate, due_by: suggestDueBy(eventDate), couple_names: t('sampleCouple') })
     .select('id')
     .single()
-  if (error || !project) return { error: error?.message ?? 'Could not create the sample project.' }
+  if (error || !project) return { error: error?.message ?? t('errSample') }
 
   // Pre-answer "seated or standing" for every room, so the editor doesn't open with that dialog on top of the
   // tour's first editor step. Not critical: if it fails, the dialog just appears and the tour waits for the answer.
@@ -71,19 +73,19 @@ export async function getOrCreateTourProject(): Promise<Result> {
   // in the tour. Deliberately no vendors: that would add entries to the team's real vendor list.
   const { data: day } = await supabase
     .from('project_days')
-    .insert({ project_id: project.id, label: 'Wedding day', day_date: eventDate, position: 0 })
+    .insert({ project_id: project.id, label: t('sampleDay'), day_date: eventDate, position: 0 })
     .select('id')
     .single()
   if (day) {
     const h = (hh: number, mm = 0) => hh * 60 + mm
     const { error: blockError } = await supabase.from('timetable_blocks').insert([
-      { title: 'Getting ready', start_min: h(12), end_min: h(13, 30), notes: 'Photographer arrives at 12:30.' },
-      { title: 'Guests arrive', start_min: h(16, 30), end_min: h(17), materials: ['Welcome sign', 'Order of service'] },
-      { title: 'Ceremony', start_min: h(17), end_min: h(17, 45), person: 'Officiant' },
-      { title: 'Cocktail hour', start_min: h(17, 45), end_min: h(19) },
-      { title: 'Dinner', start_min: h(19), end_min: h(21) },
-      { title: 'First dance', start_min: h(21), end_min: h(21, 15) },
-      { title: 'Party', start_min: h(21, 15), end_min: h(23, 30) },
+      { title: t('blkGettingReady'), start_min: h(12), end_min: h(13, 30), notes: t('blkGettingReadyNote') },
+      { title: t('blkGuestsArrive'), start_min: h(16, 30), end_min: h(17), materials: [t('blkWelcomeSign'), t('blkOrderOfService')] },
+      { title: t('blkCeremony'), start_min: h(17), end_min: h(17, 45), person: t('blkOfficiant') },
+      { title: t('blkCocktail'), start_min: h(17, 45), end_min: h(19) },
+      { title: t('blkDinner'), start_min: h(19), end_min: h(21) },
+      { title: t('blkFirstDance'), start_min: h(21), end_min: h(21, 15) },
+      { title: t('blkParty'), start_min: h(21, 15), end_min: h(23, 30) },
     ].map((b) => ({ ...b, project_id: project.id, day_id: day.id })))
     if (blockError) console.error('Tour: could not add example timetable blocks:', blockError.message)
   }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import StockSection from './StockSection'
+import { getTranslations } from 'next-intl/server'
 
 /**
  * My Stock (Phase 23 core CRUD). Team-shared retail inventory — welcome
@@ -15,12 +16,13 @@ import StockSection from './StockSection'
  * not part of this page — Orders here is a plain status log (pending/received).
  */
 export default async function StockPage() {
+  const t = await getTranslations('Stock')
   const supabase = await createClient()
   const ctx = await getPlannerContext(supabase)
   if (!ctx) {
     return (
       <main className="p-8">
-        <p className="text-sm text-red-600">No planner account linked to this login — contact an admin.</p>
+        <p className="text-sm text-red-600">{t('noPlannerAccountLinkedTo')}</p>
       </main>
     )
   }
@@ -29,7 +31,7 @@ export default async function StockPage() {
     <main className="p-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div>
-          <h1 className="text-3xl font-semibold text-gray-900">My Stock</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('myStock')}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
             {ctx.team.name}&apos;s inventory — shared with everyone on the team, currency {ctx.team.currency}
           </p>

@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getTranslations } from 'next-intl/server'
 
 export default async function ClientLandingPage() {
+  const t = await getTranslations('Client')
   const supabase = await createClient()
 
   // RLS (client_read_own_project) already scopes this to the logged-in
@@ -18,7 +20,7 @@ export default async function ClientLandingPage() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
         <p className="text-sm text-gray-500">
-          No project has been set up for your account yet — check with your planner.
+          {t('noProjectHasBeenSet')}
         </p>
       </main>
     )

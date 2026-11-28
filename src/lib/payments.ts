@@ -5,6 +5,8 @@
  */
 import type { DbDocumentKind, DbProjectPayment } from '@/types/db'
 import { addDays, daysUntil, isIsoDate } from '@/lib/projectDates'
+import { INTL_TAG, type Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
 
 export const DOCUMENTS_BUCKET = 'project-documents'
 /** Mirrors the bucket's file_size_limit — the bucket is the real enforcement, this is for a friendly message. */
@@ -12,14 +14,9 @@ export const MAX_PDF_BYTES = 10 * 1024 * 1024
 /** numeric(12,2) holds 10 integer digits. */
 export const MAX_AMOUNT = 9_999_999_999.99
 
-export const DOC_KIND_LABEL: Record<DbDocumentKind, string> = {
-  contract_draft: 'Contract draft',
-  signed_contract: 'Signed contract',
-  quote: 'Quote / proposal',
-  invoice: 'Invoice',
-  insurance_permit: 'Insurance / permit',
-  receipt: 'Receipt',
-  other: 'Other',
+/** `t` is the "Pay" translator. */
+export function docKindLabel(kind: DbDocumentKind, t: Tr): string {
+  return t(`docKind.${kind}`)
 }
 
 /** Types offered for project-level documents. 'receipt' is reserved for PDFs attached to a payment. */
@@ -61,9 +58,9 @@ export function sumAmounts(values: number[]): number {
   return values.reduce((acc, v) => acc + Math.round(v * 100), 0) / 100
 }
 
-export function formatMoney(amount: number, currency: string): string {
+export function formatMoney(amount: number, currency: string, locale: Locale): string {
   try {
-    return new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(amount)
+    return new Intl.NumberFormat(INTL_TAG[locale], { style: 'currency', currency }).format(amount)
   } catch {
     return `${amount.toFixed(2)} ${currency}`
   }
@@ -108,12 +105,12 @@ export function validDate(s: string): boolean {
  * type server-side; this only produces an early, readable error. The MIME
  * type is whatever the browser claims, so the bucket is not a content check.
  */
-export async function checkPdf(file: File): Promise<string | null> {
-  if (file.size === 0) return 'That file is empty.'
-  if (file.size > MAX_PDF_BYTES) return `PDFs can be at most ${MAX_PDF_BYTES / 1024 / 1024} MB (this one is ${(file.size / 1024 / 1024).toFixed(1)} MB).`
-  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) return 'Only PDF files can be attached.'
+export async function checkPdf(file: File, t: Tr): Promise<string | null> {
+  if (file.size === 0) return t('fileEmpty')
+  if (file.size > MAX_PDF_BYTES) return t('pdfTooBig', { max: MAX_PDF_BYTES / 1024 / 1024, size: (file.size / 1024 / 1024).toFixed(1) })
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) return t('onlyPdf')
   const head = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer())
-  if (head !== '%PDF-') return 'That file does not look like a valid PDF.'
+  if (head !== '%PDF-') return t('notValidPdf')
   return null
 }
 
@@ -142,13 +139,13 @@ export async function detectAttachment(file: File): Promise<AttachmentType | nul
  * bucket's size limit. The bucket enforces size and MIME type server-side; this gives an early,
  * readable error.
  */
-export async function checkAttachment(file: File): Promise<string | null> {
-  if (file.size === 0) return 'That file is empty.'
-  if (file.size > MAX_PDF_BYTES) return `Files can be at most ${MAX_PDF_BYTES / 1024 / 1024} MB (this one is ${(file.size / 1024 / 1024).toFixed(1)} MB).`
+export async function checkAttachment(file: File, t: Tr): Promise<string | null> {
+  if (file.size === 0) return t('fileEmpty')
+  if (file.size > MAX_PDF_BYTES) return t('fileTooBig', { max: MAX_PDF_BYTES / 1024 / 1024, size: (file.size / 1024 / 1024).toFixed(1) })
   if (!(await detectAttachment(file))) {
     return /\.(heic|heif)$/i.test(file.name)
-      ? 'HEIC photos are not supported. Choose the picture as JPEG, or take a screenshot instead.'
-      : 'Only PDF, JPG, PNG or WebP files can be attached.'
+      ? t('heicUnsupported')
+      : t('onlyAttach')
   }
   return null
 }
@@ -190,9 +187,17 @@ export function shiftMonth(ym: string, delta: number): string {
   return new Date(Date.UTC(y, m - 1 + delta, 1)).toISOString().slice(0, 7)
 }
 
-export function monthLabel(ym: string): string {
+export function monthLabel(ym: string, locale: Locale): string {
   const [y, m] = ym.split('-').map(Number)
-  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  const s = new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(INTL_TAG[locale], { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
+
+/** Monday-first short weekday names for the calendar header ("Mon"… / "lun"…). */
+export function weekdayLabels(locale: Locale): string[] {
+  return Array.from({ length: 7 }, (_, i) =>
+    new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(INTL_TAG[locale], { weekday: 'short', timeZone: 'UTC' }),
+  )
 }
 
 /**

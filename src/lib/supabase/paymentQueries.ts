@@ -1,3 +1,4 @@
+import type { Tr } from '@/i18n/types'
 import { supabase } from './client'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import { DOCUMENTS_BUCKET, detectAttachment } from '@/lib/payments'
@@ -108,8 +109,9 @@ export type DocumentUpload = {
  * behind. Path is {team_id}/{project_id}/{uuid}.pdf — the storage policy and
  * a table CHECK both key off the project segment.
  */
-export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjectDocument> {
-  const path = await uploadDocumentObject(u.teamId, u.projectId, u.file)
+/** `t` = translator for "Pay" (error texts). */
+export async function uploadProjectDocument(u: DocumentUpload, t: Tr): Promise<DbProjectDocument> {
+  const path = await uploadDocumentObject(u.teamId, u.projectId, u.file, t)
   try {
     return await registerDocument({
       projectId: u.projectId,
@@ -126,7 +128,7 @@ export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjec
     await removeStagedPdf(path)
     // The (group, version) unique index: someone else uploaded this version number first.
     if (typeof error === 'object' && error && 'code' in error && (error as { code?: string }).code === '23505' && u.versionGroupId) {
-      throw new Error('Someone just uploaded another version of this document. Refresh the page and try again.')
+      throw new Error(t('errVersionConflict'))
     }
     throw error
   }
@@ -136,9 +138,9 @@ export async function uploadProjectDocument(u: DocumentUpload): Promise<DbProjec
  * Uploads only the file (no database row yet). Returns its storage path {team_id}/{project_id}/{uuid}.{ext}.
  * The extension and content type come from the file's own bytes (PDF, JPG, PNG or WebP), not its name.
  */
-export async function uploadDocumentObject(teamId: string, projectId: string, file: File): Promise<string> {
+export async function uploadDocumentObject(teamId: string, projectId: string, file: File, t: Tr): Promise<string> {
   const type = await detectAttachment(file)
-  if (!type) throw new Error('Only PDF, JPG, PNG or WebP files can be attached.')
+  if (!type) throw new Error(t('errAttachType'))
   const path = `${teamId}/${projectId}/${crypto.randomUUID()}.${type.ext}`
   const { error } = await supabase.storage
     .from(DOCUMENTS_BUCKET)
@@ -199,7 +201,7 @@ export async function registerDocument(d: DocumentRegistration): Promise<DbProje
 }
 
 /** Asks the server to read payment details out of an uploaded PDF. Throws an Error with a user-readable message. */
-export async function extractPaymentsFromPdf(storagePath: string): Promise<ExtractionResult> {
+export async function extractPaymentsFromPdf(storagePath: string, t: Tr): Promise<ExtractionResult> {
   let res: Response
   try {
     res = await fetch('/api/payments/extract', {
@@ -208,14 +210,14 @@ export async function extractPaymentsFromPdf(storagePath: string): Promise<Extra
       body: JSON.stringify({ path: storagePath }),
     })
   } catch {
-    throw new Error('Could not reach the server to read the PDF.')
+    throw new Error(t('errReach'))
   }
   const body = (await res.json().catch(() => null)) as
     | { ok: true; currency: string | null; payments: ExtractionResult['payments'] }
     | { ok: false; message?: string }
     | null
   if (!res.ok || !body || body.ok !== true) {
-    throw new Error((body && body.ok === false && body.message) || 'Could not read the PDF.')
+    throw new Error((body && body.ok === false && body.message) || t('errReadPdf'))
   }
   return { currency: body.currency, payments: body.payments }
 }
@@ -235,14 +237,14 @@ export async function deleteProjectDocument(doc: Pick<DbProjectDocument, 'id' | 
 export type DocumentEdit = { label: string; kind: DbDocumentKind; vendorName: string | null }
 
 /** Edits the whole document (every version) so versions never disagree on name, type or vendor. */
-export async function updateDocumentGroup(groupId: string, e: DocumentEdit): Promise<DbProjectDocument[]> {
+export async function updateDocumentGroup(groupId: string, e: DocumentEdit, t: Tr): Promise<DbProjectDocument[]> {
   const { data, error } = await supabase
     .from('project_documents')
     .update({ label: e.label, kind: e.kind, vendor_name: e.vendorName })
     .eq('version_group_id', groupId)
     .select('*')
   if (error) throw error
-  if (!data || data.length === 0) throw new Error('Could not save — the document may have been removed.')
+  if (!data || data.length === 0) throw new Error(t('errNotSaved'))
   return data as DbProjectDocument[]
 }
 
@@ -263,8 +265,8 @@ export async function deleteDocumentGroup(groupId: string): Promise<string[]> {
 }
 
 /** Private bucket → short-lived signed URL, minted on click rather than stored. */
-export async function getDocumentUrl(storagePath: string): Promise<string> {
+export async function getDocumentUrl(storagePath: string, t: Tr): Promise<string> {
   const { data, error } = await supabase.storage.from(DOCUMENTS_BUCKET).createSignedUrl(storagePath, 60)
-  if (error || !data) throw error ?? new Error('Could not create a download link.')
+  if (error || !data) throw error ?? new Error(t('errNoLink'))
   return data.signedUrl
 }

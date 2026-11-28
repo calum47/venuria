@@ -3,6 +3,7 @@
  * request/response handling can be tested with a fake `fetch` (no network, no API key).
  */
 import { MAX_EXTRACTED_PAYMENTS, sanitizeExtraction, type ExtractionResult } from '@/lib/pdfPayments'
+import type { Tr } from '@/i18n/types'
 
 export const DEFAULT_MODEL = 'claude-sonnet-5-5'
 
@@ -69,6 +70,7 @@ export type ExtractOutcome =
 export async function extractWithClaude(
   pdf: Buffer,
   opts: { apiKey: string; model?: string; fetchFn?: typeof fetch; timeoutMs?: number },
+  t: Tr,
 ): Promise<ExtractOutcome> {
   const fetchFn = opts.fetchFn ?? fetch
   let res: Response
@@ -97,20 +99,20 @@ export async function extractWithClaude(
     })
   } catch (e) {
     console.error('[payments/extract] request failed:', e instanceof Error ? e.message : e)
-    return { ok: false, status: 504, code: 'upstream_unreachable', message: 'Reading the PDF took too long or could not start. Fill the details in by hand.' }
+    return { ok: false, status: 504, code: 'upstream_unreachable', message: t('extractTimeout') }
   }
 
   if (!res.ok) {
     // Log the provider's reason server-side only — it can include account details.
     console.error('[payments/extract] Anthropic API error', res.status, (await res.text()).slice(0, 500))
-    return { ok: false, status: 502, code: 'upstream_error', message: 'The PDF reader returned an error. Fill the details in by hand.' }
+    return { ok: false, status: 502, code: 'upstream_error', message: t('extractError') }
   }
 
   const body = (await res.json().catch(() => null)) as { stop_reason?: string; content?: { type: string; name?: string; input?: unknown }[] } | null
   const block = body?.content?.find((b) => b.type === 'tool_use' && b.name === TOOL.name)
   if (!block) {
     console.error('[payments/extract] no report_payments tool call; stop_reason =', body?.stop_reason, 'blocks =', body?.content?.map((b) => b.type).join(','))
-    return { ok: false, status: 502, code: 'upstream_error', message: 'The PDF reader gave no answer. Fill the details in by hand.' }
+    return { ok: false, status: 502, code: 'upstream_error', message: t('extractNoAnswer') }
   }
 
   return { ok: true, ...sanitizeExtraction(block.input) }

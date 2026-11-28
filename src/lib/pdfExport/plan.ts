@@ -3,6 +3,7 @@ import type { ObstacleShape, Point2D, ProjectZone } from '@/types'
 import { zoneLabelAnchor } from '@/lib/zones'
 import { pdfText } from './text'
 import type { PdfCatalogItem, PdfObject, PdfRoom } from './types'
+import type { Tr } from '@/i18n/types'
 
 type Box = { x: number; y: number; w: number; h: number }
 
@@ -34,8 +35,8 @@ export function tablesOfRoom(roomId: string, objects: PdfObject[], catalog: Reco
     .sort((a, b) => Math.round(a.positionCm.y / 100) - Math.round(b.positionCm.y / 100) || a.positionCm.x - b.positionCm.x)
 }
 
-export function tableHeading(o: PdfObject, index: number): string {
-  return o.tableLabel?.trim() ? pdfText(o.tableLabel.trim()) : `Table ${index + 1}`
+export function tableHeading(o: PdfObject, index: number, t: Tr): string {
+  return o.tableLabel?.trim() ? pdfText(o.tableLabel.trim()) : t('table', { n: index + 1 })
 }
 
 function shapePoints(shape: ObstacleShape): Point2D[] | null {

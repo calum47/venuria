@@ -6,6 +6,7 @@ import { STOCK_TRACKED_CATEGORIES, tableSettingDemand } from '@/lib/tableSetting
 import type { DbCatalogItem, DbGuest, DbGuestFamily, DbLayoutObject, DbRoom } from '@/types/db'
 import { normalizePdfStyle } from './style'
 import type { PdfExportData, PdfItemRow } from './types'
+import type { Tr } from '@/i18n/types'
 
 /**
  * Everything the project PDF needs, read with the caller's own session (RLS is the real gate).
@@ -14,7 +15,7 @@ import type { PdfExportData, PdfItemRow } from './types'
  *
  * Returns null when the project is missing or the caller is not on the planner team that owns it.
  */
-export async function loadPdfExportData(supabase: SupabaseClient, projectId: string): Promise<PdfExportData | null> {
+export async function loadPdfExportData(supabase: SupabaseClient, projectId: string, t: Tr): Promise<PdfExportData | null> {
   const { data: project } = await supabase
     .from('projects')
     .select('id, venue_id, team_id, event_date, couple_names, venues(name)')
@@ -25,7 +26,7 @@ export async function loadPdfExportData(supabase: SupabaseClient, projectId: str
   const { data: canPlan } = await supabase.rpc('planner_can_access_project', { pid: projectId })
   if (canPlan !== true) return null
 
-  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? 'Unknown venue'
+  const venueName = (project.venues as unknown as { name: string } | null)?.name ?? t('unknownVenue')
   const venueId = project.venue_id as string
 
   const [
@@ -87,7 +88,7 @@ export async function loadPdfExportData(supabase: SupabaseClient, projectId: str
   for (const row of rentalStockRows) {
     if (row.quantity <= 0) continue
     const list = rentalByItem.get(row.catalog_item_id) ?? []
-    list.push({ companyName: companyName.get(row.owner_id) ?? 'Unknown rental company', quantity: row.quantity })
+    list.push({ companyName: companyName.get(row.owner_id) ?? t('unknownRental'), quantity: row.quantity })
     rentalByItem.set(row.catalog_item_id, list)
   }
 
@@ -99,7 +100,7 @@ export async function loadPdfExportData(supabase: SupabaseClient, projectId: str
       const isStockTracked = !!item && STOCK_TRACKED_CATEGORIES.includes(item.category)
       const venueStock = venueStockById.get(id) ?? 0
       return {
-        name: item?.name ?? 'Unknown item',
+        name: item?.name ?? t('unknownItem'),
         category: item?.category ?? 'other',
         used,
         venueStock,

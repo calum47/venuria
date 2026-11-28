@@ -2,6 +2,7 @@ import { checkPdf } from '@/lib/payments'
 import type { ExtractionResult } from '@/lib/pdfPayments'
 import { extractPaymentsFromPdf, uploadDocumentObject } from '@/lib/supabase/paymentQueries'
 import { errMsg } from './documentUi'
+import type { Tr } from '@/i18n/types'
 
 /**
  * A PDF that is uploaded to the bucket (so it can be read server-side, whatever its size) but has
@@ -18,15 +19,15 @@ export type StagedPdf = {
 }
 
 /** Validates, uploads, then reads. Throws only when the file is unusable or cannot be uploaded. */
-export async function stagePdf(file: File, teamId: string, projectId: string): Promise<StagedPdf> {
-  const problem = await checkPdf(file)
+export async function stagePdf(file: File, teamId: string, projectId: string, t: Tr): Promise<StagedPdf> {
+  const problem = await checkPdf(file, t)
   if (problem) throw new Error(problem)
-  const path = await uploadDocumentObject(teamId, projectId, file)
+  const path = await uploadDocumentObject(teamId, projectId, file, t)
   try {
-    const result = await extractPaymentsFromPdf(path)
+    const result = await extractPaymentsFromPdf(path, t)
     return { path, size: file.size, fileName: file.name, result, readError: null }
   } catch (e) {
-    return { path, size: file.size, fileName: file.name, result: null, readError: errMsg(e) }
+    return { path, size: file.size, fileName: file.name, result: null, readError: errMsg(e, t('somethingWrong')) }
   }
 }
 

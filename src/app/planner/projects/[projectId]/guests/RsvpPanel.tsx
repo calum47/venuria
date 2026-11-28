@@ -1,8 +1,9 @@
 'use client'
 
 import { LANGS, LANG_NAME, type Lang } from '@/lib/rsvpText'
-import { RSVP_SECTION_LABEL, moveSection, normalizeSectionOrder, type RsvpSectionKey } from '@/lib/rsvpSections'
+import { moveSection, normalizeSectionOrder, type RsvpSectionKey } from '@/lib/rsvpSections'
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import type { DbGuest, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import { regenerateRsvpToken, saveRsvpSettings } from '@/lib/supabase/rsvpQueries'
 import { madridToday, rsvpPath, rsvpSummary } from '@/lib/rsvp'
@@ -12,8 +13,8 @@ const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text
 const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
 const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
 type Props = {
@@ -37,6 +38,8 @@ type Props = {
  * guest's FIRST answer is the only one the link accepts (changes are made here).
  */
 export default function RsvpPanel({ projectId, origin, initial, guests, teamId, initialPhotos, initialHotels, initialUrls, hasContactEmail }: Props) {
+  const t = useTranslations('Rsvp')
+  const tg = useTranslations('Guests')
   const [cfg, setCfg] = useState<DbProjectRsvp | null>(initial)
   const [open, setOpen] = useState(!!initial?.enabled)
   const [enabled, setEnabled] = useState(initial?.enabled ?? false)
@@ -67,7 +70,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
     try {
       await fn()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, tg('somethingWrong')))
     } finally {
       setBusy(null)
     }
@@ -85,7 +88,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      setError('Could not copy. Select the link and copy it by hand.')
+      setError(t('couldNotCopy'))
     }
   }
 
@@ -99,13 +102,13 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
     <section data-tour="rsvp-panel" className="rounded-lg border border-gray-200 bg-white">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left">
         <span>
-          <span className="text-sm font-medium text-gray-900">Guest RSVP link</span>
+          <span className="text-sm font-medium text-gray-900">{t('linkTitle')}</span>
           <span className="ml-2 text-xs text-gray-500">
-            {cfg?.enabled ? (deadlinePassed ? 'Deadline passed' : 'Open') : 'Off'} · {sum.attending} attending · {sum.declined} declined · {sum.maybe} maybe · {sum.pending} pending
-            {sum.needsReview > 0 ? ` · ${sum.needsReview} to review` : ''}
+            {cfg?.enabled ? (deadlinePassed ? t('deadlinePassed') : t('open')) : t('off')}{t('summary', { attending: sum.attending, declined: sum.declined, maybe: sum.maybe, pending: sum.pending })}
+            {sum.needsReview > 0 ? t('toReviewCount', { count: sum.needsReview }) : ''}
           </span>
         </span>
-        <span className="text-xs text-gray-400">{open ? 'Hide' : 'Show'}</span>
+        <span className="text-xs text-gray-400">{open ? t('hide') : t('show')}</span>
       </button>
 
       {open && (
@@ -114,11 +117,11 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
           <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-5">
             {([
-              ['Attending', sum.attending],
-              ['Declined', sum.declined],
-              ['Maybe', sum.maybe],
-              ['Pending', sum.pending],
-              ['Dietary (coming)', sum.dietaryAmongComing],
+              [t('statAttending'), sum.attending],
+              [t('statDeclined'), sum.declined],
+              [t('statMaybe'), sum.maybe],
+              [t('statPending'), sum.pending],
+              [t('statDietary'), sum.dietaryAmongComing],
             ] as const).map(([label, n]) => (
               <div key={label} className="rounded-lg border border-gray-100 bg-gray-50 px-2 py-2">
                 <p className="text-lg font-semibold text-gray-900">{n}</p>
@@ -129,81 +132,80 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
           {!hasContactEmail && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Guests see your company as responsible for their data, but no contact email is set for data requests. Add one in Settings → Team.
+              {t('noContactEmail')}
             </p>
           )}
 
           <label className="flex items-center gap-2 text-sm text-gray-900">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-            Accept answers through the link
+            {t('acceptAnswers')}
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-gray-600">
-              Answer by (last day)
+              {t('answerBy')}
               <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={input + ' mt-1 block'} />
             </label>
             <label className="flex items-end gap-2 pb-1 text-sm text-gray-900">
               <input type="checkbox" checked={plusOne} onChange={(e) => setPlusOne(e.target.checked)} />
-              Guests may add a plus-one
+              {t('allowPlusOne')}
             </label>
           </div>
 
           <label className="block text-xs text-gray-600">
-            Welcome note, shown under the names
+            {t('welcomeNote')}
             <textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} maxLength={500} rows={3} className={input + ' mt-1 block w-full'} />
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-gray-600">
-              Language the page opens in
+              {t('pageLanguage')}
               <select value={defaultLang} onChange={(e) => setDefaultLang(e.target.value as Lang)} className={input + ' mt-1 block'}>
                 {LANGS.map((l) => (
                   <option key={l} value={l}>{LANG_NAME[l]}</option>
                 ))}
               </select>
-              <span className="mt-1 block text-[11px] text-gray-500">Guests can still switch language on the page.</span>
+              <span className="mt-1 block text-[11px] text-gray-500">{t('canSwitchLanguage')}</span>
             </label>
             <div className="text-xs text-gray-600">
-              Order of the sections
+              {t('sectionOrder')}
               <ol className="mt-1 space-y-1">
                 {order.map((k, i) => (
                   <li key={k} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-900">
-                    <span className="flex-1">{RSVP_SECTION_LABEL[k]}</span>
-                    <button type="button" aria-label={`Move ${RSVP_SECTION_LABEL[k]} up`} disabled={i === 0} onClick={() => setOrder(moveSection(order, k, -1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↑</button>
-                    <button type="button" aria-label={`Move ${RSVP_SECTION_LABEL[k]} down`} disabled={i === order.length - 1} onClick={() => setOrder(moveSection(order, k, 1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↓</button>
+                    <span className="flex-1">{tg(`section.${k}`)}</span>
+                    <button type="button" aria-label={t('moveUp', { name: tg(`section.${k}`) })} disabled={i === 0} onClick={() => setOrder(moveSection(order, k, -1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↑</button>
+                    <button type="button" aria-label={t('moveDown', { name: tg(`section.${k}`) })} disabled={i === order.length - 1} onClick={() => setOrder(moveSection(order, k, 1))} className="px-1.5 text-gray-500 hover:text-gray-900 disabled:opacity-30">↓</button>
                   </li>
                 ))}
               </ol>
-              <span className="mt-1 block text-[11px] text-gray-500">The cover, names and welcome note always stay on top.</span>
+              <span className="mt-1 block text-[11px] text-gray-500">{t('coverStaysOnTop')}</span>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={save} disabled={!dirty || busy !== null} className={btnPrimary}>{busy === 'save' ? 'Saving…' : 'Save'}</button>
-            {dirty && <span className="text-xs text-amber-700">Unsaved changes</span>}
+            <button type="button" onClick={save} disabled={!dirty || busy !== null} className={btnPrimary}>{busy === 'save' ? t('saving') : t('save')}</button>
+            {dirty && <span className="text-xs text-amber-700">{t('unsaved')}</span>}
           </div>
 
           {cfg && (
             <div className="space-y-2 border-t border-gray-100 pt-3">
-              <p className="text-xs text-gray-600">One link for all guests. Anyone who has it can answer.</p>
+              <p className="text-xs text-gray-600">{t('oneLink')}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={input + ' min-w-0 flex-1 font-mono text-xs'} aria-label="RSVP link" />
-                <button type="button" onClick={copy} className={btn}>{copied ? 'Copied' : 'Copy'}</button>
+                <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={input + ' min-w-0 flex-1 font-mono text-xs'} aria-label={t('linkAria')} />
+                <button type="button" onClick={copy} className={btn}>{copied ? t('copied') : t('copy')}</button>
               </div>
-              {!cfg.enabled && <p className="text-xs text-amber-700">The link is off: guests who open it see “RSVP is closed”.</p>}
+              {!cfg.enabled && <p className="text-xs text-amber-700">{t('linkIsOff')}</p>}
               {!confirmNew ? (
-                <button type="button" onClick={() => setConfirmNew(true)} className="text-xs text-gray-500 underline hover:text-gray-900">Create a new link…</button>
+                <button type="button" onClick={() => setConfirmNew(true)} className="text-xs text-gray-500 underline hover:text-gray-900">{t('createNewLinkDots')}</button>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-                  <span>The current link stops working at once. Answers already given are kept.</span>
-                  <button type="button" onClick={newLink} disabled={busy !== null} className={btn}>{busy === 'token' ? 'Creating…' : 'Create new link'}</button>
-                  <button type="button" onClick={() => setConfirmNew(false)} className={btn}>Cancel</button>
+                  <span>{t('newLinkWarning')}</span>
+                  <button type="button" onClick={newLink} disabled={busy !== null} className={btn}>{busy === 'token' ? t('creating') : t('createNewLink')}</button>
+                  <button type="button" onClick={() => setConfirmNew(false)} className={btn}>{t('cancel')}</button>
                 </div>
               )}
               <p className="text-xs text-gray-500">
-                Guests type their name and are matched to this list. Unlisted names and plus-ones are added as “To review”.
-                Only a guest&rsquo;s first answer is taken; change answers in the guest&rsquo;s details.
+                {t('matchHelp')}
               </p>
             </div>
           )}

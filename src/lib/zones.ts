@@ -18,16 +18,18 @@ export const ZONE_PALETTE = [
   '#6366f1', // indigo
 ] as const
 
-export type ZonePreset = { name: string; color: string }
+/** `key` marks a built-in preset (its name is translated at the moment a zone is created); a custom zone has none. */
+export type ZonePresetKey = 'danceFloor' | 'bar' | 'ceremony' | 'buffet' | 'photoBooth' | 'stageDj' | 'lounge'
+export type ZonePreset = { key?: ZonePresetKey; name: string; color: string }
 
 export const ZONE_PRESETS: ZonePreset[] = [
-  { name: 'Dance Floor', color: '#ec4899' },
-  { name: 'Bar',         color: '#f59e0b' },
-  { name: 'Ceremony',    color: '#8b5cf6' },
-  { name: 'Buffet',      color: '#10b981' },
-  { name: 'Photo Booth', color: '#3b82f6' },
-  { name: 'Stage / DJ',  color: '#ef4444' },
-  { name: 'Lounge',      color: '#14b8a6' },
+  { key: 'danceFloor', name: 'Dance Floor', color: '#ec4899' },
+  { key: 'bar', name: 'Bar',         color: '#f59e0b' },
+  { key: 'ceremony', name: 'Ceremony',    color: '#8b5cf6' },
+  { key: 'buffet', name: 'Buffet',      color: '#10b981' },
+  { key: 'photoBooth', name: 'Photo Booth', color: '#3b82f6' },
+  { key: 'stageDj', name: 'Stage / DJ',  color: '#ef4444' },
+  { key: 'lounge', name: 'Lounge',      color: '#14b8a6' },
 ]
 
 export type ZoneTool = 'select' | 'rect' | 'polygon'

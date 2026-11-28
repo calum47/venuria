@@ -9,19 +9,22 @@
  * Safe to import from both client and server code. The checks here give friendly messages; the real
  * guarantee for direct API calls is Supabase Auth's own password-requirements setting (dashboard).
  */
-export const PASSWORD_MIN_LENGTH = 8
+import type { Tr } from '@/i18n/types'
 
-export const PASSWORD_HINT = 'At least 8 characters, with one upper-case letter, one number and one special character (for example ! @ # $ % &).'
+export const PASSWORD_MIN_LENGTH = 8
 
 const SPECIAL = /[!@#$%^&*()_+\-=[\]{};':"\\|<>?,./`~]/
 
-/** Returns a message describing what is missing, or null when the password is acceptable. */
-export function passwordProblem(password: string): string | null {
+/**
+ * Returns a message describing what is missing, or null when the password is acceptable.
+ * `t` is the translator for the "Password" messages (the hint text is t('hint')).
+ */
+export function passwordProblem(password: string, t: Tr): string | null {
   const missing: string[] = []
-  if (password.length < PASSWORD_MIN_LENGTH) missing.push(`be at least ${PASSWORD_MIN_LENGTH} characters long`)
-  if (!/\p{Lu}/u.test(password)) missing.push('contain an upper-case letter')
-  if (!/\d/.test(password)) missing.push('contain a number')
-  if (!SPECIAL.test(password)) missing.push('contain a special character (for example ! @ # $ % &)')
+  if (password.length < PASSWORD_MIN_LENGTH) missing.push(t('minLength', { n: PASSWORD_MIN_LENGTH }))
+  if (!/\p{Lu}/u.test(password)) missing.push(t('upper'))
+  if (!/\d/.test(password)) missing.push(t('digit'))
+  if (!SPECIAL.test(password)) missing.push(t('special'))
   if (missing.length === 0) return null
-  return `Password must ${missing.join(', ')}.`
+  return t('problem', { list: missing.join(', ') })
 }

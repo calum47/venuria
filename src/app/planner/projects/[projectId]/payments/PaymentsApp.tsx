@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
 import type { DbDocumentKind, DbProjectDocument, DbProjectPayment } from '@/types/db'
 import {
   createPayment,
@@ -16,7 +18,6 @@ import {
   type PaymentInput,
 } from '@/lib/supabase/paymentQueries'
 import {
-  DOC_KIND_LABEL,
   formatBytes,
   formatMoney,
   initialCalendarMonth,
@@ -27,8 +28,9 @@ import {
   shiftMonth,
   sortPayments,
   sumAmounts,
+  weekdayLabels,
 } from '@/lib/payments'
-import { formatDate, isIsoDate, todayIso } from '@/lib/projectDates'
+import { formatDate, formatDateNoWeekday, isIsoDate, todayIso } from '@/lib/projectDates'
 import { DateField } from '@/components/DateField'
 import DocumentsSection from './DocumentsSection'
 import PaymentForm, { type PendingPdf } from './PaymentForm'
@@ -52,6 +54,8 @@ type Props = {
 }
 
 export default function PaymentsApp({ projectId, teamId, currency, eventDate, initialView, initialPayments, initialDocuments, vendors }: Props) {
+  const t = useTranslations('Pay')
+  const locale = useLocale() as Locale
   const vendorNameById = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors])
   /** A linked vendor shows its current name (it may have been renamed since the payment was saved). */
   const vendorOf = (p: DbProjectPayment) => (p.vendor_id ? vendorNameById.get(p.vendor_id) : undefined) ?? p.vendor_name
@@ -85,7 +89,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
     return m
   }, [documents])
   const generalDocs = useMemo(() => documents.filter((d) => !d.payment_id), [documents])
-  const money = (n: number) => formatMoney(n, currency)
+  const money = (n: number) => formatMoney(n, currency, locale)
 
   /** List view: one group per vendor, vendors A–Z; inside a group unpaid first by due date (sortPayments). */
   const vendorGroups = useMemo(() => {
@@ -116,7 +120,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
     try {
       await fn()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, t('somethingWrong')))
     } finally {
       setBusy(null)
     }
@@ -166,7 +170,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       setDocuments((cur) => [doc, ...cur])
     } catch (e) {
       await removeStagedPdf(pdf.path)
-      setError(`The payment was saved, but the PDF could not be attached: ${errMsg(e)} Use “Attach receipt” to add it again.`)
+      setError(t('payNotAttached', { error: errMsg(e, t('somethingWrong')) }))
     }
   }
 
@@ -178,9 +182,9 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
     setEditingId(null)
     setImporting({ stage: 'reading', fileName: file.name })
     try {
-      setImporting({ stage: 'review', staged: await stagePdf(file, teamId, projectId) })
+      setImporting({ stage: 'review', staged: await stagePdf(file, teamId, projectId, t) })
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, t('somethingWrong')))
       setImporting(null)
     }
   }
@@ -229,14 +233,14 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       if (!usedOriginal) await removeStagedPdf(staged.path)
       if (attached.length > 0) setDocuments((cur) => [...attached.slice().reverse(), ...cur])
       if (failed.length > 0) {
-        setError(`The payments were saved, but the PDF could not be attached to: ${failed.join('; ')}. Use “Attach receipt” on ${failed.length === 1 ? 'that payment' : 'those payments'} to add it again.`)
+        setError(t('paymentsNotAttached', { list: failed.join('; '), count: failed.length }))
       }
     })
   }
 
   const markPaid = (id: string) =>
     run(id, async () => {
-      if (!isIsoDate(payDate)) throw new Error('Enter a valid payment date.')
+      if (!isIsoDate(payDate)) throw new Error(t('validPaymentDate'))
       replacePayment(await setPaymentPaid(id, payDate))
       setPayingId(null)
     })
@@ -264,7 +268,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       // then point it at the short-lived signed URL.
       const w = window.open('', '_blank')
       try {
-        const url = await getDocumentUrl(doc.storage_path)
+        const url = await getDocumentUrl(doc.storage_path, t)
         if (w) {
           w.opener = null
           w.location.href = url
@@ -289,11 +293,11 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         {doc.label}
       </button>
       <span className="text-gray-400">
-        {DOC_KIND_LABEL[doc.kind]}
-        {doc.vendor_name ? ` · ${doc.vendor_name}` : ''} · {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at.slice(0, 10))}
+        {t(`docKind.${doc.kind}`)}
+        {doc.vendor_name ? ` · ${doc.vendor_name}` : ''} · {formatBytes(doc.size_bytes)} · {formatDate(doc.created_at.slice(0, 10), locale)}
       </span>
-      <button onClick={() => removeDocument(doc)} disabled={busy === doc.id} className="ml-auto text-gray-400 hover:text-red-600" aria-label={`Remove ${doc.label}`}>
-        Remove
+      <button onClick={() => removeDocument(doc)} disabled={busy === doc.id} className="ml-auto text-gray-400 hover:text-red-600" aria-label={t('removeLabel', { label: doc.label })}>
+        {t('remove')}
       </button>
     </li>
   )
@@ -306,7 +310,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         {editingId === p.id ? (
           <PaymentForm
             initial={{ ...p, vendor_name: vendorOf(p) }}
-            submitLabel="Save"
+            submitLabel={t('save')}
             busy={busy === p.id}
             onSubmit={(v, pdf) => savePayment(p.id, v, pdf)}
             onCancel={() => setEditingId(null)}
@@ -318,38 +322,38 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-gray-900">
                   <span className="font-medium">{vendorOf(p)}</span> — {p.label}
-                  {!p.vendor_id && <span className="ml-2 text-[11px] text-gray-400">not in vendor list</span>}
+                  {!p.vendor_id && <span className="ml-2 text-[11px] text-gray-400">{t('notInVendorList')}</span>}
                 </p>
                 {p.notes && <p className="text-xs text-gray-500 mt-0.5">{p.notes}</p>}
               </div>
               <p className="text-sm font-medium text-gray-900 tabular-nums">{money(p.amount)}</p>
-              <p className="text-xs text-gray-500 w-28">Due {formatDate(p.due_date).replace(/^\w+, /, '')}</p>
+              <p className="text-xs text-gray-500 w-28">{t('dueOn', { date: formatDateNoWeekday(p.due_date, locale) })}</p>
               <StatusPill status={st} />
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {p.paid_at ? (
-                <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>Mark unpaid</button>
+                <button onClick={() => markUnpaid(p.id)} disabled={busy === p.id} className={btn}>{t('markUnpaid')}</button>
               ) : payingId === p.id ? (
                 <span className="flex items-center gap-2">
-                  <label htmlFor={`paid-on-${p.id}`} className="text-xs text-gray-500">Paid on</label>
+                  <label htmlFor={`paid-on-${p.id}`} className="text-xs text-gray-500">{t('paidOn')}</label>
                   <span className="w-36"><DateField id={`paid-on-${p.id}`} value={payDate} onChange={setPayDate} className={input} /></span>
-                  <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>Confirm</button>
-                  <button onClick={() => setPayingId(null)} className={btn}>Cancel</button>
+                  <button onClick={() => markPaid(p.id)} disabled={busy === p.id} className={btnPrimary + ' !py-1 !text-xs'}>{t('confirm')}</button>
+                  <button onClick={() => setPayingId(null)} className={btn}>{t('cancel')}</button>
                 </span>
               ) : (
-                <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>Mark paid</button>
+                <button onClick={() => { setPayingId(p.id); setPayDate(todayIso()) }} className={btn}>{t('markPaid')}</button>
               )}
-              <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>Edit</button>
-              <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>Attach receipt</button>
+              <button onClick={() => { setEditingId(p.id); setShowAdd(false) }} className={btn}>{t('edit')}</button>
+              <button onClick={() => setAttachingFor(attachingFor === p.id ? null : p.id)} className={btn}>{t('attachReceipt')}</button>
               {confirmDeleteId === p.id ? (
                 <span className="flex items-center gap-2 text-xs text-gray-600">
-                  Delete this payment?
-                  <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded-lg bg-red-600 px-2 py-1 text-white hover:bg-red-700">Delete</button>
-                  <button onClick={() => setConfirmDeleteId(null)} className={btn}>Keep</button>
+                  {t('deleteThisPayment')}
+                  <button onClick={() => removePayment(p.id)} disabled={busy === p.id} className="rounded-lg bg-red-600 px-2 py-1 text-white hover:bg-red-700">{t('delete')}</button>
+                  <button onClick={() => setConfirmDeleteId(null)} className={btn}>{t('keep')}</button>
                 </span>
               ) : (
-                <button onClick={() => setConfirmDeleteId(p.id)} className="text-xs text-gray-400 hover:text-red-600">Delete</button>
+                <button onClick={() => setConfirmDeleteId(p.id)} className="text-xs text-gray-400 hover:text-red-600">{t('delete')}</button>
               )}
             </div>
 
@@ -366,7 +370,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   fixedKind="receipt"
                   paymentId={p.id}
                   vendorName={vendorOf(p)}
-                  defaultLabel={`Receipt — ${p.label}`}
+                  defaultLabel={t('receiptDefaultLabel', { label: p.label })}
                   onUploaded={onUploaded}
                   onCancel={() => setAttachingFor(null)}
                   onError={setError}
@@ -393,12 +397,12 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
 
       {/* ── Totals ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Total" value={money(totals.total)} />
-        <Stat label="Paid" value={money(totals.paid)} />
-        <Stat label="Outstanding" value={money(totals.outstanding)} />
+        <Stat label={t('statTotal')} value={money(totals.total)} />
+        <Stat label={t('statPaid')} value={money(totals.paid)} />
+        <Stat label={t('statOutstanding')} value={money(totals.outstanding)} />
         <Stat
-          label="Overdue"
-          value={totals.overdueCount === 0 ? 'None' : `${totals.overdueCount} · ${money(totals.overdueAmount)}`}
+          label={t('statOverdue')}
+          value={totals.overdueCount === 0 ? t('none') : `${totals.overdueCount} · ${money(totals.overdueAmount)}`}
           tone={totals.overdueCount > 0 ? 'bad' : undefined}
         />
       </div>
@@ -407,8 +411,8 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
       <section className="rounded-lg border border-gray-200 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-gray-900">Payments</h2>
-            <div role="group" aria-label="Payments view" className="flex overflow-hidden rounded-lg border border-gray-300 text-xs">
+            <h2 className="text-sm font-semibold text-gray-900">{t('paymentsHeading')}</h2>
+            <div role="group" aria-label={t('paymentsView')} className="flex overflow-hidden rounded-lg border border-gray-300 text-xs">
               {(['list', 'calendar'] as const).map((v) => (
                 <button
                   key={v}
@@ -417,7 +421,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   onClick={() => changeView(v)}
                   className={`px-2.5 py-1 ${view === v ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
                 >
-                  {v === 'list' ? 'List' : 'Calendar'}
+                  {v === 'list' ? t('viewList') : t('viewCalendar')}
                 </button>
               ))}
             </div>
@@ -437,15 +441,15 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   void startImport(f)
                 }}
               />
-              <button onClick={() => importInput.current?.click()} className={btn + ' !py-1.5 !text-sm'}>Add payment from PDF</button>
-              <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>Add payment</button>
+              <button onClick={() => importInput.current?.click()} className={btn + ' !py-1.5 !text-sm'}>{t('addPaymentFromPdf')}</button>
+              <button onClick={() => { setShowAdd(true); setEditingId(null) }} className={btnPrimary}>{t('addPayment')}</button>
             </div>
           )}
         </div>
 
         {importing?.stage === 'reading' && (
           <p role="status" className="border-b border-gray-100 bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            Reading <strong>{importing.fileName}</strong>… this can take a few seconds.
+            {t.rich('readingFile', { name: importing.fileName, b: (c) => <strong>{c}</strong> })}
           </p>
         )}
         {importing?.stage === 'review' && (
@@ -454,12 +458,12 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
 
         {showAdd && (
           <div className="border-b border-gray-100 bg-gray-50 px-4 py-3">
-            <PaymentForm submitLabel="Add payment" busy={busy === 'new'} onSubmit={(v) => savePayment(null, v)} onCancel={() => setShowAdd(false)} />
+            <PaymentForm submitLabel={t('addPayment')} busy={busy === 'new'} onSubmit={(v) => savePayment(null, v)} onCancel={() => setShowAdd(false)} />
           </div>
         )}
 
         {sorted.length === 0 && !showAdd && !importing && (
-          <p className="px-4 py-6 text-sm text-gray-400">No payments yet.</p>
+          <p className="px-4 py-6 text-sm text-gray-400">{t('noPaymentsYet')}</p>
         )}
 
         {view === 'list' ? (
@@ -471,7 +475,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                   className="rounded-lg border border-gray-200 px-2.5 py-1 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                   onClick={() => setOpenVendors(allVendorsOpen ? new Set() : new Set(vendorGroups.map((g) => g.key)))}
                 >
-                  {allVendorsOpen ? 'Close all' : 'Open all'}
+                  {allVendorsOpen ? t('closeAll') : t('openAll')}
                 </button>
               </div>
             )}
@@ -498,12 +502,12 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
                     <span aria-hidden className={`text-gray-400 text-xs transition-transform ${open ? 'rotate-90' : ''}`}>▶</span>
                     <span className="min-w-0 flex-1 text-sm font-medium text-gray-900 truncate">{g.name}</span>
                     <span className="text-xs text-gray-500">
-                      {g.payments.length} payment{g.payments.length === 1 ? '' : 's'}
-                      {receiptCount > 0 && ` · ${receiptCount} file${receiptCount === 1 ? '' : 's'}`}
+                      {t('paymentCount', { count: g.payments.length })}
+                      {receiptCount > 0 && t('fileCount', { count: receiptCount })}
                     </span>
-                    {overdue > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">{overdue} overdue</span>}
+                    {overdue > 0 && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">{t('overdueCount', { count: overdue })}</span>}
                     <span className="text-xs text-gray-500">
-                      {unpaid.length === 0 ? 'All paid' : `${money(outstanding)} left${nextDue ? ` · next ${formatDate(nextDue)}` : ''}`}
+                      {unpaid.length === 0 ? t('allPaid') : `${t('amountLeft', { amount: money(outstanding) })}${nextDue ? t('nextDue', { date: formatDate(nextDue, locale) }) : ''}`}
                     </span>
                   </button>
                   {open && (
@@ -532,8 +536,6 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
   )
 }
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
 function chipTone(status: ReturnType<typeof paymentStatus>): string {
   if (status.kind === 'paid') return 'bg-green-50 text-green-700'
   if (status.kind === 'overdue') return 'bg-red-50 text-red-700'
@@ -559,6 +561,8 @@ function CalendarView({
   renderPayment: (p: DbProjectPayment) => React.ReactNode
   vendorOf: (p: DbProjectPayment) => string
 }) {
+  const t = useTranslations('Pay')
+  const locale = useLocale() as Locale
   const today = todayIso()
   const [ym, setYm] = useState(() => initialCalendarMonth(payments, today))
   const [selected, setSelected] = useState<string | null>(null)
@@ -578,18 +582,18 @@ function CalendarView({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-2">
         <div className="flex items-center gap-1">
-          <button type="button" onClick={() => { setYm(shiftMonth(ym, -1)); setSelected(null) }} className={btn} aria-label="Previous month">←</button>
-          <button type="button" onClick={() => { setYm(shiftMonth(ym, 1)); setSelected(null) }} className={btn} aria-label="Next month">→</button>
-          <button type="button" onClick={() => { setYm(today.slice(0, 7)); setSelected(null) }} className={btn}>Today</button>
+          <button type="button" onClick={() => { setYm(shiftMonth(ym, -1)); setSelected(null) }} className={btn} aria-label={t('prevMonth')}>←</button>
+          <button type="button" onClick={() => { setYm(shiftMonth(ym, 1)); setSelected(null) }} className={btn} aria-label={t('nextMonth')}>→</button>
+          <button type="button" onClick={() => { setYm(today.slice(0, 7)); setSelected(null) }} className={btn}>{t('today')}</button>
         </div>
-        <p className="text-sm font-medium text-gray-900">{monthLabel(ym)}</p>
+        <p className="text-sm font-medium text-gray-900">{monthLabel(ym, locale)}</p>
         <p className="text-xs text-gray-500">
-          {inMonth.length === 0 ? 'Nothing due this month' : `${inMonth.length} due · ${money(sumAmounts(inMonth.map((p) => p.amount)))}`}
+          {inMonth.length === 0 ? t('nothingDueMonth') : t('dueSummary', { count: inMonth.length, amount: money(sumAmounts(inMonth.map((p) => p.amount))) })}
         </p>
       </div>
 
       <div className="grid grid-cols-7 border-b border-gray-100 text-center text-[11px] text-gray-400">
-        {WEEKDAYS.map((d) => <div key={d} className="py-1">{d}</div>)}
+        {weekdayLabels(locale).map((d) => <div key={d} className="py-1">{d}</div>)}
       </div>
       <div className="grid grid-cols-7">
         {weeks.flat().map((cell) => {
@@ -602,14 +606,14 @@ function CalendarView({
               type="button"
               onClick={() => setSelected(isSelected ? null : cell.iso)}
               aria-pressed={isSelected}
-              aria-label={`${formatDate(cell.iso)}${ps.length ? `, ${ps.length} payment${ps.length === 1 ? '' : 's'} due` : ''}${cell.iso === eventDate ? ', event day' : ''}`}
+              aria-label={t('dayAria', { date: formatDate(cell.iso, locale), payments: ps.length ? t('dayPayments', { count: ps.length }) : '', event: cell.iso === eventDate ? t('eventDay') : '' })}
               className={`min-h-20 border-b border-r border-gray-100 p-1 text-left align-top ${cell.inMonth ? 'bg-white' : 'bg-gray-50'} ${isSelected ? 'ring-2 ring-inset ring-brand-600' : 'hover:bg-gray-50'}`}
             >
               <span className="flex items-center gap-1">
                 <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
                   {cell.day}
                 </span>
-                {cell.iso === eventDate && <span className="rounded-lg bg-purple-100 px-1 text-[10px] text-purple-700">Event</span>}
+                {cell.iso === eventDate && <span className="rounded-lg bg-purple-100 px-1 text-[10px] text-purple-700">{t('event')}</span>}
               </span>
               <span className="mt-0.5 block space-y-0.5">
                 {ps.slice(0, 2).map((p) => (
@@ -617,7 +621,7 @@ function CalendarView({
                     {vendorOf(p)} {money(p.amount)}
                   </span>
                 ))}
-                {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">+{ps.length - 2} more</span>}
+                {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">{t('moreCount', { count: ps.length - 2 })}</span>}
               </span>
             </button>
           )
@@ -625,13 +629,13 @@ function CalendarView({
       </div>
 
       <p className="px-4 py-2 text-[11px] text-gray-400">
-        <span className="text-green-700">Green</span> paid · <span className="text-red-700">red</span> overdue · <span className="text-amber-700">amber</span> due within 7 days · grey later. Click a day to see and edit its payments.
+        {t.rich('calendarLegend', { g: (c) => <span className="text-green-700">{c}</span>, r: (c) => <span className="text-red-700">{c}</span>, a: (c) => <span className="text-amber-700">{c}</span> })}
       </p>
 
       {selected && (
         <div className="border-t border-gray-100">
           <p className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600">
-            {formatDate(selected)}{selectedPayments.length === 0 ? ' — no payments due' : ''}
+            {formatDate(selected, locale)}{selectedPayments.length === 0 ? t('noPaymentsDue') : ''}
           </p>
           {selectedPayments.length > 0 && <ul className="divide-y divide-gray-100">{selectedPayments.map(renderPayment)}</ul>}
         </div>
@@ -650,10 +654,12 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: 'ba
 }
 
 function StatusPill({ status }: { status: ReturnType<typeof paymentStatus> }) {
+  const t = useTranslations('Pay')
+  const locale = useLocale() as Locale
   const base = 'w-36 rounded-full px-2.5 py-0.5 text-center text-xs font-medium'
-  if (status.kind === 'paid') return <span className={`${base} bg-green-50 text-green-700`}>Paid {formatDate(status.paidAt).replace(/^\w+, /, '')}</span>
-  if (status.kind === 'overdue') return <span className={`${base} bg-red-50 text-red-700`}>Overdue {status.days} day{status.days === 1 ? '' : 's'}</span>
-  if (status.days === 0) return <span className={`${base} bg-amber-50 text-amber-700`}>Due today</span>
-  return <span className={`${base} ${status.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>Due in {status.days} day{status.days === 1 ? '' : 's'}</span>
+  if (status.kind === 'paid') return <span className={`${base} bg-green-50 text-green-700`}>{t('statusPaid', { date: formatDateNoWeekday(status.paidAt, locale) })}</span>
+  if (status.kind === 'overdue') return <span className={`${base} bg-red-50 text-red-700`}>{t('statusOverdue', { count: status.days })}</span>
+  if (status.days === 0) return <span className={`${base} bg-amber-50 text-amber-700`}>{t('statusDueToday')}</span>
+  return <span className={`${base} ${status.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{t('statusDueIn', { count: status.days })}</span>
 }
 

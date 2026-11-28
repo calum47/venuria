@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { formatMoney, monthGrid, monthLabel, paymentStatus, shiftMonth, sumAmounts } from '@/lib/payments'
+import { useLocale, useTranslations } from 'next-intl'
+import type { Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
+import { formatMoney, monthGrid, monthLabel, paymentStatus, shiftMonth, sumAmounts, weekdayLabels } from '@/lib/payments'
 import { formatDate, todayIso } from '@/lib/projectDates'
 
 export type OverviewPayment = {
@@ -19,7 +22,7 @@ export type OverviewPayment = {
 type View = 'calendar' | 'list'
 type Filter = 'all' | 'pending' | 'paid'
 
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
 const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50'
 
 function tone(p: OverviewPayment): string {
@@ -29,12 +32,12 @@ function tone(p: OverviewPayment): string {
   return st.days <= 7 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-600'
 }
 
-function statusText(p: OverviewPayment): string {
+function statusText(p: OverviewPayment, t: Tr, locale: Locale): string {
   const st = paymentStatus(p)
-  if (st.kind === 'paid') return `Paid ${formatDate(st.paidAt).replace(/^\w+, /, '')}`
-  if (st.kind === 'overdue') return `Overdue ${st.days} day${st.days === 1 ? '' : 's'}`
-  if (st.days === 0) return 'Due today'
-  return `Due in ${st.days} day${st.days === 1 ? '' : 's'}`
+  if (st.kind === 'paid') return t('paidOn', { date: formatDate(st.paidAt, locale).replace(/^[^,]+, /, '') })
+  if (st.kind === 'overdue') return t('overdueDays', { count: st.days })
+  if (st.days === 0) return t('dueToday')
+  return t('dueInDays', { count: st.days })
 }
 
 /**
@@ -47,7 +50,11 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
   const [view, setView] = useState<View>('calendar')
   const [filter, setFilter] = useState<Filter>('all')
   const today = todayIso()
-  const money = (n: number) => formatMoney(n, currency)
+  const t = useTranslations('Payments')
+  const tc = useTranslations('Common')
+  const locale = useLocale() as Locale
+  const WEEKDAYS = weekdayLabels(locale)
+  const money = (n: number) => formatMoney(n, currency, locale)
 
   const next = payments.filter((p) => !p.paid_at && p.due_date >= today).sort((a, b) => a.due_date.localeCompare(b.due_date))[0]
   const [ym, setYm] = useState((next ? next.due_date : today).slice(0, 7))
@@ -74,13 +81,13 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
 
   const row = (p: OverviewPayment) => (
     <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2.5 text-sm">
-      <span className="w-28 shrink-0 text-gray-600">{formatDate(p.due_date)}</span>
+      <span className="w-28 shrink-0 text-gray-600">{formatDate(p.due_date, locale)}</span>
       <span className="min-w-0 flex-1">
         <Link href={`/planner/projects/${p.projectId}/payments`} className="font-medium text-gray-900 hover:underline">{p.vendor}</Link>
         <span className="text-gray-500"> · {p.label} · {p.projectTitle}</span>
       </span>
       <span className="tabular-nums text-gray-900">{money(p.amount)}</span>
-      <span className={`w-36 rounded-full px-2.5 py-0.5 text-center text-xs font-medium ${tone(p)}`}>{statusText(p)}</span>
+      <span className={`w-36 rounded-full px-2.5 py-0.5 text-center text-xs font-medium ${tone(p)}`}>{statusText(p, t, locale)}</span>
     </li>
   )
 
@@ -96,7 +103,7 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
               onClick={() => setView(v)}
               className={`rounded-full border px-3 py-1 text-xs ${view === v ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
             >
-              {v === 'calendar' ? 'Calendar' : 'List'}
+              {v === 'calendar' ? t('viewCalendar') : t('viewList')}
             </button>
           ))}
         </div>
@@ -110,22 +117,22 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
                 onClick={() => setFilter(f)}
                 className={`rounded-full border px-3 py-1 text-xs capitalize ${filter === f ? 'border-gray-800 bg-gray-800 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
               >
-                {f}
+                {f === 'all' ? t('filterAll') : f === 'pending' ? t('filterPending') : t('filterPaid')}
               </button>
             ))}
           </div>
         ) : (
           <p className="text-xs text-gray-500">
-            {inMonth.length === 0 ? 'Nothing due this month' : `${inMonth.length} due · ${money(sumAmounts(inMonth.map((p) => p.amount)))}`}
+            {inMonth.length === 0 ? t('nothingDueMonth') : t('dueSummary', { count: inMonth.length, amount: money(sumAmounts(inMonth.map((p) => p.amount))) })}
           </p>
         )}
       </div>
 
       {payments.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-gray-400">No payments yet on the projects you can edit.</p>
+        <p className="px-4 py-6 text-sm text-gray-400">{t('noPaymentsYet')}</p>
       ) : view === 'list' ? (
         listed.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-gray-400">Nothing in this filter.</p>
+          <p className="px-4 py-6 text-sm text-gray-400">{t('nothingInFilter')}</p>
         ) : (
           <ul className="divide-y divide-gray-100">{listed.map(row)}</ul>
         )
@@ -133,11 +140,11 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
         <div>
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-2">
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => { setYm(shiftMonth(ym, -1)); setSelected(null) }} className={btn} aria-label="Previous month">←</button>
-              <button type="button" onClick={() => { setYm(shiftMonth(ym, 1)); setSelected(null) }} className={btn} aria-label="Next month">→</button>
-              <button type="button" onClick={() => { setYm(today.slice(0, 7)); setSelected(null) }} className={btn}>Today</button>
+              <button type="button" onClick={() => { setYm(shiftMonth(ym, -1)); setSelected(null) }} className={btn} aria-label={tc('previousMonth')}>←</button>
+              <button type="button" onClick={() => { setYm(shiftMonth(ym, 1)); setSelected(null) }} className={btn} aria-label={tc('nextMonth')}>→</button>
+              <button type="button" onClick={() => { setYm(today.slice(0, 7)); setSelected(null) }} className={btn}>{tc('today')}</button>
             </div>
-            <p className="text-sm font-medium text-gray-900">{monthLabel(ym)}</p>
+            <p className="text-sm font-medium text-gray-900">{monthLabel(ym, locale)}</p>
             <span className="w-16" />
           </div>
           <div className="grid grid-cols-7 border-b border-gray-100 text-center text-[11px] text-gray-400">
@@ -154,7 +161,7 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
                   type="button"
                   onClick={() => setSelected(isSelected ? null : cell.iso)}
                   aria-pressed={isSelected}
-                  aria-label={`${formatDate(cell.iso)}${ps.length ? `, ${ps.length} payment${ps.length === 1 ? '' : 's'} due` : ''}`}
+                  aria-label={t('dayAria', { date: formatDate(cell.iso, locale), count: ps.length })}
                   className={`min-h-20 border-b border-r border-gray-100 p-1 text-left align-top ${cell.inMonth ? 'bg-white' : 'bg-gray-50'} ${isSelected ? 'ring-2 ring-inset ring-brand-600' : 'hover:bg-gray-50'}`}
                 >
                   <span className={isToday ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] text-white' : `text-[11px] ${cell.inMonth ? 'text-gray-700' : 'text-gray-300'}`}>
@@ -166,19 +173,23 @@ export default function PaymentsOverview({ payments, currency }: { payments: Ove
                         {p.vendor} {money(p.amount)}
                       </span>
                     ))}
-                    {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">+{ps.length - 2} more</span>}
+                    {ps.length > 2 && <span className="block px-1 text-[10px] text-gray-500">{t('moreCount', { count: ps.length - 2 })}</span>}
                   </span>
                 </button>
               )
             })}
           </div>
           <p className="px-4 py-2 text-[11px] text-gray-400">
-            <span className="text-green-700">Green</span> paid · <span className="text-red-700">red</span> overdue · <span className="text-amber-700">amber</span> due within 7 days · grey later. Click a day for its payments.
+            {t.rich('legend', {
+              g: (c) => <span className="text-green-700">{c}</span>,
+              r: (c) => <span className="text-red-700">{c}</span>,
+              a: (c) => <span className="text-amber-700">{c}</span>,
+            })}
           </p>
           {selected && (
             <div className="border-t border-gray-100">
               <p className="bg-gray-50 px-4 py-2 text-xs font-medium text-gray-600">
-                {formatDate(selected)}{selectedPayments.length === 0 ? ' — no payments due' : ''}
+                {formatDate(selected, locale)}{selectedPayments.length === 0 ? ` — ${t('noPaymentsDue')}` : ''}
               </p>
               {selectedPayments.length > 0 && <ul className="divide-y divide-gray-100">{selectedPayments.map(row)}</ul>}
             </div>

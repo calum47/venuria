@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { getTranslations } from 'next-intl/server'
 
 /**
  * Creating a Venue is just a plain insert — no auth user involved. It's
@@ -11,13 +12,14 @@ import { revalidatePath } from 'next/cache'
  * database level regardless.
  */
 export async function createVenue(formData: FormData) {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
 
   const name = formData.get('name') as string
   const maxCapacityRaw = formData.get('maxCapacityPersons') as string
 
   if (!name) {
-    return { error: 'Venue name is required.' }
+    return { error: t('venueNameIsRequired') }
   }
 
   const { error } = await supabase.from('venues').insert({
@@ -38,13 +40,14 @@ export async function createVenue(formData: FormData) {
  * admin_manage_rental_companies RLS, session-scoped client.
  */
 export async function createRentalCompany(formData: FormData) {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
 
   const name = formData.get('name') as string
   const contactEmail = formData.get('contactEmail') as string
 
   if (!name) {
-    return { error: 'Rental company name is required.' }
+    return { error: t('rentalCompanyNameIsRequired') }
   }
 
   const { error } = await supabase.from('rental_companies').insert({
@@ -66,25 +69,26 @@ export async function createRentalCompany(formData: FormData) {
  * Admin only, by the admin_manage_* RLS policies (same pattern as createRentalCompany).
  */
 export async function addVendorRole(formData: FormData) {
+  const t = await getTranslations('Errors')
   const supabase = await createClient()
 
   const plannerId = formData.get('plannerId') as string
   const companyName = ((formData.get('companyName') as string) ?? '').trim()
-  if (!plannerId) return { error: 'Choose the planner.' }
-  if (!companyName) return { error: 'Vendor company name is required.' }
+  if (!plannerId) return { error: t('chooseThePlanner') }
+  if (!companyName) return { error: t('vendorCompanyNameIsRequired') }
 
   const { data: planner } = await supabase.from('planners').select('id, user_id, name, email').eq('id', plannerId).maybeSingle()
-  if (!planner) return { error: 'That planner was not found.' }
+  if (!planner) return { error: t('thatPlannerWasNotFound') }
 
   const { data: existing } = await supabase.from('rental_managers').select('id').eq('user_id', planner.user_id).maybeSingle()
-  if (existing) return { error: `${planner.name} is already linked to a vendor company.` }
+  if (existing) return { error: t('nameIsAlreadyLinkedTo', { name: planner.name }) }
 
   const { data: company, error: cErr } = await supabase
     .from('rental_companies')
     .insert({ name: companyName, contact_email: planner.email || null })
     .select('id')
     .single()
-  if (cErr || !company) return { error: cErr?.message ?? 'Could not create the company.' }
+  if (cErr || !company) return { error: cErr?.message ?? t('couldNotCreateTheCompany') }
 
   const { error: mErr } = await supabase
     .from('rental_managers')

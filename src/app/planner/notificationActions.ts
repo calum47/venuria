@@ -7,6 +7,8 @@ import { madridToday } from '@/lib/rsvp'
 import { addDays } from '@/lib/projectDates'
 import { PAYMENT_LEAD_DAYS, buildBell, EMPTY_BELL, type BellData } from '@/lib/notifications'
 import { formatDate } from '@/lib/projectDates'
+import { getLocale, getTranslations } from 'next-intl/server'
+import type { Locale } from '@/i18n/config'
 
 /**
  * Loads the bell for the signed-in planner. Everything is read with the
@@ -39,6 +41,8 @@ export async function getBell(): Promise<BellData> {
     const reviewGuests = reviewRes.data ?? []
     const projectIds = [...new Set([...payments.map((p) => p.project_id), ...reviewGuests.map((g) => g.project_id)])]
 
+    const locale = (await getLocale()) as Locale
+    const tc = await getTranslations('Common')
     const labels = new Map<string, string>()
     if (projectIds.length > 0) {
       const { data: projects } = await supabase
@@ -46,8 +50,8 @@ export async function getBell(): Promise<BellData> {
         .select('id, event_date, couple_names, venues(name)')
         .in('id', projectIds)
       for (const p of projects ?? []) {
-        const title = projectTitle(p.couple_names, (p.venues as unknown as { name: string } | null)?.name ?? 'Project')
-        labels.set(p.id, p.event_date ? `${title} · ${formatDate(p.event_date)}` : title)
+        const title = projectTitle(p.couple_names, (p.venues as unknown as { name: string } | null)?.name ?? tc('project'))
+        labels.set(p.id, p.event_date ? `${title} · ${formatDate(p.event_date, locale)}` : title)
       }
     }
 

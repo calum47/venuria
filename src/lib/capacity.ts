@@ -9,6 +9,8 @@
  *   standing -> the project's guest total (everyone is in the room; a few chairs
  *               are expected and do not matter)
  */
+import type { Tr } from '@/i18n/types'
+
 export type CapacityMode = 'seated' | 'standing'
 
 export type RoomCapacity = { capacity_seated: number | null; capacity_standing: number | null }
@@ -21,8 +23,9 @@ export function capacityLoad(mode: CapacityMode, chairsInRoom: number, guestTota
   return mode === 'seated' ? chairsInRoom : guestTotal
 }
 
-export const modeLabel = (m: CapacityMode) => (m === 'seated' ? 'Seated' : 'Standing')
-export const unitLabel = (m: CapacityMode, n: number) => (m === 'seated' ? (n === 1 ? 'seat' : 'seats') : n === 1 ? 'guest' : 'guests')
+/** `t` = translator for "Capacity". */
+export const modeLabel = (m: CapacityMode, t: Tr) => t(m)
+export const unitLabel = (m: CapacityMode, n: number, t: Tr) => t(m === 'seated' ? 'seats' : 'guests', { count: n })
 
 export type CapacityState = 'unknown' | 'ok' | 'near' | 'over' | 'acknowledged'
 
@@ -48,24 +51,25 @@ export function capacityStatus(limit: number | null, load: number, overrideLoad:
   return { state: load >= limit * 0.9 ? 'near' : 'ok', limit, load }
 }
 
-/** One line for a hub card, e.g. "Seated · 96 of 120 seats" or "Seated up to 120 · standing up to 200". */
+/** One line for a hub card, e.g. "Seated · 96 of 120 seats" or "Seated up to 120 · standing up to 200". `t` = "Capacity". */
 export function capacityLine(
   room: RoomCapacity,
   mode: CapacityMode | null,
   chairsInRoom: number,
   guestTotal: number,
   overrideLoad: number | null,
+  t: Tr,
 ): { text: string; state: CapacityState | 'venue' } | null {
   if (!mode) {
     const parts: string[] = []
-    if (room.capacity_seated !== null) parts.push(`seated up to ${room.capacity_seated}`)
-    if (room.capacity_standing !== null) parts.push(`standing up to ${room.capacity_standing}`)
-    return parts.length ? { text: parts.join(' · ').replace(/^./, (c) => c.toUpperCase()), state: 'venue' } : null
+    if (room.capacity_seated !== null) parts.push(t('seatedUpTo', { n: room.capacity_seated }))
+    if (room.capacity_standing !== null) parts.push(parts.length ? t('standingUpToLower', { n: room.capacity_standing }) : t('standingUpTo', { n: room.capacity_standing }))
+    return parts.length ? { text: parts.join(' · '), state: 'venue' } : null
   }
   const limit = capacityLimit(room, mode)
   const load = capacityLoad(mode, chairsInRoom, guestTotal)
   const st = capacityStatus(limit, load, overrideLoad)
-  if (limit === null) return { text: `${modeLabel(mode)} · no limit set by the venue`, state: 'unknown' }
-  const base = `${modeLabel(mode)} · ${load} of ${limit} ${unitLabel(mode, limit)}`
-  return { text: st.state === 'over' ? `${base} — over the limit` : st.state === 'acknowledged' ? `${base} — over, acknowledged` : base, state: st.state }
+  if (limit === null) return { text: t('noLimit', { mode: modeLabel(mode, t) }), state: 'unknown' }
+  const base = t('base', { mode: modeLabel(mode, t), load, limit, unit: unitLabel(mode, limit, t) })
+  return { text: st.state === 'over' ? t('over', { base }) : st.state === 'acknowledged' ? t('acknowledged', { base }) : base, state: st.state }
 }

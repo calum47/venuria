@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { INTL_TAG, type Locale } from '@/i18n/config'
 import type { DbProjectDay, DbTeamVendor, DbTimetableBlock } from '@/types/db'
 import {
   createBlock,
@@ -47,14 +49,16 @@ const input = 'rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text
 const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
 const btnPrimary = 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700 disabled:opacity-50'
 
-function errMsg(e: unknown): string {
-  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : 'Something went wrong.'
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
 type Editing = { kind: 'block'; id: string } | { kind: 'new'; start: number; end: number } | null
 type Drag = { id: string; mode: 'move' | 'resize'; delta: number }
 
 export default function TimetableApp({ projectId, teamId, eventDate, initialDays, initialBlocks, initialVendors, readOnly = false }: Props) {
+  const tr = useTranslations('Timetable')
+  const locale = useLocale() as Locale
   const [days, setDays] = useState<DbProjectDay[]>(initialDays)
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
   const [vendors, setVendors] = useState<DbTeamVendor[]>(initialVendors)
@@ -89,7 +93,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
     try {
       await fn()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, tr('somethingWrong')))
     } finally {
       setBusy(false)
     }
@@ -99,7 +103,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
   const addDay = () =>
     run(async () => {
       const first = days.length === 0
-      const label = first ? 'Wedding day' : `Day ${days.length + 1}`
+      const label = first ? tr('weddingDay') : tr('dayN', { n: days.length + 1 })
       const position = days.reduce((m, d) => Math.max(m, d.position), -1) + 1
       const d = await createDay(projectId, label, first ? eventDate : null, position)
       setDays((prev) => [...prev, d])
@@ -149,7 +153,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
       .then((saved) => setBlocks((prev) => prev.map((x) => (x.id === saved.id ? saved : x))))
       .catch((err) => {
         setBlocks((prev) => prev.map((x) => (x.id === before.id ? before : x)))
-        setError(errMsg(err))
+        setError(errMsg(err, tr('somethingWrong')))
       })
   }
 
@@ -182,26 +186,26 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
             aria-pressed={d.id === day?.id}
             className={`rounded-full border px-3 py-1 text-sm ${d.id === day?.id ? 'border-brand-600 bg-brand-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
           >
-            {d.label}{d.day_date ? ` · ${shortDay(d.day_date)}` : ''}
+            {d.label}{d.day_date ? ` · ${shortDay(d.day_date, locale)}` : ''}
           </button>
         ))}
-        {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btn}>+ Add day</button>}
+        {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btn}>{tr('addDay')}</button>}
         <span className="flex-1" />
-        {!readOnly && <button type="button" onClick={() => setShowVendors(true)} className={btn}>Vendors ({vendors.length})</button>}
-        {!readOnly && day && <button type="button" onClick={() => setEditing({ kind: 'new', start: 18 * 60, end: 19 * 60 })} className={btnPrimary}>+ Add block</button>}
+        {!readOnly && <button type="button" onClick={() => setShowVendors(true)} className={btn}>{tr('vendorsCount', { count: vendors.length })}</button>}
+        {!readOnly && day && <button type="button" onClick={() => setEditing({ kind: 'new', start: 18 * 60, end: 19 * 60 })} className={btnPrimary}>{tr('addBlock')}</button>}
       </div>
 
       {!day ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-sm text-gray-600">No days yet.</p>
-          {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btnPrimary + ' mt-3'}>Add the first day</button>}
+          <p className="text-sm text-gray-600">{tr('noDaysYet')}</p>
+          {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btnPrimary + ' mt-3'}>{tr('addFirstDay')}</button>}
         </div>
       ) : (
         <>
           {!readOnly && <DayBar key={day.id} day={day} blockCount={dayBlocks.length} setDays={setDays} setBlocks={setBlocks} setActiveDayId={setActiveDayId} run={run} />}
 
           {vendors.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 text-xs text-gray-600" aria-label="Vendor colours">
+            <div className="flex flex-wrap gap-1.5 text-xs text-gray-600" aria-label={tr('vendorColours')}>
               {vendors.map((v) => (
                 <span key={v.id} className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-0.5">
                   <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: v.colour }} />
@@ -212,7 +216,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
           )}
 
           {!readOnly && <p className="text-xs text-gray-500">
-            Click an empty slot to add a block. Drag a block up or down to shift it (snaps to {DRAG_SNAP_MIN} min), drag its bottom edge to change its length, or click it to type exact times.
+            {tr('gridHelp', { min: DRAG_SNAP_MIN })}
           </p>}
 
           <div data-tour="timetable-grid" className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
@@ -241,7 +245,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                       key={b.id}
                       role="button"
                       tabIndex={0}
-                      aria-label={`${b.title}, ${formatRange(b.start_min, b.end_min)}`}
+                      aria-label={tr('blockAria', { title: b.title, range: formatRange(b.start_min, b.end_min) })}
                       onKeyDown={(e) => { if (!readOnly && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setEditing({ kind: 'block', id: b.id }) } }}
                       onPointerDown={(e) => onPointerDown(e, b, 'move')}
                       onPointerMove={onPointerMove}
@@ -269,7 +273,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
                         onPointerCancel={onPointerCancel}
                         className="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize bg-black/10 hover:bg-black/25"
                         aria-hidden
-                        title="Drag to change the length"
+                        title={tr('dragToResize')}
                       />
                     </div>
                   )
@@ -302,9 +306,9 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
   )
 }
 
-function shortDay(iso: string): string {
+function shortDay(iso: string, locale: Locale): string {
   const d = new Date(`${iso}T00:00:00`)
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(INTL_TAG[locale], { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
 // ── Day bar: rename, date, delete ────────────────────────────────────────────
@@ -317,6 +321,7 @@ function DayBar(p: {
   setActiveDayId: (id: string | null) => void
   run: (fn: () => Promise<void>) => Promise<void>
 }) {
+  const tr = useTranslations('Timetable')
   const { day } = p
   const [label, setLabel] = useState(day.label)
   const [date, setDate] = useState(day.day_date ?? '')
@@ -325,7 +330,7 @@ function DayBar(p: {
 
   const save = () =>
     p.run(async () => {
-      if (!label.trim()) throw new Error('A day needs a name.')
+      if (!label.trim()) throw new Error(tr('dayNeedsName'))
       const saved = await updateDay(day.id, { label, day_date: date || null })
       p.setDays((prev) => prev.map((d) => (d.id === saved.id ? saved : d)))
     })
@@ -340,18 +345,18 @@ function DayBar(p: {
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-sm">
-      <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} aria-label="Day name" className={input + ' w-44'} />
-      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Day date" className={input} />
-      {dirty && <button type="button" onClick={save} className={btn}>Save day</button>}
+      <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} aria-label={tr('dayName')} className={input + ' w-44'} />
+      <input type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label={tr('dayDate')} className={input} />
+      {dirty && <button type="button" onClick={save} className={btn}>{tr('saveDay')}</button>}
       <span className="flex-1" />
       {confirmDelete ? (
         <span className="flex items-center gap-2 text-xs text-gray-700">
-          Delete this day{p.blockCount > 0 ? ` and its ${p.blockCount} block${p.blockCount === 1 ? '' : 's'}` : ''}?
-          <button type="button" onClick={remove} className={btn + ' border-red-300 text-red-700'}>Yes, delete</button>
-          <button type="button" onClick={() => setConfirmDelete(false)} className={btn}>Cancel</button>
+          {tr('deleteDayQ', { extra: p.blockCount > 0 ? tr('andItsBlocks', { count: p.blockCount }) : '' })}
+          <button type="button" onClick={remove} className={btn + ' border-red-300 text-red-700'}>{tr('yesDelete')}</button>
+          <button type="button" onClick={() => setConfirmDelete(false)} className={btn}>{tr('cancel')}</button>
         </span>
       ) : (
-        <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>Delete day</button>
+        <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>{tr('deleteDay')}</button>
       )}
     </div>
   )
@@ -370,6 +375,7 @@ function BlockPanel(p: {
   onManageVendors: () => void
   onClose: () => void
 }) {
+  const tr = useTranslations('Timetable')
   const { block } = p
   const [title, setTitle] = useState(block?.title ?? '')
   const [start, setStart] = useState(formatClock(block?.start_min ?? p.initialStart ?? 18 * 60))
@@ -383,8 +389,8 @@ function BlockPanel(p: {
 
   const save = async () => {
     setError(null)
-    if (!title.trim()) return setError('Give the block a title.')
-    const t = resolveTimes(start, end)
+    if (!title.trim()) return setError(tr('blockNeedsTitle'))
+    const t = resolveTimes(start, end, tr)
     if (!t.ok) return setError(t.error)
     setBusy(true)
     try {
@@ -405,7 +411,7 @@ function BlockPanel(p: {
       }
       p.onClose()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, tr('somethingWrong')))
     } finally {
       setBusy(false)
     }
@@ -420,78 +426,78 @@ function BlockPanel(p: {
       p.setBlocks((prev) => prev.filter((x) => x.id !== block.id))
       p.onClose()
     } catch (e) {
-      setError(errMsg(e))
+      setError(errMsg(e, tr('somethingWrong')))
       setBusy(false)
     }
   }
 
   const label = 'block text-xs font-medium text-gray-600 mb-1'
-  const parsed = resolveTimes(start, end)
+  const parsed = resolveTimes(start, end, tr)
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end bg-black/20" onClick={p.onClose}>
       <aside
         role="dialog"
-        aria-label={block ? 'Edit block' : 'New block'}
+        aria-label={block ? tr('editBlock') : tr('newBlock')}
         className="h-full w-full max-w-sm space-y-4 overflow-y-auto bg-white p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">{block ? 'Edit block' : 'New block'}</h2>
-          <button type="button" onClick={p.onClose} className={btn} aria-label="Close">✕</button>
+          <h2 className="text-base font-semibold text-gray-900">{block ? tr('editBlock') : tr('newBlock')}</h2>
+          <button type="button" onClick={p.onClose} className={btn} aria-label={tr('close')}>✕</button>
         </div>
 
         <div>
-          <label className={label} htmlFor="tb-title">Title</label>
-          <input id="tb-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder="Cocktail hour" className={input + ' w-full'} autoFocus />
+          <label className={label} htmlFor="tb-title">{tr('title')}</label>
+          <input id="tb-title" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={120} placeholder={tr('titlePlaceholder')} className={input + ' w-full'} autoFocus />
         </div>
 
         <div className="grid grid-cols-2 gap-2">
           <div>
-            <label className={label} htmlFor="tb-start">Start</label>
+            <label className={label} htmlFor="tb-start">{tr('start')}</label>
             <input id="tb-start" value={start} onChange={(e) => setStart(e.target.value)} placeholder="18:00" className={input + ' w-full'} />
           </div>
           <div>
-            <label className={label} htmlFor="tb-end">End</label>
+            <label className={label} htmlFor="tb-end">{tr('end')}</label>
             <input id="tb-end" value={end} onChange={(e) => setEnd(e.target.value)} placeholder="19:00" className={input + ' w-full'} />
           </div>
         </div>
         <p className="text-xs text-gray-500">
-          {parsed.ok ? `${formatRange(parsed.start, parsed.end)} · ${durationLabel(parsed.start, parsed.end)}` : parsed.error}
-          {parsed.ok && parsed.end >= 1440 ? ' · an end before the start means after midnight' : ''}
+          {parsed.ok ? tr('rangeDuration', { range: formatRange(parsed.start, parsed.end), duration: durationLabel(parsed.start, parsed.end) }) : parsed.error}
+          {parsed.ok && parsed.end >= 1440 ? tr('afterMidnightNote') : ''}
         </p>
 
         <div>
-          <label className={label} htmlFor="tb-vendor">Vendor</label>
+          <label className={label} htmlFor="tb-vendor">{tr('vendor')}</label>
           <div className="flex gap-1.5">
             <select id="tb-vendor" value={vendorId} onChange={(e) => setVendorId(e.target.value)} className={input + ' min-w-0 flex-1'}>
-              <option value="">No vendor</option>
+              <option value="">{tr('noVendor')}</option>
               {p.vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
-            <button type="button" onClick={p.onManageVendors} className={btn}>Manage…</button>
+            <button type="button" onClick={p.onManageVendors} className={btn}>{tr('manage')}</button>
           </div>
         </div>
 
         <div>
-          <label className={label} htmlFor="tb-person">Person in charge (optional)</label>
+          <label className={label} htmlFor="tb-person">{tr('personInCharge')}</label>
           <input id="tb-person" value={person} onChange={(e) => setPerson(e.target.value)} maxLength={120} className={input + ' w-full'} />
         </div>
 
         <div>
-          <label className={label} htmlFor="tb-notes">Notes</label>
+          <label className={label} htmlFor="tb-notes">{tr('notes')}</label>
           <textarea id="tb-notes" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} rows={3} className={input + ' w-full'} />
         </div>
 
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={save} disabled={busy} className={btnPrimary}>{block ? 'Save' : 'Add block'}</button>
-          <button type="button" onClick={p.onClose} className={btn}>Cancel</button>
+          <button type="button" onClick={save} disabled={busy} className={btnPrimary}>{block ? tr('save') : tr('addBlockBtn')}</button>
+          <button type="button" onClick={p.onClose} className={btn}>{tr('cancel')}</button>
           <span className="flex-1" />
           {block && (confirmDelete ? (
-            <button type="button" onClick={remove} disabled={busy} className={btn + ' border-red-300 text-red-700'}>Confirm delete</button>
+            <button type="button" onClick={remove} disabled={busy} className={btn + ' border-red-300 text-red-700'}>{tr('confirmDelete')}</button>
           ) : (
-            <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>Delete</button>
+            <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>{tr('delete')}</button>
           ))}
         </div>
       </aside>
@@ -516,6 +522,7 @@ function VendorManager(p: {
   setBlocks: Dispatch<SetStateAction<DbTimetableBlock[]>>
   onClose: () => void
 }) {
+  const tr = useTranslations('Timetable')
   const [editingId, setEditingId] = useState<string | 'new' | null>(p.vendors.length === 0 ? 'new' : null)
   const [error, setError] = useState<string | null>(null)
 
@@ -527,12 +534,12 @@ function VendorManager(p: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={p.onClose}>
-      <div role="dialog" aria-label="Vendors" className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-label={tr('vendors')} className="max-h-[85vh] w-full max-w-lg space-y-3 overflow-y-auto rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">Vendors</h2>
-          <button type="button" onClick={p.onClose} className={btn} aria-label="Close">✕</button>
+          <h2 className="text-base font-semibold text-gray-900">{tr('vendors')}</h2>
+          <button type="button" onClick={p.onClose} className={btn} aria-label={tr('close')}>✕</button>
         </div>
-        <p className="text-xs text-gray-500">Shared with your whole team. A vendor&rsquo;s colour tints its blocks on the timetable; contact details and Instagram appear in the run-down.</p>
+        <p className="text-xs text-gray-500">{tr('vendorsShared')}</p>
         {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
         <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
@@ -542,7 +549,7 @@ function VendorManager(p: {
                 <VendorForm
                   key={v.id}
                   initial={toInput(v)}
-                  submitLabel="Save"
+                  submitLabel={tr('save')}
                   onCancel={() => setEditingId(null)}
                   onSubmit={async (input) => {
                     const saved = await updateVendor(v.id, input)
@@ -562,18 +569,18 @@ function VendorManager(p: {
                 <div className="flex items-center gap-2 text-sm">
                   <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ background: v.colour }} />
                   <span className="min-w-0 flex-1 truncate text-gray-900">{v.name}</span>
-                  <button type="button" onClick={() => { setError(null); setEditingId(v.id) }} className={btn}>Edit</button>
+                  <button type="button" onClick={() => { setError(null); setEditingId(v.id) }} className={btn}>{tr('edit')}</button>
                 </div>
               )}
             </li>
           ))}
-          {p.vendors.length === 0 && <li className="p-3 text-sm text-gray-500">No vendors yet.</li>}
+          {p.vendors.length === 0 && <li className="p-3 text-sm text-gray-500">{tr('noVendorsYet')}</li>}
         </ul>
 
         {editingId === 'new' ? (
           <VendorForm
             initial={EMPTY_VENDOR}
-            submitLabel="Add vendor"
+            submitLabel={tr('addVendor')}
             onCancel={() => setEditingId(null)}
             onSubmit={async (input) => {
               const created = await createVendor(p.teamId, input)
@@ -583,7 +590,7 @@ function VendorManager(p: {
             setError={setError}
           />
         ) : (
-          <button type="button" onClick={() => { setError(null); setEditingId('new') }} className={btn}>+ New vendor</button>
+          <button type="button" onClick={() => { setError(null); setEditingId('new') }} className={btn}>{tr('newVendor')}</button>
         )}
       </div>
     </div>
@@ -603,6 +610,7 @@ function VendorForm(p: {
   onDelete?: () => Promise<void>
   setError: (m: string | null) => void
 }) {
+  const tr = useTranslations('Timetable')
   const [f, setF] = useState({
     name: p.initial.name, colour: p.initial.colour, contact_name: p.initial.contact_name ?? '', phone: p.initial.phone ?? '',
     email: p.initial.email ?? '', instagram: p.initial.instagram ?? '', notes: p.initial.notes ?? '',
@@ -618,15 +626,15 @@ function VendorForm(p: {
     try {
       await fn()
     } catch (e) {
-      const m = errMsg(e)
-      p.setError(/duplicate|unique/i.test(m) ? 'You already have a vendor with that name.' : m)
+      const m = errMsg(e, tr('somethingWrong'))
+      p.setError(/duplicate|unique/i.test(m) ? tr('vendorDuplicate') : m)
       setBusy(false)
     }
   }
 
   const submit = () =>
     guard(async () => {
-      if (!f.name.trim()) throw new Error('A vendor needs a name.')
+      if (!f.name.trim()) throw new Error(tr('vendorNeedsName'))
       await p.onSubmit({
         name: f.name, colour: f.colour, contact_name: nul(f.contact_name), phone: nul(f.phone),
         email: nul(f.email), instagram: nul(f.instagram), notes: nul(f.notes),
@@ -636,24 +644,24 @@ function VendorForm(p: {
   return (
     <div className="space-y-2 text-sm">
       <div className="flex gap-2">
-        <input value={f.name} onChange={set('name')} maxLength={80} placeholder="Vendor name" aria-label="Vendor name" className={input + ' min-w-0 flex-1'} />
-        <input type="color" value={f.colour} onChange={set('colour')} aria-label="Vendor colour" className="h-8 w-10 cursor-pointer rounded-lg border border-gray-300 bg-white p-0.5" />
+        <input value={f.name} onChange={set('name')} maxLength={80} placeholder={tr('vendorName')} aria-label={tr('vendorName')} className={input + ' min-w-0 flex-1'} />
+        <input type="color" value={f.colour} onChange={set('colour')} aria-label={tr('vendorColour')} className="h-8 w-10 cursor-pointer rounded-lg border border-gray-300 bg-white p-0.5" />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input value={f.contact_name} onChange={set('contact_name')} maxLength={120} placeholder="Contact name" aria-label="Contact name" className={input} />
-        <input value={f.phone} onChange={set('phone')} maxLength={40} placeholder="Phone" aria-label="Phone" className={input} />
-        <input value={f.email} onChange={set('email')} maxLength={120} placeholder="Email" aria-label="Email" className={input} />
-        <input value={f.instagram} onChange={set('instagram')} maxLength={60} placeholder="Instagram (@handle)" aria-label="Instagram" className={input} />
+        <input value={f.contact_name} onChange={set('contact_name')} maxLength={120} placeholder={tr('contactName')} aria-label={tr('contactName')} className={input} />
+        <input value={f.phone} onChange={set('phone')} maxLength={40} placeholder={tr('phone')} aria-label={tr('phone')} className={input} />
+        <input value={f.email} onChange={set('email')} maxLength={120} placeholder={tr('email')} aria-label={tr('email')} className={input} />
+        <input value={f.instagram} onChange={set('instagram')} maxLength={60} placeholder={tr('instagramHandle')} aria-label={tr('instagram')} className={input} />
       </div>
-      <textarea value={f.notes} onChange={set('notes')} maxLength={500} rows={2} placeholder="Notes" aria-label="Vendor notes" className={input + ' w-full'} />
+      <textarea value={f.notes} onChange={set('notes')} maxLength={500} rows={2} placeholder={tr('vendorNotes')} aria-label={tr('vendorNotes')} className={input + ' w-full'} />
       <div className="flex items-center gap-2">
         <button type="button" onClick={submit} disabled={busy} className={btnPrimary}>{p.submitLabel}</button>
-        <button type="button" onClick={p.onCancel} disabled={busy} className={btn}>Cancel</button>
+        <button type="button" onClick={p.onCancel} disabled={busy} className={btn}>{tr('cancel')}</button>
         <span className="flex-1" />
         {p.onDelete && (confirmDelete ? (
-          <button type="button" disabled={busy} onClick={() => guard(p.onDelete!)} className={btn + ' border-red-300 text-red-700'} title="Blocks keep their times and just lose the vendor tag">Confirm delete</button>
+          <button type="button" disabled={busy} onClick={() => guard(p.onDelete!)} className={btn + ' border-red-300 text-red-700'} title={tr('deleteKeepsBlocks')}>{tr('confirmDelete')}</button>
         ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>Delete</button>
+          <button type="button" onClick={() => setConfirmDelete(true)} className={btn}>{tr('delete')}</button>
         ))}
       </div>
     </div>

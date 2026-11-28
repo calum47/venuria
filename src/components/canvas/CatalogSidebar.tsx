@@ -1,6 +1,8 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
 import { useLayoutStore } from '@/stores/layoutStore'
+import { categoryLabel } from '@/lib/categories'
 import { DbCatalogItem } from '@/types/db'
 
 // ─── Category display config ──────────────────────────────────────────────────
@@ -13,12 +15,6 @@ const CATEGORY_ICONS: Record<string, string> = {
   decorations: '🌸',
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  tables:      'Tables',
-  chairs:      'Chairs',
-  decorations: 'Decorations',
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 type Props = {
@@ -26,6 +22,8 @@ type Props = {
 }
 
 export default function CatalogSidebar({ catalogItems }: Props) {
+  const t = useTranslations('CatalogSidebar')
+  const tcat = useTranslations('Categories')
   const { snapToGrid, toggleSnapToGrid, gridSizeCm, setGridSize } = useLayoutStore()
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, item: DbCatalogItem) => {
@@ -55,10 +53,10 @@ export default function CatalogSidebar({ catalogItems }: Props) {
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <h2 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">
-          Catalog
+          {t('title')}
         </h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          {catalogItems.length} items
+          {t('items', { count: catalogItems.length })}
         </p>
       </div>
 
@@ -69,7 +67,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
             <div className="flex items-center gap-2 mb-2">
               <span className="text-sm">{CATEGORY_ICONS[category] ?? '📦'}</span>
               <p className="text-xs text-gray-400 uppercase tracking-wide font-medium">
-                {CATEGORY_LABELS[category] ?? category}
+                {categoryLabel(tcat, category)}
               </p>
               <span className="text-xs text-gray-300 ml-auto">
                 {grouped[category].length}
@@ -104,7 +102,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
                         {item.width_cm} × {item.depth_cm} cm
                       </p>
                       {item.owner_type === 'rental' && (
-                        <p className="text-xs text-amber-500">Rental</p>
+                        <p className="text-xs text-amber-500">{t('rental')}</p>
                       )}
                     </div>
                   </div>
@@ -116,7 +114,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
 
         {catalogItems.length === 0 && (
           <p className="text-xs text-gray-400 text-center mt-8">
-            No items in catalog
+            {t('empty')}
           </p>
         )}
       </div>
@@ -124,7 +122,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
       {/* Grid controls */}
       <div className="p-4 border-t border-gray-200 space-y-3">
         <div className="flex items-center justify-between" data-tour="snap">
-          <span className="text-sm text-gray-700">Snap to Grid</span>
+          <span className="text-sm text-gray-700">{t('snap')}</span>
           <button
             onClick={toggleSnapToGrid}
             className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
@@ -139,7 +137,7 @@ export default function CatalogSidebar({ catalogItems }: Props) {
 
         {snapToGrid && (
           <div className="space-y-1">
-            <span className="text-xs text-gray-500">Grid Size: {gridSizeCm} cm</span>
+            <span className="text-xs text-gray-500">{t('gridSize', { cm: gridSizeCm })}</span>
             <input
               type="range"
               min={10}

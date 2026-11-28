@@ -1,3 +1,4 @@
+import type { Tr } from '@/i18n/types'
 import { supabase } from './client'
 import type { DbCatalogItem, DbTableSettingTemplate } from '@/types/db'
 import type { TableSettingItem } from '@/types'
@@ -45,10 +46,11 @@ async function replaceItems(templateId: string, items: TableSettingItem[]) {
   if (error) throw error
 }
 
-export async function createTemplate(name: string, items: TableSettingItem[]): Promise<string> {
+/** `t` = translator for "TemplateModal". */
+export async function createTemplate(name: string, items: TableSettingItem[], t: Tr): Promise<string> {
   const { data: teamId, error: teamError } = await supabase.rpc('current_team_id')
   if (teamError) throw teamError
-  if (!teamId) throw new Error('No team found for this account.')
+  if (!teamId) throw new Error(t('noTeam'))
   const { data, error } = await supabase
     .from('table_setting_templates')
     .insert({ team_id: teamId, name: name.trim() })

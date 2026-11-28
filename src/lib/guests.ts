@@ -4,6 +4,8 @@
  * types.
  */
 import { addDays, isIsoDate } from '@/lib/projectDates'
+import { INTL_TAG, type Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
 
 export const GUEST_PHOTOS_BUCKET = 'guest-photos'
 /** The bucket limit. Photos are downsized long before this (see PHOTO_MAX_EDGE). */
@@ -15,7 +17,10 @@ export const PHOTO_MAX_EDGE = 640
 export const MAX_STAY_RANGE_NIGHTS = 31
 
 export type AgeGroup = 'adult' | 'child' | 'baby'
-export const AGE_LABEL: Record<AgeGroup, string> = { adult: 'Adult', child: 'Child', baby: 'Baby' }
+/** `t` is the "Guests" translator. */
+export function ageLabel(group: AgeGroup, t: Tr): string {
+  return t(`age.${group}`)
+}
 
 // ── Small display helpers ────────────────────────────────────────────────────
 
@@ -27,8 +32,8 @@ export function initials(name: string): string {
 }
 
 /** '4 Jun' — no year; the stay is always near the event date. */
-export function shortDate(isoDate: string): string {
-  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString('en-GB', {
+export function shortDate(isoDate: string, locale: Locale): string {
+  return new Date(`${isoDate}T00:00:00Z`).toLocaleDateString(INTL_TAG[locale], {
     day: 'numeric',
     month: 'short',
     timeZone: 'UTC',
@@ -68,14 +73,14 @@ export type Stay = { night: string; hotel: string }
 export type StayRun = { hotel: string; from: string; to: string; nights: number }
 
 /** Every night from `from` to `to` inclusive, or why it can't be done. */
-export function nightsInRange(from: string, to: string): { ok: true; nights: string[] } | { ok: false; error: string } {
-  if (!isIsoDate(from) || !isIsoDate(to)) return { ok: false, error: 'Enter a valid first and last night.' }
-  if (to < from) return { ok: false, error: 'The last night is before the first night.' }
+export function nightsInRange(from: string, to: string, t: Tr): { ok: true; nights: string[] } | { ok: false; error: string } {
+  if (!isIsoDate(from) || !isIsoDate(to)) return { ok: false, error: t('stayInvalid') }
+  if (to < from) return { ok: false, error: t('stayReversed') }
   const nights: string[] = []
   for (let d = from; d <= to; d = addDays(d, 1)) {
     nights.push(d)
     if (nights.length > MAX_STAY_RANGE_NIGHTS) {
-      return { ok: false, error: `That is more than ${MAX_STAY_RANGE_NIGHTS} nights — add it in smaller ranges.` }
+      return { ok: false, error: t('stayTooLong', { max: MAX_STAY_RANGE_NIGHTS }) }
     }
   }
   return { ok: true, nights }
@@ -97,13 +102,13 @@ export function stayRuns(stays: Stay[]): StayRun[] {
   return runs
 }
 
-export function runLabel(r: StayRun): string {
-  return r.from === r.to ? `${r.hotel} · ${shortDate(r.from)}` : `${r.hotel} · ${shortDate(r.from)}–${shortDate(r.to)}`
+export function runLabel(r: StayRun, locale: Locale): string {
+  return r.from === r.to ? `${r.hotel} · ${shortDate(r.from, locale)}` : `${r.hotel} · ${shortDate(r.from, locale)}–${shortDate(r.to, locale)}`
 }
 
 /** One line for the table: runs joined, empty string when no stays. */
-export function staySummary(stays: Stay[]): string {
-  return stayRuns(stays).map(runLabel).join(' · ')
+export function staySummary(stays: Stay[], locale: Locale): string {
+  return stayRuns(stays).map((r) => runLabel(r, locale)).join(' · ')
 }
 
 // ── Seats ────────────────────────────────────────────────────────────────────
@@ -128,6 +133,7 @@ export function buildSeatIndex(
   assignments: SeatAssignmentRow[],
   roomNames: Record<string, string>,
   catalogNames: Record<string, string>,
+  t: Tr,
 ): Record<string, SeatInfo[]> {
   const byId = new Map(objects.map((o) => [o.id, o]))
   const out: Record<string, SeatInfo[]> = {}
@@ -135,14 +141,14 @@ export function buildSeatIndex(
   const labelOf = (o: SeatObject) => {
     const custom = o.extra_data?.tableLabel
     if (typeof custom === 'string' && custom.trim()) return custom.trim()
-    return catalogNames[o.catalog_item_id] ?? 'Table'
+    return catalogNames[o.catalog_item_id] ?? t('table')
   }
 
   for (const a of assignments) {
     const obj = byId.get(a.layout_object_id)
     if (!obj) continue
     const tableId = obj.extra_data?.isChairFor
-    const room = roomNames[obj.room_id] ?? 'Room'
+    const room = roomNames[obj.room_id] ?? t('room')
     let info: SeatInfo
     if (typeof tableId === 'string' && byId.has(tableId)) {
       const table = byId.get(tableId)!
@@ -163,8 +169,8 @@ export function buildSeatIndex(
   return out
 }
 
-export function seatLabel(s: SeatInfo, showRoom: boolean): string {
-  const base = s.seat != null ? `${s.table} · seat ${s.seat}` : s.table
+export function seatLabel(s: SeatInfo, showRoom: boolean, t: Tr): string {
+  const base = s.seat != null ? t('seatLabel', { table: s.table, seat: s.seat }) : s.table
   return showRoom ? `${s.room}: ${base}` : base
 }
 

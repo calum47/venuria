@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { supabase } from '@/lib/supabase/client'
 import type { DbProjectRoomSetting, DbRoom } from '@/types/db'
 import { acknowledgeOverLimit, getRoomSettings, setRoomMode } from '@/lib/supabase/capacityQueries'
@@ -85,6 +86,7 @@ export function RoomCapacityBody({
   chairsInRoom: number
   guestTotal: number
 }) {
+  const tc = useTranslations('Capacity')
   const [error, setError] = useState<string | null>(null)
   const [asking, setAsking] = useState(false)
   const [note, setNote] = useState('')
@@ -97,7 +99,7 @@ export function RoomCapacityBody({
     try {
       upsertLocal(await setRoomMode(projectId, room.id, mode))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the choice.')
+      setError(err instanceof Error ? err.message : tc('saveChoiceError'))
     } finally {
       setBusy(false)
     }
@@ -107,9 +109,9 @@ export function RoomCapacityBody({
   if (!setting) {
     if (!canEdit) return null
     return (
-      <div data-tour="room-mode-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Seated or standing">
+      <div data-tour="room-mode-dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={tc('seatedOrStanding')}>
         <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl space-y-3">
-          <h2 className="text-base font-semibold text-gray-900">How is “{room.name}” used in this project?</h2>
+          <h2 className="text-base font-semibold text-gray-900">{tc('howUsedQ', { room: room.name })}</h2>
           <div className="grid grid-cols-2 gap-3">
             {(['seated', 'standing'] as CapacityMode[]).map((m) => {
               const limit = capacityLimit(room, m)
@@ -120,12 +122,12 @@ export function RoomCapacityBody({
                   onClick={() => chooseMode(m)}
                   className="rounded-lg border border-gray-200 p-3 text-left hover:border-brand-400 disabled:opacity-50"
                 >
-                  <span className="block text-sm font-medium text-gray-900">{modeLabel(m)}</span>
+                  <span className="block text-sm font-medium text-gray-900">{modeLabel(m, tc)}</span>
                   <span className="block text-xs text-gray-500 mt-0.5">
-                    {m === 'seated' ? 'Dinner, ceremony' : 'Cocktail, dancing'}
+                    {m === 'seated' ? tc('seatedHint') : tc('standingHint')}
                   </span>
                   <span className="block text-xs text-gray-700 mt-2">
-                    {limit !== null ? `Up to ${limit} people` : 'No limit set by the venue'}
+                    {limit !== null ? tc('upToPeople', { limit }) : tc('noLimitVenue')}
                   </span>
                 </button>
               )
@@ -144,7 +146,7 @@ export function RoomCapacityBody({
 
   const submitNote = async () => {
     const text = note.trim()
-    if (!text) return setError('Write a short note first (what was agreed, or why it is fine).')
+    if (!text) return setError(tc('noteRequired'))
     setBusy(true)
     setError(null)
     try {
@@ -152,7 +154,7 @@ export function RoomCapacityBody({
       setAsking(false)
       setNote('')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not save the note.')
+      setError(err instanceof Error ? err.message : tc('saveNoteError'))
     } finally {
       setBusy(false)
     }
@@ -169,12 +171,12 @@ export function RoomCapacityBody({
       <span className="flex items-center gap-1.5">
         <span
           className={`rounded-md border px-2 py-1 text-xs ${tone}`}
-          title={setting.override_note ? `Over the limit, acknowledged: ${setting.override_note}` : undefined}
+          title={setting.override_note ? tc('overAckTitle', { note: setting.override_note }) : undefined}
         >
           {limit === null
-            ? `${load} ${unitLabel(mode, load)} · no limit set`
-            : `${load} / ${limit} ${unitLabel(mode, limit)}`}
-          {status.state === 'acknowledged' ? ' · over, acknowledged' : ''}
+            ? tc('loadNoLimit', { load, unit: unitLabel(mode, load, tc) })
+            : tc('loadOfLimit', { load, limit, unit: unitLabel(mode, limit, tc) })}
+          {status.state === 'acknowledged' ? tc('overAckShort') : ''}
         </span>
         {canEdit && (
           <select
@@ -183,14 +185,14 @@ export function RoomCapacityBody({
             onChange={(e) => {
               const next = e.target.value as CapacityMode
               if (next === mode) return
-              if (setting.override_note && !confirm('Changing the scene clears the note you wrote for going over the limit. Continue?')) return
+              if (setting.override_note && !confirm(tc('changeSceneConfirm'))) return
               chooseMode(next)
             }}
-            aria-label="Seated or standing"
+            aria-label={tc('seatedOrStanding')}
             className="rounded-md border border-gray-200 bg-white px-1.5 py-1 text-xs text-gray-700"
           >
-            <option value="seated">Seated</option>
-            <option value="standing">Standing</option>
+            <option value="seated">{tc('seated')}</option>
+            <option value="standing">{tc('standing')}</option>
           </select>
         )}
       </span>
@@ -198,14 +200,14 @@ export function RoomCapacityBody({
       {status.state === 'over' && (
         <div role="alert" className="fixed left-1/2 top-14 z-40 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-red-200 bg-white p-3 shadow-lg">
           <p className="text-sm font-medium text-red-700">
-            {room.name} is over its {mode} limit: {load} {unitLabel(mode, load)} against a maximum of {limit}.
+            {tc('overLimitMsg', { room: room.name, mode: mode === 'seated' ? tc('modeSeatedLower') : tc('modeStandingLower'), load, unit: unitLabel(mode, load, tc), limit: limit ?? 0 })}
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
-            {mode === 'seated' ? 'Counted from the chairs placed in this room.' : 'Counted from the project’s guest total.'} This is a warning, not a block.
+            {mode === 'seated' ? tc('countedChairs') : tc('countedGuests')} {tc('warningNotBlock')}
           </p>
           {canEdit && !asking && (
             <button onClick={() => setAsking(true)} className="mt-2 rounded-lg border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50">
-              Continue anyway…
+              {tc('continueAnyway')}
             </button>
           )}
           {canEdit && asking && (
@@ -216,12 +218,12 @@ export function RoomCapacityBody({
                 maxLength={300}
                 rows={2}
                 autoFocus
-                placeholder="Note: what was agreed with the venue, or why this is fine"
+                placeholder={tc('notePlaceholder')}
                 className="w-full rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-900"
               />
               <div className="flex items-center gap-2">
-                <button onClick={submitNote} disabled={busy} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs text-white disabled:opacity-40">Save note and continue</button>
-                <button onClick={() => { setAsking(false); setError(null) }} className="text-xs text-gray-500">Cancel</button>
+                <button onClick={submitNote} disabled={busy} className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs text-white disabled:opacity-40">{tc('saveNoteContinue')}</button>
+                <button onClick={() => { setAsking(false); setError(null) }} className="text-xs text-gray-500">{tc('cancel')}</button>
               </div>
             </div>
           )}

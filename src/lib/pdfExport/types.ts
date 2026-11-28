@@ -1,5 +1,7 @@
 import type { LayoutObject, ObstacleShape, Point2D, ProjectZone } from '@/types'
 import type { PdfStyle } from './style'
+import type { Locale } from '@/i18n/config'
+import type { Tr } from '@/i18n/types'
 
 export type PdfRoom = {
   id: string
@@ -73,6 +75,9 @@ export type PdfLogo = { dataUrl: string; format: 'PNG' | 'JPEG'; widthPx: number
 export type PdfFontData = { normal: string; bold: string }
 
 export type PdfOptions = {
+  /** Translator for the "Pdf" namespace and the language of the document (dates). */
+  t: Tr
+  locale: Locale
   sections: PdfSections
   /** Rooms to include in plans and the seating chart. */
   roomIds: string[]

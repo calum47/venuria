@@ -1,5 +1,7 @@
 'use client'
 
+import { useTranslations } from 'next-intl'
+
 type Props = {
   tableId: string
   tableName: string
@@ -9,15 +11,16 @@ type Props = {
 }
 
 export default function ChairCountPopover({ tableName, maxChairs, onConfirm, onSkip }: Props) {
+  const t = useTranslations('ChairCount')
   const options = [2, 4, 6, 8, 10, 12, 14, 16].filter((n) => n <= maxChairs)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
       <div className="bg-white rounded-xl shadow-xl p-6 w-80 space-y-4">
         <div>
-          <h3 className="font-semibold text-gray-900">Chairs around this table?</h3>
+          <h3 className="font-semibold text-gray-900">{t('title')}</h3>
           <p className="text-sm text-gray-500 mt-0.5">{tableName}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Max {maxChairs} chairs</p>
+          <p className="text-xs text-gray-400 mt-0.5">{t('max', { n: maxChairs })}</p>
         </div>
 
         <div className="grid grid-cols-4 gap-2">
@@ -40,7 +43,7 @@ export default function ChairCountPopover({ tableName, maxChairs, onConfirm, onS
             className="flex-1 py-2 text-sm text-gray-500 border border-gray-200
                        rounded-lg hover:bg-gray-50 transition-colors"
           >
-            No chairs
+            {t('none')}
           </button>
         </div>
       </div>

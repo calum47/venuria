@@ -2,8 +2,11 @@ import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import RoomFloorPlanManager from '@/components/venue/RoomFloorPlanManager'
 import { DbRoom } from '@/types/db'
+import { getTranslations } from 'next-intl/server'
 
 export default async function VenuePage() {
+  const t = await getTranslations('Venue')
+  const tc = await getTranslations('Common')
   const supabase = await createClient()
   const {
     data: { user },
@@ -12,7 +15,7 @@ export default async function VenuePage() {
   if (!user) {
     return (
       <main className="min-h-screen bg-gray-50 p-8">
-        <p className="text-sm text-gray-500">Not signed in.</p>
+        <p className="text-sm text-gray-500">{t('notSignedIn')}</p>
       </main>
     )
   }
@@ -36,23 +39,22 @@ export default async function VenuePage() {
     <main className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-gray-900">Venue Manager{venueName ? ` — ${venueName}` : ''}</h1>
+          <h1 className="text-3xl font-semibold text-gray-900">{t('venueManager')}{venueName ? ` — ${venueName}` : ''}</h1>
           <SignOutButton />
         </div>
         <p className="text-sm text-gray-500 mb-6">
-          Logged in as <span className="font-medium text-gray-900">{user.email}</span>.
+          {tc('loggedInAs')} <span className="font-medium text-gray-900">{user.email}</span>.
         </p>
 
         {!venueId ? (
           <p className="text-sm text-red-600">
-            No venue is linked to this account — contact an admin.
+            {t('noVenueIsLinkedTo')}
           </p>
         ) : (
           <section>
-            <h2 className="text-lg font-medium text-gray-900 mb-2">Floor plan &amp; restricted zones</h2>
+            <h2 className="text-lg font-medium text-gray-900 mb-2">{t('floorPlanRestrictedZones')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Upload a floor plan PNG, set its scale, trace the walls and mark obstacles (pillars, columns, planters) that furniture
-              can never overlap. Planners see this in every project using the room.
+              {t('floorPlanHelp')}
             </p>
             <RoomFloorPlanManager venueId={venueId} rooms={rooms} />
           </section>
