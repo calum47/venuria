@@ -55,7 +55,7 @@ function InviteBox({ origin }: { origin: string }) {
     <section className="bg-white rounded-xl border border-gray-100 p-5 space-y-3">
       <h2 className="text-sm font-semibold text-gray-900">Invite a colleague</h2>
       <p className="text-xs text-gray-400">
-        Creates a one-time link, valid for 7 days. Whoever opens it sets up their own login and joins this team.
+        One-time link, valid 7 days. Whoever opens it sets up their own login and joins this team.
       </p>
       <form action={submit} className="flex items-end gap-2">
         <div className="flex flex-col gap-1">

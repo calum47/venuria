@@ -148,7 +148,7 @@ export default function NotificationBell() {
                 </section>
               )}
               <p className="px-3 py-2 text-[11px] text-gray-400 border-t border-gray-100">
-                Payment reminders start 7 days before the due date and repeat daily until the payment is marked paid.
+                Payment reminders start 7 days before the due date, daily until paid.
               </p>
             </>
           )}

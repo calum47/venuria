@@ -110,7 +110,6 @@ export function RoomCapacityBody({
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Seated or standing">
         <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl space-y-3">
           <h2 className="text-base font-semibold text-gray-900">How is “{room.name}” used in this project?</h2>
-          <p className="text-sm text-gray-500">This decides which capacity limit applies to the room.</p>
           <div className="grid grid-cols-2 gap-3">
             {(['seated', 'standing'] as CapacityMode[]).map((m) => {
               const limit = capacityLimit(room, m)
@@ -133,7 +132,6 @@ export function RoomCapacityBody({
             })}
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
-          <p className="text-xs text-gray-400">You can change this later from the toolbar.</p>
         </div>
       </div>
     )

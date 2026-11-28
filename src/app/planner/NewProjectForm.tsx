@@ -32,7 +32,7 @@ export default function NewProjectForm({ venues }: { venues: Venue[] }) {
   if (venues.length === 0) {
     return (
       <p className="text-sm text-gray-500">
-        No venues exist yet — an admin needs to create one before you can start a project.
+        No venues yet — ask an admin to create one.
       </p>
     )
   }

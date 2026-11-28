@@ -135,7 +135,7 @@ export default function TableSettingSection({ object, catalogItems, settingItems
 
       {/* This table's own setting */}
       {lines.length === 0 ? (
-        <p className="text-xs text-gray-400">Nothing on this table yet. Apply a template or add items below.</p>
+        <p className="text-xs text-gray-400">Nothing on this table yet.</p>
       ) : (
         <div className="space-y-2.5">
           <div className="flex items-baseline justify-between text-[11px] text-gray-400">

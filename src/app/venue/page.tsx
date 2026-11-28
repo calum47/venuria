@@ -51,9 +51,8 @@ export default async function VenuePage() {
           <section>
             <h2 className="text-lg font-medium text-gray-900 mb-2">Floor plan &amp; restricted zones</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Upload a floor plan PNG, calibrate its scale, trace the wall boundary, and mark obstacles
-              (pillars, columns, planters) that furniture can never overlap. Planners see this
-              automatically in every project using this room.
+              Upload a floor plan PNG, set its scale, trace the walls and mark obstacles (pillars, columns, planters) that furniture
+              can never overlap. Planners see this in every project using the room.
             </p>
             <RoomFloorPlanManager venueId={venueId} rooms={rooms} />
           </section>

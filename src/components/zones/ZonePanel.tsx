@@ -101,7 +101,7 @@ export default function ZonePanel({ roomName }: Props) {
         <section>
           <p className="text-xs text-gray-500 mb-1.5">In this room ({zones.length})</p>
           {zones.length === 0 ? (
-            <p className="text-xs text-gray-400">No zones yet. Pick a tool above and draw one.</p>
+            <p className="text-xs text-gray-400">No zones yet.</p>
           ) : (
             <ul className="space-y-1">
               {zones.map((z) => {
@@ -152,7 +152,7 @@ export default function ZonePanel({ roomName }: Props) {
 
       <div className="p-3 border-t border-gray-100">
         <p className="text-[11px] text-gray-400 leading-snug">
-          Auto-Arrange keeps tables out of every zone. Click the swatch to cycle colours.
+          Auto-Arrange avoids zones. Click a swatch to change its colour.
         </p>
       </div>
     </div>

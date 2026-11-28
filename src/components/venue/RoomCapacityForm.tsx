@@ -45,8 +45,7 @@ export default function RoomCapacityForm({ room, onSaved }: Props) {
     <div className="rounded-lg border border-gray-100 bg-white p-4 space-y-2">
       <h3 className="text-sm font-medium text-gray-900">Capacity of {room.name}</h3>
       <p className="text-xs text-gray-500">
-        Maximum number of people. Planners choose per project whether this room is seated (dinner, ceremony) or
-        standing (cocktail, dancing, a few chairs are fine) and see the matching limit. Leave empty if unknown.
+        Maximum number of people, seated (dinner, ceremony) or standing (cocktail, dancing). Planners pick which applies per project. Leave empty if unknown.
       </p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="space-y-1">

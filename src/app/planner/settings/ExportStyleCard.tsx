@@ -208,8 +208,8 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
       <div>
         <h2 className="text-sm font-semibold text-gray-900">Exports: look and logo</h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          How your team&apos;s exported PDFs look, and your own logo printed on every page (also on floor plan JPGs). Applies to the
-          whole team. The Venuria mark always appears at the bottom right of every page and cannot be turned off.
+          How your team&apos;s exported PDFs look, plus your logo on every page (also on floor plan JPGs). Applies to the whole team.
+          The Venuria mark always stays at the bottom right.
         </p>
       </div>
 
@@ -401,7 +401,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
           </div>
           <div className="h-[560px] overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
             {projects.length === 0 ? (
-              <p className="p-6 text-sm text-gray-400">Create a project first: the preview shows a real one, so you can see exactly what clients will get.</p>
+              <p className="p-6 text-sm text-gray-400">Create a project first — the preview uses a real one.</p>
             ) : dataError || previewError ? (
               <p className="p-6 text-sm text-red-600">{dataError ?? previewError}</p>
             ) : previewUrl ? (
@@ -411,7 +411,7 @@ export default function ExportStyleCard({ teamId, initialStyle, initialLogoPath,
             )}
           </div>
           <p className="mt-1.5 text-[11px] text-gray-400">
-            This is the real PDF built from that project. Unsaved changes show here but only apply to exports once you save.
+            Unsaved changes show here but only apply to exports once you save.
           </p>
         </div>
       </div>

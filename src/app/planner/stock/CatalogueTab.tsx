@@ -352,12 +352,12 @@ function EditProductModal({
           </Labelled>
         </div>
         <p className="text-xs text-gray-500">
-          Avg cost is the weighted average of everything bought, and updates by itself with each purchase. Edit it by hand only to correct it.
+          Avg cost updates itself with each purchase. Edit it only to correct it.
         </p>
 
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={onDemand} onChange={(e) => { setOnDemand(e.target.checked); if (e.target.checked) setReusable(false) }} className="rounded-lg border-gray-300" />
-          On Demand (made to order — no stock count, routed through Orders instead of Purchases/Sales)
+          On demand (made to order: no stock count, handled in Orders)
         </label>
 
         {!onDemand && (

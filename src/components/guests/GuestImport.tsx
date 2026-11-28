@@ -124,8 +124,8 @@ export default function GuestImport({
       <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-lg bg-white p-4 shadow-xl">
         <h3 className="text-sm font-semibold text-gray-900">Import guests</h3>
         <p className="mt-1 text-xs text-gray-500">
-          Choose a .txt, .csv or .pdf file, or paste names. A .csv or .pdf can also carry VIP, speeches, age group, dietary needs, notes and
-          families; only what the file states is filled in. Review and edit below. Nothing is saved until you press Import.
+          Choose a .txt, .csv or .pdf file, or paste names. Files can also carry VIP, speeches, age group, dietary needs, notes and
+          families. Review below; nothing is saved until you press Import.
         </p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">

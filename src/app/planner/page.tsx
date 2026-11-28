@@ -121,7 +121,6 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
       <div className="max-w-4xl mx-auto space-y-10">
         <div>
           <h1 className="text-4xl font-semibold text-gray-900">My projects</h1>
-          <p className="mt-1 text-sm text-gray-500">The weddings and events you and your team are planning.</p>
           {canAssign && (
             <div className="mt-3">
               <AssigneeFilter teammates={teammates ?? []} value={assigneeFilter} meId={ctx.planner.id} />
@@ -139,7 +138,7 @@ export default async function PlannerPage({ searchParams }: { searchParams: Prom
           <ul className="divide-y divide-gray-100 overflow-hidden bg-white rounded-2xl border border-gray-200 shadow-sm">
             {mine.map(renderRow)}
             {mine.length === 0 && (
-              <li className="px-5 py-4 text-sm text-gray-400">Nothing created by or assigned to you yet.</li>
+              <li className="px-5 py-4 text-sm text-gray-400">No projects yet.</li>
             )}
           </ul>
         </section>

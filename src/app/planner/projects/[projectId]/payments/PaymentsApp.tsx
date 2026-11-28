@@ -459,7 +459,7 @@ export default function PaymentsApp({ projectId, teamId, currency, eventDate, in
         )}
 
         {sorted.length === 0 && !showAdd && !importing && (
-          <p className="px-4 py-6 text-sm text-gray-400">No payments yet. Add each deposit, instalment or balance with its due date.</p>
+          <p className="px-4 py-6 text-sm text-gray-400">No payments yet.</p>
         )}
 
         {view === 'list' ? (

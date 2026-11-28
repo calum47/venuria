@@ -142,8 +142,8 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       {exportData && <ExportPanel data={exportData} />}
       {totalShortfallItems > 0 && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          {totalShortfallItems} item{totalShortfallItems === 1 ? '' : 's'} exceed what {venueName} has in stock —
-          see the highlighted rows below for what to rent.
+          {totalShortfallItems} item{totalShortfallItems === 1 ? '' : 's'} exceed {venueName}&apos;s stock —
+          highlighted rows show what to rent.
         </div>
       )}
 

@@ -71,7 +71,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
       )}
 
       {rooms.length === 0 && (
-        <p className="text-sm text-gray-500">No rooms set up for this venue yet — add one below.</p>
+        <p className="text-sm text-gray-500">No rooms yet.</p>
       )}
 
       {showNewRoomForm && (
@@ -129,9 +129,7 @@ export default function RoomFloorPlanManager({ venueId, rooms: initialRooms }: P
       <div className="border-t pt-4 mt-2">
         <h3 className="text-sm font-medium text-gray-900 mb-2">Stock — tables &amp; chairs</h3>
         <p className="text-xs text-gray-500 mb-3">
-          How many of each standard item this venue physically owns. Not a hard limit yet — a planner
-          can still place more than you have; this just tracks what&apos;s yours vs. what would need
-          renting later.
+          How many of each standard item this venue owns. Not a hard limit: anything beyond it is shown to planners as needing rental.
         </p>
         <StockManager ownerType="venue" ownerId={venueId} />
       </div>

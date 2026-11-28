@@ -91,7 +91,7 @@ export default function TableSettingModal({ items, templates, onClose, onChanged
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
             <h2 className="font-semibold text-gray-800">Table setting templates</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Shared with your whole team. Per-seat items multiply by the chairs at each table.</p>
+            <p className="text-xs text-gray-400 mt-0.5">Shared with your team. Per-seat items scale with the number of chairs.</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-lg leading-none" aria-label="Close">×</button>
         </div>

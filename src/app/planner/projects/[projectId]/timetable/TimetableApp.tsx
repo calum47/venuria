@@ -193,7 +193,7 @@ export default function TimetableApp({ projectId, teamId, eventDate, initialDays
 
       {!day ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center">
-          <p className="text-sm text-gray-600">A project can span several days: the wedding itself, a welcome party, a brunch.</p>
+          <p className="text-sm text-gray-600">No days yet.</p>
           {!readOnly && <button type="button" onClick={addDay} disabled={busy} className={btnPrimary + ' mt-3'}>Add the first day</button>}
         </div>
       ) : (

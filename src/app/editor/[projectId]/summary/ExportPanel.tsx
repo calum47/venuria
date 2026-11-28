@@ -99,8 +99,7 @@ export default function ExportPanel({ data }: { data: PdfExportData }) {
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
       <p className="mt-2 text-xs text-gray-400">
-        English only. Characters outside Western European alphabets print as “?”. Fonts, colours and the logo follow your
-        team&apos;s setting (Settings → Exports).
+        English only; characters outside Western European alphabets print as “?”. Style and logo follow Settings → Exports.
       </p>
     </section>
   )

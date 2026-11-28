@@ -61,7 +61,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
   if (days.length === 0 || blocks.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center print:hidden">
-        <p className="text-sm text-gray-600">Nothing to list yet. Add blocks to the timetable and they appear here.</p>
+        <p className="text-sm text-gray-600">Nothing yet — add blocks in the timetable.</p>
         <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">Go to the timetable</Link>
       </div>
     )
@@ -100,7 +100,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
         </div>
         <p className="text-xs text-gray-500">
           {filtered ? 'Only the selected vendors’ entries are listed and printed. ' : ''}
-          Each entry has its own switches for what vendor information is shown. Choose “Save as PDF” in the print dialog to get a file.
+          Each entry has its own switches for the vendor details shown. Choose “Save as PDF” in the print dialog.
         </p>
       </div>
 

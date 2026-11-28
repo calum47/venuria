@@ -60,9 +60,7 @@ export default async function RentalPage() {
           <section>
             <h2 className="text-lg font-medium text-gray-900 mb-2">Stock — tables &amp; chairs</h2>
             <p className="text-sm text-gray-500 mb-4">
-              How many of each standard item your company has available to rent out. Planners draw from
-              a venue&apos;s own stock first — this is what fills the gap when a project needs more than the
-              venue has.
+              How many of each standard item you can rent out. Planners use the venue&apos;s own stock first; yours covers the rest.
             </p>
             <StockManager ownerType="rental_company" ownerId={rentalCompanyId} />
           </section>

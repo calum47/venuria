@@ -329,7 +329,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
 
       {guests.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
-          No guests yet. Add one above, or import a list from a file.
+          No guests yet.
         </p>
       ) : visible.length === 0 ? (
         <p className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">No guests match these filters.</p>
@@ -706,7 +706,7 @@ function GuestPanel(p: PanelProps) {
           <h2 className="text-lg font-semibold text-gray-900">{guest.name}</h2>
           <button type="button" onClick={p.onClose} className={btn} aria-label="Close details">Close</button>
         </div>
-        {dirty && <p className="mt-1 text-xs text-amber-700">Unsaved changes — save, or revert by reopening this guest.</p>}
+        {dirty && <p className="mt-1 text-xs text-amber-700">Unsaved changes.</p>}
         {error && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
         <fieldset disabled={p.readOnly} className="m-0 mt-4 min-w-0 space-y-4 border-0 p-0">
@@ -739,7 +739,7 @@ function GuestPanel(p: PanelProps) {
                   </>
                 )}
               </div>
-              <p className="text-xs text-gray-500">JPEG, PNG or WebP. Resized on your device and stored privately for your team.</p>
+              <p className="text-xs text-gray-500">JPEG, PNG or WebP. Stored privately for your team.</p>
             </div>
           </div>
 
@@ -773,7 +773,7 @@ function GuestPanel(p: PanelProps) {
           {/* Family */}
           <div className={section}>
             <p className="text-sm font-medium text-gray-900">Family</p>
-            <p className="text-xs text-gray-500">Link parents with their children and babies so they show together.</p>
+            <p className="text-xs text-gray-500">Link parents and children so they show together.</p>
             {!creatingFamily ? (
               <select
                 value={guest.family_id ?? ''}
@@ -856,7 +856,7 @@ function GuestPanel(p: PanelProps) {
             {p.seats.length > 0 ? (
               <ul className="text-sm text-gray-700">{p.seats.map((s, i) => <li key={i}>{seatLabel(s, true)}</li>)}</ul>
             ) : guest.rsvp_status === 'declined' ? (
-              <p className="text-sm text-gray-500">Not attending, so no seat is needed.</p>
+              <p className="text-sm text-gray-500">Not attending.</p>
             ) : guest.age_group === 'baby' ? (
               <p className="text-sm text-gray-500">Babies don&rsquo;t need a seat.</p>
             ) : guest.seat_dismissed_at ? (
@@ -880,7 +880,7 @@ function GuestPanel(p: PanelProps) {
           {/* Hotel per night */}
           <div className={section}>
             <p className="text-sm font-medium text-gray-900">Hotel per night</p>
-            <p className="text-xs text-gray-500">A night is the evening of that date. Entering a night that already has a hotel replaces it.</p>
+            <p className="text-xs text-gray-500">A night is the evening of that date. Entering an existing night replaces it.</p>
             {runs.length === 0 ? <p className="text-sm text-gray-500">No stays recorded.</p> : (
               <ul className="space-y-1">
                 {runs.map((r) => (

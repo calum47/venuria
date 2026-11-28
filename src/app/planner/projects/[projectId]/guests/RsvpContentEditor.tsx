@@ -211,7 +211,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         )}
       </div>
       <p className="text-xs text-gray-500">
-        Guests see these sections on the RSVP page, in this order: cover photo with the names, details, your RSVP questions, the area, hotels. A section with nothing in it is not shown. Write each text once: it is shown as typed to guests in every language.
+        Guests see these sections in this order: cover with names, details, your RSVP questions, the area, hotels. Empty sections are hidden. Texts are shown as typed, in every language.
       </p>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
@@ -237,7 +237,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           {showToggle('show_details', showDetails, 'Show on the page')}
         </div>
         <label className="block text-xs text-gray-600">
-          Schedule (one line per row, for example “17:00 Ceremony”)
+          Schedule (one line per row, e.g. “17:00 Ceremony”)
           <textarea value={schedule} onChange={(e) => setSchedule(e.target.value)} maxLength={1000} rows={4} className={input + ' mt-1 block w-full'} />
         </label>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -260,7 +260,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           {showToggle('show_area', showArea, 'Show on the page')}
         </div>
         <label className="block text-xs text-gray-600">
-          Text (how to get there, parking, transport, what is nearby…)
+          Text (getting there, parking, transport, nearby…)
           <textarea value={areaText} onChange={(e) => setAreaText(e.target.value)} maxLength={2000} rows={5} className={input + ' mt-1 block w-full'} />
         </label>
         <button type="button" onClick={saveArea} disabled={!areaDirty || busy !== null} className={btnPrimary}>{busy === 'area' ? 'Saving…' : 'Save text'}</button>
@@ -298,7 +298,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           <p className="text-sm font-medium text-gray-900">Hotels ({hotels.length}/{MAX_HOTELS})</p>
           {showToggle('show_hotels', showHotels, 'Show on the page')}
         </div>
-        <p className="text-xs text-gray-500">Recommended places to stay, shown on the page. This is separate from the hotel you note for each guest per night.</p>
+        <p className="text-xs text-gray-500">Recommended places to stay, shown on the page. Separate from each guest&rsquo;s own hotel.</p>
 
         {hotels.map((h) =>
           editingHotel === h.id ? (

@@ -129,7 +129,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
           {!hasContactEmail && (
             <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Guests see your company name as responsible for their data, but there is no contact email for their data requests yet. Add one in Settings → Team.
+              Guests see your company as responsible for their data, but no contact email is set for data requests. Add one in Settings → Team.
             </p>
           )}
 
@@ -150,7 +150,7 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
           </div>
 
           <label className="block text-xs text-gray-600">
-            Welcome note shown under the names (a few warm words for your guests)
+            Welcome note, shown under the names
             <textarea value={welcome} onChange={(e) => setWelcome(e.target.value)} maxLength={500} rows={3} className={input + ' mt-1 block w-full'} />
           </label>
 
@@ -186,12 +186,12 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
 
           {cfg && (
             <div className="space-y-2 border-t border-gray-100 pt-3">
-              <p className="text-xs text-gray-600">Share this one link with every guest. It is secret: anyone who has it can answer.</p>
+              <p className="text-xs text-gray-600">One link for all guests. Anyone who has it can answer.</p>
               <div className="flex flex-wrap items-center gap-2">
                 <input readOnly value={url} onFocus={(e) => e.currentTarget.select()} className={input + ' min-w-0 flex-1 font-mono text-xs'} aria-label="RSVP link" />
                 <button type="button" onClick={copy} className={btn}>{copied ? 'Copied' : 'Copy'}</button>
               </div>
-              {!cfg.enabled && <p className="text-xs text-amber-700">The link is saved but switched off: guests who open it see “RSVP is closed”.</p>}
+              {!cfg.enabled && <p className="text-xs text-amber-700">The link is off: guests who open it see “RSVP is closed”.</p>}
               {!confirmNew ? (
                 <button type="button" onClick={() => setConfirmNew(true)} className="text-xs text-gray-500 underline hover:text-gray-900">Create a new link…</button>
               ) : (
@@ -202,8 +202,8 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
                 </div>
               )}
               <p className="text-xs text-gray-500">
-                A guest types their name and is matched against this list. Names not on the list, and plus-ones, are added and marked “To review”.
-                The link only takes a guest&rsquo;s first answer; change an answer in the guest&rsquo;s details.
+                Guests type their name and are matched to this list. Unlisted names and plus-ones are added as “To review”.
+                Only a guest&rsquo;s first answer is taken; change answers in the guest&rsquo;s details.
               </p>
             </div>
           )}

@@ -122,9 +122,8 @@ export default function AutoArrangeModal({
           <h3 className="font-semibold text-gray-900">✨ Auto-Arrange</h3>
           <p className="text-sm text-gray-500 mt-0.5">{currentRoom.name}</p>
           <p className="text-xs text-gray-400 mt-1">
-            Dining tables only. Adds new tables inside the room boundary, avoiding obstacles and anything already placed. Every
-            table gets its maximum chairs — remove the ones you don&apos;t need afterwards. Doesn&apos;t move or
-            remove anything that&apos;s already there.
+            Dining tables only. Adds tables inside the room, avoiding obstacles and anything already placed; nothing existing is moved
+            or removed. Each table gets its maximum chairs, so remove extras afterwards.
           </p>
         </div>
 
@@ -179,8 +178,7 @@ export default function AutoArrangeModal({
         </label>
         {balanceAroundSweetheart && (
           <p className="text-xs text-gray-400 px-1 -mt-2">
-            Requires a Sweetheart Table already placed in this room, at your desired position — Auto-Arrange
-            only works around it, never places or moves it.
+            Place a Sweetheart Table first, where you want it. Auto-Arrange works around it and never moves it.
           </p>
         )}
 

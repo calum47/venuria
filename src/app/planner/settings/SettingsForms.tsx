@@ -32,7 +32,7 @@ export default function SettingsForms({ plannerName, email, plannerCode, role, t
         <div className="max-w-2xl">
           <Card title="Exports: look and logo">
             <p className="text-xs text-gray-500">
-              The look of exported PDFs and the logo printed on them are set by your team manager. Your exports already use them.
+              Export look and logo are set by your team manager and already apply to your exports.
             </p>
           </Card>
         </div>
@@ -166,7 +166,7 @@ function TeamForm({ team, canEdit }: { team: { id: string; name: string; currenc
         </div>
         <div className="w-full border-t border-gray-100 pt-3">
           <p className="text-xs text-gray-500">
-            Shown to guests on the RSVP page as the party responsible for their data. Leave the company name empty to use the team name.
+            Shown to guests on the RSVP page as responsible for their data. An empty company name uses the team name.
           </p>
         </div>
         <div className="flex flex-col gap-1 flex-1 min-w-[12rem]">
