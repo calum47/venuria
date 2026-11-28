@@ -46,6 +46,19 @@ export default async function VendorMaterialsPage({ params }: { params: Promise<
     .sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
   const categories = [...new Set(rows.map((r) => r.category))]
 
+  // What the planner has asked THIS vendor for on this project, and the answer given.
+  const { data: asked } = await supabase
+    .from('project_item_sources')
+    .select('catalog_item_id, requested_quantity, quantity, status')
+    .eq('project_id', projectId)
+    .eq('rental_company_id', ctx.companyId)
+  const askedNames = new Map(rows.map((r) => [r.id, r.name]))
+  const missingIds = (asked ?? []).map((a) => a.catalog_item_id).filter((id) => !askedNames.has(id))
+  if (missingIds.length > 0) {
+    const { data: more } = await supabase.from('catalog_items').select('id, name').in('id', missingIds)
+    for (const m of more ?? []) askedNames.set(m.id, m.name)
+  }
+
   return (
     <VendorShell ctx={ctx}>
       <main className="px-4 sm:px-6 py-10">
@@ -55,6 +68,29 @@ export default async function VendorMaterialsPage({ params }: { params: Promise<
             <h1 className="mt-2 text-3xl font-semibold text-gray-900">{t('materials')}</h1>
             <p className="text-sm text-gray-500 mt-0.5">{t('materialsIntro')}</p>
           </div>
+          {(asked ?? []).length > 0 && (
+            <section>
+              <div className="mb-2 flex items-baseline justify-between">
+                <h2 className="text-sm font-semibold text-gray-900">{t('requestedFromYou')}</h2>
+                <Link href="/rental/requests" className="text-xs text-brand-700 hover:underline">{t('answerRequests')}</Link>
+              </div>
+              <ul className="divide-y divide-gray-100 rounded-xl border border-brand-100 bg-white">
+                {(asked ?? []).map((a) => (
+                  <li key={a.catalog_item_id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                    <span className="text-gray-900">{askedNames.get(a.catalog_item_id) ?? t('unknownItem')}</span>
+                    <span className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">{a.requested_quantity}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-xs ${a.status === 'accepted' ? 'bg-green-100 text-green-800' : a.status === 'declined' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>
+                        {a.status === 'pending' && t('requestPending')}
+                        {a.status === 'accepted' && (a.quantity < a.requested_quantity ? t('requestAcceptedPart', { granted: a.quantity, asked: a.requested_quantity }) : t('requestAccepted'))}
+                        {a.status === 'declined' && t('requestDeclined')}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           {rows.length === 0 ? (
             <p className="rounded-lg border border-dashed border-gray-300 bg-white px-4 py-8 text-center text-sm text-gray-500">{t('nothingPlaced')}</p>
           ) : (

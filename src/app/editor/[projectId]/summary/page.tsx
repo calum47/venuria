@@ -94,13 +94,13 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       .eq('owner_type', 'rental_company')
       .in('catalog_item_id', usedItemIds),
     supabase.rpc('rental_committed_elsewhere', { p_project: projectId, p_items: usedItemIds }),
-    supabase.from('project_item_sources').select('catalog_item_id, rental_company_id, quantity').eq('project_id', projectId),
+    supabase.from('project_item_sources').select('catalog_item_id, rental_company_id, quantity, requested_quantity, status').eq('project_id', projectId),
     supabase.rpc('planner_project_access', { pid: projectId }),
   ])
   const editable = accessLevel === 'edit'
   const committedKey = (item: string, co: string) => `${item}:${co}`
   const committedMap = new Map<string, number>((committedRows ?? []).map((r: { catalog_item_id: string; rental_company_id: string; committed: number }) => [committedKey(r.catalog_item_id, r.rental_company_id), r.committed]))
-  const chosenMap = new Map<string, number>((sourceRows ?? []).map((r) => [committedKey(r.catalog_item_id, r.rental_company_id), r.quantity]))
+  const sourceMap = new Map((sourceRows ?? []).map((r) => [committedKey(r.catalog_item_id, r.rental_company_id), r]))
 
   const catalogById = new Map<string, DbCatalogItem>((catalogItems ?? []).map((c) => [c.id, c]))
 
@@ -120,7 +120,9 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
     list.push({
       companyId: row.owner_id, companyName, stock: row.quantity,
       committed: committedMap.get(committedKey(row.catalog_item_id, row.owner_id)) ?? 0,
-      chosen: chosenMap.get(committedKey(row.catalog_item_id, row.owner_id)) ?? 0,
+      chosen: sourceMap.get(committedKey(row.catalog_item_id, row.owner_id))?.requested_quantity ?? 0,
+      granted: sourceMap.get(committedKey(row.catalog_item_id, row.owner_id))?.quantity ?? 0,
+      status: (sourceMap.get(committedKey(row.catalog_item_id, row.owner_id))?.status as SourceOption['status']) ?? null,
     })
     rentalAvailabilityByItem.set(row.catalog_item_id, list)
   }
@@ -136,7 +138,7 @@ export default async function ProjectSummaryPage({ params }: { params: Promise<P
       // of a false shortfall for categories that were never in scope for stock.
       const isStockTracked = !!item && STOCK_TRACKED_CATEGORIES.includes(item.category)
       const venueStock = venueStockById.get(id) ?? 0
-      const rentedQty = (rentalAvailabilityByItem.get(id) ?? []).reduce((a, o) => a + o.chosen, 0)
+      const rentedQty = (rentalAvailabilityByItem.get(id) ?? []).reduce((a, o) => a + (o.status === 'pending' ? o.chosen : o.granted), 0)
       const shortfall = isStockTracked ? Math.max(0, used - rentedQty - venueStock) : 0
       return {
         id,

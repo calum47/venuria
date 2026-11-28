@@ -11,6 +11,21 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-item-requests-planner': {
+    title: 'Lo que alquilas a un proveedor ahora es una solicitud que el proveedor responde',
+    items: [
+      'Cuando eliges cuántas sillas, mesas o platos alquilar a un proveedor, se convierte en una solicitud. El proveedor la acepta, acepta solo parte de la cantidad o la rechaza.',
+      'El resumen del proyecto muestra la respuesta junto a cada proveedor: pendiente, confirmado (o confirmadas N de M) o rechazado. Las cantidades pendientes y confirmadas cuentan como reservadas, así que no se prometen las mismas unidades dos veces en una fecha.',
+      'Pedir artículos a un proveedor también lo añade al proyecto y a tu lista de proveedores del cronograma.',
+    ],
+  },
+  '2026-11-28-item-requests-vendor': {
+    title: 'Solicitudes: responde a lo que te piden los planificadores',
+    items: [
+      'La nueva página de Solicitudes muestra lo que te piden los planificadores, con el proyecto, la fecha y cuántas unidades te quedan libres ese día. Acepta todo, acepta parte o rechaza.',
+      'Dentro de un proyecto, la página de Materiales muestra lo que se te ha solicitado y tu respuesta.',
+    ],
+  },
   '2026-11-28-vendor-in-timetable-fix': {
     title: 'Los proveedores que añades aparecen siempre en la lista del cronograma',
     items: [

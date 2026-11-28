@@ -3,10 +3,15 @@ import { getTranslations } from 'next-intl/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import { Rings } from '@/components/brand/Rings'
 import type { VendorContext } from '@/lib/supabase/vendorContext'
+import { createClient } from '@/lib/supabase/server'
 
 /** Header for the vendor's project pages (/rental/projects/…): works for pure vendor logins, which have no planner nav. */
 export default async function VendorShell({ ctx, children }: { ctx: VendorContext; children: React.ReactNode }) {
   const t = await getTranslations('VendorProjects')
+  const supabase = await createClient()
+  const { count: pendingCount } = await supabase
+    .from('project_item_sources').select('project_id', { count: 'exact', head: true })
+    .eq('rental_company_id', ctx.companyId).eq('status', 'pending')
   const pill = 'shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900'
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -19,6 +24,10 @@ export default async function VendorShell({ ctx, children }: { ctx: VendorContex
           <nav className="flex items-center gap-1">
             <Link href="/rental/projects" className={pill}>{t('myProjects')}</Link>
             {ctx.hasVendorStock && <Link href="/rental" className={pill}>{t('vendorPage')}</Link>}
+            <Link href="/rental/requests" className={pill}>
+              {t('requests')}
+              {!!pendingCount && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-xs text-white">{pendingCount}</span>}
+            </Link>
             <Link href="/rental/settings" className={pill}>{t('settings')}</Link>
             {ctx.isPlanner && <Link href="/planner" className={pill}>{t('plannerSide')}</Link>}
           </nav>
