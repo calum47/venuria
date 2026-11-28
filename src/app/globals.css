@@ -95,6 +95,16 @@ body {
   font-family: var(--font-sans);
 }
 
+/* The RSVP page inside an iframe on a planner's own website (EmbedBridge sets data-embedded).
+   There it must be exactly as tall as its content: "100vh" would mean the iframe's own height,
+   so the page could never shrink and an empty box would be left below the form. */
+html[data-embedded='true'],
+html[data-embedded='true'] body,
+html[data-embedded='true'] main {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
 /* Page titles and large section titles use the serif. Small UI headings
    (text-xs / text-sm / text-base, e.g. panel headings in dense tools) stay in
    the sans so they remain legible at their size. font-size-adjust evens out

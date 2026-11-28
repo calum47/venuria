@@ -6,6 +6,7 @@ import { RSVP_MEDIA_BUCKET, buildPublicContent, type PublicContent } from '@/lib
 import { LANGS, TEXT, pickLang, type Lang } from '@/lib/rsvpText'
 import { pickText } from '@/lib/rsvpTranslations'
 import type { DbProjectRsvp, DbRsvpEvent, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
+import EmbedBridge from '@/components/rsvp/EmbedBridge'
 import RsvpForm from './RsvpForm'
 
 export const dynamic = 'force-dynamic'
@@ -48,6 +49,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   if (!cfg || (!live && !previewOk)) {
     return (
       <main className="flex min-h-screen w-full items-start justify-center bg-gray-50 px-4 py-10 sm:items-center">
+        <EmbedBridge />
         <div className="w-full max-w-xl space-y-2 rounded-xl border border-gray-100 bg-white p-6 shadow-sm sm:p-8">
           <h1 className="text-xl font-semibold text-gray-900">{t.closedTitle}</h1>
           <p className="text-sm text-gray-500">{t.closedBody}</p>
@@ -83,6 +85,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
 
   return (
     <main className="flex min-h-screen w-full items-start justify-center bg-gradient-to-b from-brand-50 via-gray-50 to-gray-50 px-0 py-0 sm:py-8">
+      <EmbedBridge />
       <div className="w-full sm:w-[90%]">
         <RsvpForm
           token={token}

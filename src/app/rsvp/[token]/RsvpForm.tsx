@@ -1,11 +1,12 @@
 'use client'
 
-import { Fragment, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { LANGS, LANG_NAME, TEXT, fill, type Lang } from '@/lib/rsvpText'
 import type { RsvpStatus } from '@/lib/rsvp'
 import type { PublicContent } from '@/lib/rsvpContent'
 import type { RsvpSectionKey } from '@/lib/rsvpSections'
 import { Rings } from '@/components/brand/Rings'
+import { notifyEmbedScroll } from '@/lib/rsvpEmbed'
 import RsvpMap, { type MapTexts } from './RsvpMap'
 import { lookupGuest, submitRsvp, type LookupResult, type SubmitResult } from './actions'
 
@@ -68,6 +69,17 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [closed, setClosed] = useState(false)
+
+  // Inside an iframe on a planner's own website the host page is what scrolls, so when the guest moves to
+  // the next step (or the thank-you), ask it to bring the form back into view. No-op outside an iframe.
+  const firstStep = useRef(true)
+  useEffect(() => {
+    if (firstStep.current) {
+      firstStep.current = false
+      return
+    }
+    notifyEmbedScroll(document.getElementById('rsvp-form'))
+  }, [step])
 
   const lookupMessage = (r: LookupResult['state']): string | null => {
     switch (r) {
@@ -458,7 +470,7 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
         {previewBanner && <div className="mx-auto w-full max-w-2xl">{previewBanner}</div>}
         <div className="mx-auto w-full max-w-2xl">{intro}</div>
         {sectionOrder.map((k) => (
-          <Fragment key={k}>{sections[k] && <div className={`mx-auto w-full ${sectionWidth[k]}`}>{sections[k]}</div>}</Fragment>
+          <Fragment key={k}>{sections[k] && <div id={k === 'form' ? 'rsvp-form' : undefined} className={`mx-auto w-full ${sectionWidth[k]}`}>{sections[k]}</div>}</Fragment>
         ))}
       </div>
     </article>
