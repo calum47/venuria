@@ -11,7 +11,7 @@ export type Translations = { h?: Record<string, string> } & Partial<Record<Trans
 
 /** Which columns of which tables are translated. */
 export const TRANSLATED_FIELDS = {
-  project_rsvp: ['welcome_message', 'schedule', 'dress_code', 'area_text'],
+  project_rsvp: ['welcome_message', 'schedule', 'schedule_title', 'area_text'],
   project_rsvp_photos: ['caption'],
   project_rsvp_hotels: ['description', 'booking_note'],
   project_rsvp_events: ['title', 'location', 'description', 'tag'],

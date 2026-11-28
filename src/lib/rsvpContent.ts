@@ -1,7 +1,7 @@
 /**
  * Content of the public RSVP page (migration 026). Pure helpers.
  *
- * Sections: cover photo, details (schedule, dress code, map link), area (text
+ * Sections: cover photo, day-by-day, the big day (title, schedule, venue map link), area (text
  * and photos), hotels. A section is shown only when the planner has it switched
  * on AND it has something in it, so an empty section never leaves a heading
  * with nothing under it.
@@ -75,10 +75,12 @@ export type PublicEvent = {
 
 export type PublicContent = {
   coverUrl: string | null
-  /** The day-by-day programme, plus the dress code and the venue map link. */
-  details: { events: PublicEvent[]; dressCode: string | null; mapUrl: string | null } | null
-  /** The wedding-day schedule, one line per row. */
-  schedule: { lines: string[] } | null
+  /** The day-by-day programme. */
+  details: { events: PublicEvent[] } | null
+  /** The wedding-day block: its title (null = the page's default), the schedule one line per row, the venue map link. */
+  schedule: { title: string | null; lines: string[]; mapUrl: string | null } | null
+  /** The venue's map link, also used by the map in the hotels section. */
+  venueMapUrl: string | null
   area: { text: string | null; photos: { url: string; caption: string | null }[] } | null
   /** Empty (and no map) = the hotels section is not shown. */
   hotels: PublicHotel[]
@@ -89,7 +91,7 @@ export type PublicContent = {
 type CfgLike = {
   cover_path: string | null
   schedule: string | null
-  dress_code: string | null
+  schedule_title: string | null
   map_url: string | null
   area_text: string | null
   show_details: boolean
@@ -128,7 +130,7 @@ export function buildPublicContent(
       tag: pickText(e.translations, lang, 'tag', e.tag)?.trim() || null,
     }))
   const lines = scheduleLines(pickText(cfg.translations, lang, 'schedule', cfg.schedule))
-  const dressCode = pickText(cfg.translations, lang, 'dress_code', cfg.dress_code)?.trim() || null
+  const scheduleTitle = pickText(cfg.translations, lang, 'schedule_title', cfg.schedule_title)?.trim() || null
   const mapUrl = cfg.map_url?.trim() || null
   const areaText = pickText(cfg.translations, lang, 'area_text', cfg.area_text)?.trim() || null
   const areaPhotos = photos.filter((p) => urls[p.path]).map((p) => ({ url: urls[p.path], caption: pickText(p.translations, lang, 'caption', p.caption)?.trim() || null }))
@@ -152,8 +154,9 @@ export function buildPublicContent(
 
   return {
     coverUrl: cfg.cover_path ? urls[cfg.cover_path] ?? null : null,
-    details: cfg.show_details && (events.length > 0 || dressCode || mapUrl) ? { events, dressCode, mapUrl } : null,
-    schedule: cfg.show_schedule && lines.length > 0 ? { lines } : null,
+    details: cfg.show_details && events.length > 0 ? { events } : null,
+    schedule: cfg.show_schedule && (lines.length > 0 || mapUrl) ? { title: scheduleTitle, lines, mapUrl } : null,
+    venueMapUrl: mapUrl,
     area: cfg.show_area && (areaText || areaPhotos.length > 0) ? { text: areaText, photos: areaPhotos } : null,
     hotels: hotelList,
     map,

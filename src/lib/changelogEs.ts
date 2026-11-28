@@ -11,6 +11,13 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-big-day': {
+    title: 'Página de confirmación: sección «El gran día» con el programa y el mapa',
+    items: [
+      'El programa del día de la boda y el botón del mapa del lugar están ahora juntos en una sola sección, «El gran día». Puedes cambiar su título (por ejemplo, «Sábado» o «La ceremonia»); los invitados lo ven en su idioma.',
+      'La tarjeta del código de vestimenta ya no aparece en la página, porque ya se muestra como etiqueta en las entradas del día a día. El enlace del mapa del lugar se define ahora en la misma sección que el programa.',
+    ],
+  },
   '2026-11-28-rsvp-day-by-day': {
     title: 'Página de confirmación: programa día a día y programa del día de la boda',
     items: [

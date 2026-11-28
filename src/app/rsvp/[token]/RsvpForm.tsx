@@ -220,30 +220,23 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
           </ol>
         </div>
       )}
-      {(content.details.dressCode || content.details.mapUrl) && (
-        <div className="space-y-5 rounded-2xl bg-brand-50/60 p-5 text-center">
-          {content.details.dressCode && (
-            <div className="space-y-1.5">
-              <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.dressCodeTitle}</h2>
-              <p className="whitespace-pre-line text-sm text-gray-800">{content.details.dressCode}</p>
-            </div>
-          )}
-          {content.details.mapUrl && (
-            <a href={content.details.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-block rounded-full border border-brand-300 bg-white px-4 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-50">
-              {t.openMap} ↗
-            </a>
-          )}
-        </div>
-      )}
     </section>
   )
 
   const schedule = content.schedule && (
-    <section className="space-y-3 rounded-2xl bg-brand-50/60 p-5 text-center">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700">{t.weddingDayTitle}</h2>
-      <ul className="space-y-1 text-sm text-gray-800">
-        {content.schedule.lines.map((l, i) => <li key={i}>{l}</li>)}
-      </ul>
+    <section className="space-y-4 rounded-2xl bg-brand-50/60 px-5 py-7 text-center">
+      <h2 className="text-2xl font-medium text-gray-900">{content.schedule.title ?? t.weddingDayTitle}</h2>
+      <div className="mx-auto h-px w-12 bg-brand-300" />
+      {content.schedule.lines.length > 0 && (
+        <ul className="space-y-1.5 text-sm text-gray-800">
+          {content.schedule.lines.map((l, i) => <li key={i}>{l}</li>)}
+        </ul>
+      )}
+      {content.schedule.mapUrl && (
+        <a href={content.schedule.mapUrl} target="_blank" rel="noopener noreferrer nofollow" className="inline-block rounded-full border border-brand-300 bg-white px-4 py-1.5 text-sm text-brand-800 transition-colors hover:bg-brand-50">
+          {t.openMap} ↗
+        </a>
+      )}
     </section>
   )
 
@@ -282,7 +275,7 @@ export default function RsvpForm({ token, initialLang, welcomes, coupleNames, de
           <RsvpMap
             venue={content.map.venue}
             venueName={venueName}
-            venueMapUrl={content.details?.mapUrl ?? null}
+            venueMapUrl={content.venueMapUrl}
             hotels={content.hotels}
             selectedId={mapSelected}
             onSelect={setMapSelected}

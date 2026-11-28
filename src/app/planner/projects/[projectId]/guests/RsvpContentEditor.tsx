@@ -97,8 +97,8 @@ function Thumb({ url, alt, className }: { url: string | undefined; alt: string; 
 }
 
 /**
- * The content of the public RSVP page: cover photo, details (schedule, dress
- * code, map link), the area (text + photos) and recommended hotels. Every
+ * The content of the public RSVP page: cover photo, the day-by-day programme, the big day (title, schedule, venue
+ * map link), the area (text + photos) and recommended hotels. Every
  * section can be switched off without losing what was typed. Hotels here are a
  * list on the page only; a guest's own hotel per night stays free text.
  */
@@ -113,7 +113,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const [editingEvent, setEditingEvent] = useState<string | null>(null)
   const [translating, setTranslating] = useState(false)
   const [schedule, setSchedule] = useState(cfg?.schedule ?? '')
-  const [dress, setDress] = useState(cfg?.dress_code ?? '')
+  const [scheduleTitle, setScheduleTitle] = useState(cfg?.schedule_title ?? '')
   const [mapUrl, setMapUrl] = useState(cfg?.map_url ?? '')
   const [mapAddress, setMapAddress] = useState(cfg?.map_address ?? '')
   const [notice, setNotice] = useState<string | null>(null)
@@ -130,8 +130,10 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   const showMap = cfg?.show_map ?? false
   const mapAddressDirty = (mapAddress.trim() || null) !== (cfg?.map_address ?? null)
 
-  const detailsDirty = (dress.trim() || null) !== (cfg?.dress_code ?? null) || (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
-  const scheduleDirty = (schedule.trim() || null) !== (cfg?.schedule ?? null)
+  const scheduleDirty =
+    (schedule.trim() || null) !== (cfg?.schedule ?? null) ||
+    (scheduleTitle.trim() || null) !== (cfg?.schedule_title ?? null) ||
+    (mapUrl.trim() || null) !== (cfg?.map_url ?? null)
   const areaDirty = (areaText.trim() || null) !== (cfg?.area_text ?? null)
 
   const run = async (key: string, fn: () => Promise<void>) => {
@@ -154,23 +156,6 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
     if (r !== 'ok') setNotice(r === 'not_configured' ? t('translateNotConfigured') : t('translateFailed'))
   }
   const addUrl = (path: string, url: string | null) => url && setUrls((u) => ({ ...u, [path]: url }))
-
-  const saveDetails = () =>
-    run('details', async () => {
-      const link = normalizeWebUrl(mapUrl, tg)
-      if (!link.ok) throw new Error(t('mapLinkError', { error: link.error }))
-      // The venue's position is looked up again whenever its map link changes (or was never found).
-      const linkChanged = (link.url ?? null) !== (cfg?.map_url ?? null)
-      let position: { map_lat: number | null; map_lng: number | null } | Record<string, never> = {}
-      if (linkChanged || cfg?.map_lat == null) {
-        const r = await locatePlace({ mapsUrl: link.url, address: cfg?.map_address ?? null })
-        position = { map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null }
-        if (!r.point && (link.url || cfg?.map_address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapVenueMissing'))
-      }
-      await save({ dress_code: dress.trim() || null, map_url: link.url, ...position })
-      setMapUrl(link.url ?? '')
-      await translateAfter()
-    })
 
   /** Saves the venue address and finds the venue on the map (link first, address if the link gives nothing). */
   const saveMapAddress = () =>
@@ -207,7 +192,18 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
 
   const saveSchedule = () =>
     run('schedule', async () => {
-      await save({ schedule: schedule.trim() || null })
+      const link = normalizeWebUrl(mapUrl, tg)
+      if (!link.ok) throw new Error(t('mapLinkError', { error: link.error }))
+      // The venue's position is looked up again whenever its map link changes (or was never found).
+      const linkChanged = (link.url ?? null) !== (cfg?.map_url ?? null)
+      let position: { map_lat: number | null; map_lng: number | null } | Record<string, never> = {}
+      if (linkChanged || cfg?.map_lat == null) {
+        const r = await locatePlace({ mapsUrl: link.url, address: cfg?.map_address ?? null })
+        position = { map_lat: r.point?.lat ?? null, map_lng: r.point?.lng ?? null }
+        if (!r.point && (link.url || cfg?.map_address)) setNotice(r.unreachable ? t('mapLookupUnreachable') : t('mapVenueMissing'))
+      }
+      await save({ schedule: schedule.trim() || null, schedule_title: scheduleTitle.trim() || null, map_url: link.url, ...position })
+      setMapUrl(link.url ?? '')
       await translateAfter()
     })
 
@@ -421,18 +417,6 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         ) : (
           <button type="button" className={btn} disabled={busy !== null || events.length >= MAX_EVENTS} onClick={() => { setAddingEvent(true); setEditingEvent(null) }}>{t('addEventBtn')}</button>
         )}
-
-        <div className="grid gap-2 pt-2 sm:grid-cols-2">
-          <label className="block text-xs text-gray-600">
-            {t('dressCode')}
-            <input value={dress} onChange={(e) => setDress(e.target.value)} maxLength={300} className={input + ' mt-1 block w-full'} />
-          </label>
-          <label className="block text-xs text-gray-600">
-            {t('mapLink')}
-            <input value={mapUrl} onChange={(e) => setMapUrl(e.target.value)} maxLength={500} placeholder="https://maps.app.goo.gl/…" className={input + ' mt-1 block w-full'} />
-          </label>
-        </div>
-        <button type="button" onClick={saveDetails} disabled={!detailsDirty || busy !== null} className={btnPrimary}>{busy === 'details' ? tg('saving') : t('saveDetails')}</button>
       </div>
 
       {/* Wedding-day schedule */}
@@ -442,8 +426,16 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
           {showToggle('show_schedule', showSchedule, t('showOnPage'))}
         </div>
         <label className="block text-xs text-gray-600">
+          {t('scheduleTitle')}
+          <input value={scheduleTitle} onChange={(e) => setScheduleTitle(e.target.value)} maxLength={60} placeholder={t('scheduleTitlePlaceholder')} className={input + ' mt-1 block w-full'} />
+        </label>
+        <label className="block text-xs text-gray-600">
           {t('schedule')}
           <textarea value={schedule} onChange={(e) => setSchedule(e.target.value)} maxLength={1000} rows={6} className={input + ' mt-1 block w-full'} />
+        </label>
+        <label className="block text-xs text-gray-600">
+          {t('mapLink')}
+          <input value={mapUrl} onChange={(e) => setMapUrl(e.target.value)} maxLength={500} placeholder="https://maps.app.goo.gl/…" className={input + ' mt-1 block w-full'} />
         </label>
         <button type="button" onClick={saveSchedule} disabled={!scheduleDirty || busy !== null} className={btnPrimary}>{busy === 'schedule' ? tg('saving') : t('saveSchedule')}</button>
       </div>

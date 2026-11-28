@@ -134,6 +134,8 @@ export type DbProjectRsvp = {
   translations: unknown
   // Migration 056: the wedding-day schedule has its own switch
   show_schedule: boolean
+  // Migration 057: the title of the wedding-day block (null = the page's default title)
+  schedule_title: string | null
 }
 
 /** One day-by-day entry (migration 056). */

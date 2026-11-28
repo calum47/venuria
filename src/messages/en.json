@@ -863,7 +863,7 @@
     "section_form": "Answer form",
     "section_area": "The area",
     "section_hotels": "Hotels",
-    "section_schedule": "Wedding-day schedule"
+    "section_schedule": "The big day"
   },
   "Rsvp": {
     "couldNotCopy": "Could not copy. Select the link and copy it by hand.",
@@ -918,12 +918,9 @@
     "remove": "Remove",
     "working": "Working…",
     "coverHelp": "Shown wide across the top, so a landscape photo works best. JPEG, PNG or WebP; it is resized here and location data in the file is dropped.",
-    "details": "Details",
     "showOnPage": "Show on the page",
     "schedule": "Schedule (one line per row, e.g. “17:00 Ceremony”)",
-    "dressCode": "Dress code",
-    "mapLink": "Map link (Google Maps or similar)",
-    "saveDetails": "Save details",
+    "mapLink": "Venue map link (Google Maps or similar; shown as an “Open map” button)",
     "gettingThere": "Getting there & the area",
     "areaText": "Text (getting there, parking, transport, nearby…)",
     "saveText": "Save text",
@@ -965,7 +962,7 @@
     "mapLookupUnreachable": "The map lookup service could not be reached just now. Your changes are saved; save again in a moment to place it on the map.",
     "hotelMapsUrl": "Google Maps link (optional)",
     "mapsLinkError": "Google Maps link: {error}",
-    "translateIntro": "Text you write here (welcome note, schedule, dress code, area text, captions, hotel descriptions and booking notes) is translated into Spanish, English and French automatically when you save, so guests see it in the language they choose. Names and addresses stay as written. Check the result with Preview page, switching the language at the top.",
+    "translateIntro": "Text you write here (welcome note, schedule and its title, area text, captions, hotel descriptions and booking notes) is translated into Spanish, English and French automatically when you save, so guests see it in the language they choose. Names and addresses stay as written. Check the result with Preview page, switching the language at the top.",
     "translateFailed": "Saved, but the translation could not be made just now. Guests will see this text as you wrote it, in every language, until you save again.",
     "translateNotConfigured": "Saved. Automatic translation is not set up on this site yet, so guests see this text as you wrote it, in every language.",
     "dayByDayCount": "Day by day ({count} of {max})",
@@ -982,11 +979,13 @@
     "eventDescription": "Description (optional)",
     "eventTag": "Short label (optional), e.g. dress code",
     "eventNeedsTitle": "Give the entry a title.",
-    "weddingDaySchedule": "Wedding-day schedule",
+    "weddingDaySchedule": "The big day: schedule and map",
     "saveSchedule": "Save schedule",
     "translateNow": "Translate now",
     "translating": "Translating…",
-    "translateDone": "Everything is translated. Open Preview page and switch the language to check it."
+    "translateDone": "Everything is translated. Open Preview page and switch the language to check it.",
+    "scheduleTitle": "Section title (guests see it in their language)",
+    "scheduleTitlePlaceholder": "The big day"
   },
   "Pay": {
     "readFromPdf": "read from the PDF",

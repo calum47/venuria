@@ -30,6 +30,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-big-day',
+    date: '2026-11-28',
+    title: 'RSVP page: "The big day" section with the schedule and the map',
+    roles: ['planner'],
+    items: [
+      'The wedding-day schedule and the venue map button now sit together in one section, "The big day". You can change its title (for example "Saturday" or "The ceremony"); guests see it in their own language.',
+      'The dress code card is gone from the page, since it already shows as a label on the day-by-day entries. The venue map link is now set in the same section as the schedule.',
+    ],
+  },
+  {
     id: '2026-11-28-rsvp-day-by-day',
     date: '2026-11-28',
     title: 'RSVP page: a day-by-day programme and a wedding-day schedule',

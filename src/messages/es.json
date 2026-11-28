@@ -863,7 +863,7 @@
     "section_form": "Formulario de respuesta",
     "section_area": "La zona",
     "section_hotels": "Hoteles",
-    "section_schedule": "Programa del día de la boda"
+    "section_schedule": "El gran día"
   },
   "Rsvp": {
     "couldNotCopy": "No se ha podido copiar. Selecciona el enlace y cópialo a mano.",
@@ -918,12 +918,9 @@
     "remove": "Quitar",
     "working": "Procesando…",
     "coverHelp": "Se muestra a todo lo ancho en la parte superior, así que una foto horizontal queda mejor. JPEG, PNG o WebP; se redimensiona aquí y se eliminan los datos de ubicación del archivo.",
-    "details": "Detalles",
     "showOnPage": "Mostrar en la página",
     "schedule": "Programa (una línea por fila, p. ej., «17:00 Ceremonia»)",
-    "dressCode": "Código de vestimenta",
-    "mapLink": "Enlace del mapa (Google Maps o similar)",
-    "saveDetails": "Guardar detalles",
+    "mapLink": "Enlace del mapa del lugar (Google Maps o similar; se muestra como botón «Abrir mapa»)",
     "gettingThere": "Cómo llegar y la zona",
     "areaText": "Texto (cómo llegar, aparcamiento, transporte, alrededores…)",
     "saveText": "Guardar texto",
@@ -965,7 +962,7 @@
     "mapLookupUnreachable": "No se ha podido contactar con el servicio de búsqueda del mapa. Tus cambios están guardados; vuelve a guardar en un momento para situarlo en el mapa.",
     "hotelMapsUrl": "Enlace de Google Maps (opcional)",
     "mapsLinkError": "Enlace de Google Maps: {error}",
-    "translateIntro": "El texto que escribes aquí (mensaje de bienvenida, programa, código de vestimenta, texto de la zona, pies de foto, descripciones de hoteles y notas de reserva) se traduce automáticamente al español, inglés y francés al guardar, para que los invitados lo vean en el idioma que elijan. Los nombres y las direcciones se quedan como los escribes. Revisa el resultado con Vista previa, cambiando el idioma arriba.",
+    "translateIntro": "El texto que escribes aquí (mensaje de bienvenida, programa y su título, texto de la zona, pies de foto, descripciones de hoteles y notas de reserva) se traduce automáticamente al español, inglés y francés al guardar, para que los invitados lo vean en el idioma que elijan. Los nombres y las direcciones se quedan como los escribes. Revisa el resultado con Vista previa, cambiando el idioma arriba.",
     "translateFailed": "Guardado, pero no se ha podido traducir en este momento. Los invitados verán este texto tal como lo escribiste, en todos los idiomas, hasta que vuelvas a guardar.",
     "translateNotConfigured": "Guardado. La traducción automática aún no está configurada en este sitio, así que los invitados ven este texto tal como lo escribiste, en todos los idiomas.",
     "dayByDayCount": "Día a día ({count} de {max})",
@@ -982,11 +979,13 @@
     "eventDescription": "Descripción (opcional)",
     "eventTag": "Etiqueta breve (opcional), p. ej. código de vestimenta",
     "eventNeedsTitle": "Pon un título a la entrada.",
-    "weddingDaySchedule": "Programa del día de la boda",
+    "weddingDaySchedule": "El gran día: programa y mapa",
     "saveSchedule": "Guardar programa",
     "translateNow": "Traducir ahora",
     "translating": "Traduciendo…",
-    "translateDone": "Todo está traducido. Abre Vista previa y cambia el idioma para comprobarlo."
+    "translateDone": "Todo está traducido. Abre Vista previa y cambia el idioma para comprobarlo.",
+    "scheduleTitle": "Título de la sección (los invitados lo ven en su idioma)",
+    "scheduleTitlePlaceholder": "El gran día"
   },
   "Pay": {
     "readFromPdf": "leído del PDF",

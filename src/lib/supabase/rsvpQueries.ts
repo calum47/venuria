@@ -77,7 +77,7 @@ import type { DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 
 export type RsvpContentPatch = Partial<{
   schedule: string | null
-  dress_code: string | null
+  schedule_title: string | null
   map_url: string | null
   area_text: string | null
   show_details: boolean
