@@ -59,10 +59,11 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
 
   const { data: vendorRow } = await supabase
     .from('rental_managers')
-    .select('rental_companies(name)')
+    .select('rental_companies(name, is_vendor)')
     .eq('user_id', user.id)
     .maybeSingle()
-  const vendorCompany = (vendorRow as { rental_companies: { name: string } | null } | null)?.rental_companies?.name
+  const vendorCo = (vendorRow as { rental_companies: { name: string; is_vendor: boolean } | null } | null)?.rental_companies
+  const vendorCompany = vendorCo?.name
 
   return {
     userId: user.id,
@@ -77,7 +78,8 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
     team,
     lastProjectId: lastPage?.project_id ?? lastVisit?.project_id ?? null,
     lastPath: lastPage?.path ?? null,
-    vendor: vendorRow ? { companyName: vendorCompany ?? 'Vendor' } : null,
+    // The admin can switch the Vendor tag off: then this login is a plain planner (no switch, no Vendor page).
+    vendor: vendorRow && vendorCo?.is_vendor !== false ? { companyName: vendorCompany ?? 'Vendor' } : null,
   }
 }
 

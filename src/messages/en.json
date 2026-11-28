@@ -227,7 +227,8 @@
     "thatVenueAlreadyHasA": "That venue already has a manager account assigned.",
     "thatRentalCompanyAlreadyHas": "That rental company already has a manager account assigned.",
     "chooseAnAccountAndType": "Choose an account and type a temporary password.",
-    "thatLoginDoesNotBelong": "That login does not belong to a planner, venue manager or rental manager."
+    "thatLoginDoesNotBelong": "That login does not belong to a planner, venue manager or rental manager.",
+    "vendorAccessNotSaved": "Could not save — only an admin can change this."
   },
   "Capacity": {
     "seated": "Seated",
@@ -453,7 +454,14 @@
     "theCompanyItselfNoLogin": "The company itself — no login yet. Assign a manager account to it after.",
     "companyName": "Company name",
     "contactEmailOptional": "Contact email (optional)",
-    "alreadyVendors": "Already vendors: {names}"
+    "alreadyVendors": "Already vendors: {names}",
+    "vendorAccess": "Vendor access",
+    "vendorAccessHelp": "Per vendor or rental company. “Vendor” = the Vendor tag (the Planner ⇄ Vendor switch and the Vendor page). “Vendor stock” = the tables & chairs it rents out, not the team’s regular stock (My stock). Switching off only hides; nothing is deleted, and ticking again restores it.",
+    "noLoginLinked": "No login linked",
+    "vendorTag": "Vendor",
+    "vendorStock": "Vendor stock",
+    "vendorStockNeedsTag": "Needs the Vendor tag",
+    "makeVendorHelp": "Creates the vendor company and links it to the planner’s own login: same email and password, with a switch between Planner and Vendor. The vendor gets what a rental company has (rentable tables and chairs) plus the team’s stock, shared with My stock. Afterwards, use “Vendor access” above to switch the Vendor tag or Vendor stock on and off."
   },
   "Venue": {
     "notSignedIn": "Not signed in.",
@@ -517,7 +525,10 @@
     "noRentalCompanyIsLinked": "No rental company is linked to this account — contact an admin.",
     "stockTablesChairs": "Stock — tables & chairs",
     "stockProductsYouSell": "Stock — products you sell",
-    "myStock": "My stock"
+    "myStock": "My stock",
+    "vendorAccessOff": "Vendor access is switched off for this account. Contact an admin.",
+    "stockTablesChairsHelp": "How many of each standard item you can rent out. Planners use the venue’s own stock first; yours covers the rest.",
+    "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round."
   },
   "Client": {
     "noProjectHasBeenSet": "No project has been set up for your account yet — check with your planner."

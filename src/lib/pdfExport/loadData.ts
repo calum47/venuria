@@ -49,7 +49,7 @@ export async function loadPdfExportData(supabase: SupabaseClient, projectId: str
     supabase.from('guest_families').select('*').eq('project_id', projectId),
     supabase.from('seat_assignments').select('guest_id, layout_object_id').eq('project_id', projectId),
     supabase.from('catalog_item_stock').select('catalog_item_id, quantity').eq('owner_type', 'venue').eq('owner_id', venueId),
-    supabase.from('rental_companies').select('id, name').order('name'),
+    supabase.from('rental_companies').select('id, name').eq('is_vendor', true).eq('has_vendor_stock', true).order('name'),
     getAllProjectZones(projectId, supabase),
   ])
 
@@ -86,7 +86,7 @@ export async function loadPdfExportData(supabase: SupabaseClient, projectId: str
   const companyName = new Map<string, string>((rentalCompanies ?? []).map((rc) => [rc.id as string, rc.name as string]))
   const rentalByItem = new Map<string, { companyName: string; quantity: number }[]>()
   for (const row of rentalStockRows) {
-    if (row.quantity <= 0) continue
+    if (row.quantity <= 0 || !companyName.has(row.owner_id)) continue
     const list = rentalByItem.get(row.catalog_item_id) ?? []
     list.push({ companyName: companyName.get(row.owner_id) ?? t('unknownRental'), quantity: row.quantity })
     rentalByItem.set(row.catalog_item_id, list)

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { SignOutButton } from '@/components/auth/SignOutButton'
 import StockManager from '@/components/stock/StockManager'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { getPlannerContext } from '@/lib/supabase/plannerContext'
 import StockSection from '@/app/planner/stock/StockSection'
 import { getTranslations } from 'next-intl/server'
@@ -24,16 +25,22 @@ export default async function RentalPage() {
 
   const { data: rentalManager } = await supabase
     .from('rental_managers')
-    .select('rental_company_id, rental_companies(name)')
+    .select('rental_company_id, rental_companies(name, is_vendor, has_vendor_stock)')
     .eq('user_id', user.id)
     .maybeSingle()
 
   const rentalCompanyId = rentalManager?.rental_company_id as string | undefined
-  const rentalCompanyName = (rentalManager as { rental_companies: { name: string } | null } | null)
-    ?.rental_companies?.name
+  const company = (rentalManager as { rental_companies: { name: string; is_vendor: boolean; has_vendor_stock: boolean } | null } | null)
+    ?.rental_companies
+  const rentalCompanyName = company?.name
+  // Admin switches (see Admin → Vendor access). Off only hides: the data is kept.
+  const isVendor = company?.is_vendor !== false
+  const hasVendorStock = isVendor && company?.has_vendor_stock !== false
 
   // A login that is also a planner is a Vendor: same page, plus the team's retail stock (shared with My stock) and a switch back.
   const plannerCtx = await getPlannerContext(supabase)
+  // A planner whose Vendor tag was switched off has no Vendor page: back to the planner side.
+  if (rentalCompanyId && !isVendor && plannerCtx) redirect('/planner')
 
   return (
     <main className="min-h-screen bg-gray-50 p-8">
@@ -59,21 +66,23 @@ export default async function RentalPage() {
           <p className="text-sm text-red-600">
             {t('noRentalCompanyIsLinked')}
           </p>
-        ) : (
+        ) : !isVendor ? (
+          <p className="text-sm text-gray-500">{t('vendorAccessOff')}</p>
+        ) : hasVendorStock ? (
           <section>
             <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockTablesChairs')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              How many of each standard item you can rent out. Planners use the venue&apos;s own stock first; yours covers the rest.
+              {t('stockTablesChairsHelp')}
             </p>
             <StockManager ownerType="rental_company" ownerId={rentalCompanyId} />
           </section>
-        )}
+        ) : null}
 
         {plannerCtx && (
           <section className="mt-10">
             <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockProductsYouSell')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              The same stock as <span className="font-medium">{t('myStock')}</span> on the planner side ({plannerCtx.team.name}): catalogue, purchases and sales. A change made here shows there, and the other way round.
+              {t.rich('stockProductsHelp', { team: plannerCtx.team.name, b: (c) => <span className="font-medium">{c}</span> })}
             </p>
             <StockSection supabase={supabase} ctx={plannerCtx} />
           </section>
