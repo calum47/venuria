@@ -11,6 +11,19 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-vendor-contacts-planner': {
+    title: 'Los proveedores que añades aparecen en tu cronograma con sus datos de contacto',
+    items: [
+      'Un proveedor que añades a un proyecto aparece ahora en tu lista de proveedores, listo para etiquetarlo en los bloques del cronograma. Sus datos de contacto se rellenan con lo que el proveedor ha introducido en sus propios Ajustes y se actualizan solos cuando los cambia.',
+      'Los proveedores que no tienen cuenta de Venuria se siguen añadiendo igual que antes, con «+ Nuevo proveedor».',
+    ],
+  },
+  '2026-11-28-vendor-contacts-vendor': {
+    title: 'Ajustes: tus datos de contacto',
+    items: [
+      'La nueva página de Ajustes guarda tu persona de contacto, teléfono, correo e Instagram. Los planificadores que te añaden a un proyecto los ven automáticamente en su cronograma y su guion del día, y se mantienen al día cuando los cambias.',
+    ],
+  },
   '2026-11-28-vendors-on-projects-planner': {
     title: 'Añade proveedores a un proyecto',
     items: [

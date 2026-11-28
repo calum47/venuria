@@ -63,6 +63,11 @@ export default async function RentalPage() {
             {t('projectsYouAreOn')}
           </Link>
         )}
+        {rentalCompanyId && isVendor && (
+          <Link href="/rental/settings" className="mb-6 ml-2 inline-block rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50">
+            {t('contactSettings')}
+          </Link>
+        )}
         <p className="text-sm text-gray-500 mb-6">
           {tc('loggedInAs')} <span className="font-medium text-gray-900">{user.email}</span>.
         </p>

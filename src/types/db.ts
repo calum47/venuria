@@ -319,6 +319,8 @@ export type DbTeamVendor = {
   email: string | null
   instagram: string | null
   notes: string | null
+  /** Set when this vendor is a Venuria vendor account: name and contact details then come from it (read-only here). */
+  rental_company_id: string | null
   created_at: string
 }
 
