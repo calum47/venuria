@@ -11,6 +11,20 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-vendors-on-projects-planner': {
+    title: 'Añade proveedores a un proyecto',
+    items: [
+      'En la página de un proyecto, «Proveedores de este proyecto» te permite añadir a los proveedores que ayudan en ese evento. Un proveedor añadido puede consultar los materiales, el plano 2D, el cronograma y el guion del día, solo en lectura. Nunca ve invitados, pagos ni documentos.',
+      'Puedes quitar a un proveedor en cualquier momento y su acceso termina al instante.',
+      'Si tú también eres proveedor, un enlace «Proyectos de proveedor» en este menú muestra los proyectos a los que te han añadido.',
+    ],
+  },
+  '2026-11-28-vendors-on-projects-vendor': {
+    title: 'Consulta los proyectos en los que trabajas',
+    items: [
+      'Cuando un planificador te añade a un proyecto, aparece en «Proyectos en los que participas» (un enlace «Proyectos de proveedor» en el menú de planificación, o en tu página de proveedor). Puedes consultar sus materiales, el plano 2D, el cronograma y el guion del día, solo en lectura.',
+    ],
+  },
   '2026-11-28-3d-hidden-shorter-tour': {
     title: 'Vista 3D oculta por ahora; recorrido más corto',
     items: [

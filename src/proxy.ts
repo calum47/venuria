@@ -10,7 +10,8 @@ const PROTECTED_PREFIXES: Record<string, AuthRole[]> = {
   '/planner': ['planner'],
   '/client': ['client'],
   // Planners build the layout, clients view it + manage guests — both need in.
-  '/editor': ['planner', 'client'],
+  // ...and a vendor added to a project may look at its 2D map there, read-only (migration 048).
+  '/editor': ['planner', 'client', 'rental'],
 }
 
 export async function proxy(request: NextRequest) {
@@ -33,7 +34,10 @@ export async function proxy(request: NextRequest) {
   // Someone can hold several roles (a planner who is also a Vendor): any one of them is enough.
   const roles = await resolveUserRoles(supabase, user.id)
 
-  if (!roles.some((r) => allowedRoles.includes(r))) {
+  // A vendor may open the 2D map under /editor but not the planner's Summary (stock, shortfalls, PDF export).
+  const plannerOnly = /^\/editor\/[^/]+\/summary/.test(path) && !roles.some((r) => r === 'planner' || r === 'client')
+
+  if (plannerOnly || !roles.some((r) => allowedRoles.includes(r))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     url.searchParams.set('error', 'unauthorized')

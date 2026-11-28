@@ -58,6 +58,11 @@ export default async function RentalPage() {
             <SignOutButton />
           </div>
         </div>
+        {rentalCompanyId && isVendor && (
+          <Link href="/rental/projects" className="mb-6 inline-block rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm text-brand-800 hover:bg-brand-100">
+            {t('projectsYouAreOn')}
+          </Link>
+        )}
         <p className="text-sm text-gray-500 mb-6">
           {tc('loggedInAs')} <span className="font-medium text-gray-900">{user.email}</span>.
         </p>
@@ -66,9 +71,9 @@ export default async function RentalPage() {
           <p className="text-sm text-red-600">
             {t('noRentalCompanyIsLinked')}
           </p>
-        ) : !hasVendorStock ? (
+        ) : !isVendor ? (
           <p className="text-sm text-gray-500">{t('vendorAccessOff')}</p>
-        ) : (
+        ) : !hasVendorStock ? null : (
           <section>
             <h2 className="text-lg font-medium text-gray-900 mb-2">{t('stockTablesChairs')}</h2>
             <p className="text-sm text-gray-500 mb-4">

@@ -17,6 +17,8 @@ type Props = {
   initialBlocks: DbTimetableBlock[]
   vendors: DbTeamVendor[]
   readOnly?: boolean
+  /** Where "Go to timetable" leads when there is nothing yet (vendors have their own read-only timetable page). */
+  timetableHref?: string
 }
 
 const btn = 'rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-700 hover:bg-gray-50 disabled:opacity-50'
@@ -26,7 +28,7 @@ function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : fallback
 }
 
-export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors, readOnly = false }: Props) {
+export default function RundownApp({ projectId, title, eventDate, days, initialBlocks, vendors, readOnly = false, timetableHref }: Props) {
   const t = useTranslations('Timetable')
   const locale = useLocale() as Locale
   const [blocks, setBlocks] = useState<DbTimetableBlock[]>(initialBlocks)
@@ -66,7 +68,7 @@ export default function RundownApp({ projectId, title, eventDate, days, initialB
     return (
       <div className="rounded-lg border border-dashed border-gray-300 bg-white p-10 text-center print:hidden">
         <p className="text-sm text-gray-600">{t('nothingYet')}</p>
-        <Link href={`/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">{t('goToTimetable')}</Link>
+        <Link href={timetableHref ?? `/planner/projects/${projectId}/timetable`} className="mt-3 inline-block rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white hover:bg-brand-700">{t('goToTimetable')}</Link>
       </div>
     )
   }

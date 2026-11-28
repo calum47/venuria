@@ -79,7 +79,8 @@
     "main": "Main",
     "switchToVendor": "Switch to your Vendor account — {name}",
     "plannerVendor": "Planner ⇄ Vendor",
-    "menu": "Menu"
+    "menu": "Menu",
+    "vendorProjects": "Vendor projects"
   },
   "Bell": {
     "ariaNew": "Notifications, {count} new",
@@ -228,7 +229,8 @@
     "thatRentalCompanyAlreadyHas": "That rental company already has a manager account assigned.",
     "chooseAnAccountAndType": "Choose an account and type a temporary password.",
     "thatLoginDoesNotBelong": "That login does not belong to a planner, venue manager or rental manager.",
-    "vendorAccessNotSaved": "Could not save — only an admin can change this."
+    "vendorAccessNotSaved": "Could not save — only an admin can change this.",
+    "projectVendorNotAllowed": "Only people who can edit this project can add or remove vendors, and only vendors with the Vendor tag."
   },
   "Capacity": {
     "seated": "Seated",
@@ -456,7 +458,7 @@
     "contactEmailOptional": "Contact email (optional)",
     "alreadyVendors": "Already vendors: {names}",
     "vendorAccess": "Vendor access",
-    "vendorAccessHelp": "Per vendor or rental company. “Vendor” = the Vendor tag. “Vendor stock” = the tables & chairs it rents out (not the team’s regular stock, My stock); only with it on does the login get the Planner ⇄ Vendor switch and the Vendor page. A vendor with just the tag is a plain planner in the app. Switching off only hides; nothing is deleted, and ticking again restores it.",
+    "vendorAccessHelp": "Per vendor or rental company. “Vendor” = the Vendor tag: planners can add the vendor to a project, where it sees the materials, 2D map, timetable and run-down read-only. “Vendor stock” = the tables & chairs it rents out (not the team’s regular stock, My stock); only with it on does the login get the Planner ⇄ Vendor switch and the Vendor page. Switching off only hides; nothing is deleted, and ticking again restores it.",
     "noLoginLinked": "No login linked",
     "vendorTag": "Vendor",
     "vendorStock": "Vendor stock",
@@ -526,9 +528,10 @@
     "stockTablesChairs": "Stock — tables & chairs",
     "stockProductsYouSell": "Stock — products you sell",
     "myStock": "My stock",
-    "vendorAccessOff": "Vendor stock is switched off for this account. Contact an admin.",
+    "vendorAccessOff": "Vendor access is switched off for this account. Contact an admin.",
     "stockTablesChairsHelp": "How many of each standard item you can rent out. Planners use the venue’s own stock first; yours covers the rest.",
-    "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round."
+    "stockProductsHelp": "The same stock as <b>My stock</b> on the planner side ({team}): catalogue, purchases and sales. A change made here shows there, and the other way round.",
+    "projectsYouAreOn": "Projects you’re on →"
   },
   "Client": {
     "noProjectHasBeenSet": "No project has been set up for your account yet — check with your planner."
@@ -1222,7 +1225,8 @@
     "zoomHint": "Drag to pan · Ctrl+drag to select · Scroll or pinch to zoom",
     "switchingRoom": "Switching room…",
     "saving": "Saving…",
-    "saved": "Saved {time}"
+    "saved": "Saved {time}",
+    "backToProject": "← Project"
   },
   "AutoArrange": {
     "selectOne": "Select at least one table to arrange.",
@@ -1658,5 +1662,38 @@
     "teamBody": "Invite colleagues with a one-time link so they can create their own account. Members see public projects and the ones assigned to them. Leads see and can assign every project.",
     "settingsTitle": "That’s the tour",
     "settingsBody": "Your name, password and company details live here too. You can also change the style of your PDFs from here before you download them. Replay this tour any time with this button."
+  },
+  "ProjectVendors": {
+    "title": "Vendors on this project",
+    "help": "Vendors you add can look at this project, read-only: the materials, the 2D map, the timetable and the run-down. They never see guests, payments or documents.",
+    "none": "No vendors added yet.",
+    "remove": "Remove",
+    "choose": "Choose a vendor…",
+    "add": "Add",
+    "noVendorsExist": "No vendors exist yet. An admin gives the Vendor tag in Admin → Vendor access."
+  },
+  "VendorProjects": {
+    "myProjects": "Projects",
+    "vendorPage": "Vendor page",
+    "plannerSide": "Planner",
+    "noAccess": "No vendor access for this account.",
+    "title": "Projects you’re on",
+    "subtitle": "Projects a planner has added you to. You can look, not change.",
+    "none": "No planner has added you to a project yet.",
+    "noDate": "No event date",
+    "backToProjects": "← Projects",
+    "readOnlyNote": "You can look at this project but not change it. Guests, payments and documents are not shown.",
+    "map": "2D map",
+    "mapHint": "See where everything is placed in each room",
+    "materials": "Materials",
+    "materialsHint": "Every item the project uses, with quantities",
+    "timetable": "Timetable",
+    "timetableHint": "The whole day, hour by hour",
+    "rundown": "Run-down list",
+    "rundownHint": "The day as a list you can print",
+    "materialsIntro": "How many of each item the project uses: placed on the plans plus what the tables’ settings call for.",
+    "nothingPlaced": "Nothing has been placed yet.",
+    "unknownItem": "Unknown item",
+    "onTables": "{count} on tables"
   }
 }

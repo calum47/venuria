@@ -12,6 +12,8 @@ export type PlannerContext = {
   lastPath: string | null
   /** Set when this login is also a Vendor (a rental company manager): the company to switch to. */
   vendor: { companyName: string } | null
+  /** This login manages a company that has the Vendor tag (even without Vendor stock): it can be added to projects. */
+  vendorTag: boolean
 }
 
 /**
@@ -80,6 +82,7 @@ export async function getPlannerContext(supabase: SupabaseClient): Promise<Plann
     lastPath: lastPage?.path ?? null,
     // The Planner ⇄ Vendor switch and the Vendor page exist only for a vendor with Vendor stock switched on
     // (admin → Vendor access). A tag-only vendor is a plain planner here: nothing to switch to.
+    vendorTag: !!vendorRow && vendorCo?.is_vendor !== false,
     vendor: vendorRow && vendorCo?.is_vendor !== false && vendorCo?.has_vendor_stock !== false ? { companyName: vendorCompany ?? 'Vendor' } : null,
   }
 }

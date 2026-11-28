@@ -30,6 +30,26 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-vendors-on-projects-planner',
+    date: '2026-11-28',
+    title: 'Add vendors to a project',
+    roles: ['planner'],
+    items: [
+      'On a project page, "Vendors on this project" lets you add the vendors who are helping on that event. An added vendor can look at the materials, the 2D map, the timetable and the run-down, read-only. They never see guests, payments or documents.',
+      'Remove a vendor at any time and their access ends straight away.',
+      'If you are also a vendor yourself, a "Vendor projects" link in this menu shows the projects you have been added to.',
+    ],
+  },
+  {
+    id: '2026-11-28-vendors-on-projects-vendor',
+    date: '2026-11-28',
+    title: 'See the projects you are working on',
+    roles: ['rental'],
+    items: [
+      'When a planner adds you to a project, it appears under "Projects you’re on" (a "Vendor projects" link in the planner menu, or on your Vendor page). You can look at its materials, the 2D map, the timetable and the run-down, read-only.',
+    ],
+  },
+  {
     id: '2026-11-28-3d-hidden-shorter-tour',
     date: '2026-11-28',
     title: '3D view hidden for now; shorter tour',
