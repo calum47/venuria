@@ -81,7 +81,7 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'rooms-capacity', path: editor(), target: ['rooms', 'capacity'],
     title: 'Rooms and capacity',
-    body: 'Switch between the venue’s rooms, and choose whether each is seated or standing to see how close you are to its limit.',
+    body: 'Switch between the venue’s rooms. Each room has a seated and a standing limit set by the venue, so choosing how it’s used tells you how many people it holds.',
   },
   {
     id: 'auto-arrange', path: editor(), target: 'auto-arrange',
