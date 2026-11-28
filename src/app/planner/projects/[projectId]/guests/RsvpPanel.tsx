@@ -5,7 +5,7 @@ import { moveSection, normalizeSectionOrder, type RsvpSectionKey } from '@/lib/r
 import { useState } from 'react'
 import { useTranslations } from 'next-intl'
 import type { DbGuest, DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
-import { regenerateRsvpToken, saveRsvpSettings } from '@/lib/supabase/rsvpQueries'
+import { regenerateRsvpToken, saveRsvpSettings, translateRsvpText } from '@/lib/supabase/rsvpQueries'
 import { madridToday, rsvpPath, rsvpSummary } from '@/lib/rsvp'
 import RsvpContentEditor from './RsvpContentEditor'
 
@@ -80,6 +80,8 @@ export default function RsvpPanel({ projectId, origin, initial, guests, teamId, 
     run('save', async () => {
       const saved = await saveRsvpSettings(projectId, { enabled, deadline: deadline || null, welcome_message: welcome, allow_plus_one: plusOne, default_lang: defaultLang, section_order: order })
       setCfg(saved)
+      const tr = await translateRsvpText(projectId)
+      if (tr !== 'ok') setError(tr === 'not_configured' ? t('translateNotConfigured') : t('translateFailed'))
     })
 
   const copy = async () => {

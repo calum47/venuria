@@ -963,7 +963,10 @@
     "mapHotelNotFoundSaved": "{name} was saved, but it could not be found on the map. Check its Google Maps link or address.",
     "mapLookupUnreachable": "The map lookup service could not be reached just now. Your changes are saved; save again in a moment to place it on the map.",
     "hotelMapsUrl": "Google Maps link (optional)",
-    "mapsLinkError": "Google Maps link: {error}"
+    "mapsLinkError": "Google Maps link: {error}",
+    "translateIntro": "Text you write here (welcome note, schedule, dress code, area text, captions, hotel descriptions and booking notes) is translated into Spanish, English and French automatically when you save, so guests see it in the language they choose. Names and addresses stay as written. Check the result with Preview page, switching the language at the top.",
+    "translateFailed": "Saved, but the translation could not be made just now. Guests will see this text as you wrote it, in every language, until you save again.",
+    "translateNotConfigured": "Saved. Automatic translation is not set up on this site yet, so guests see this text as you wrote it, in every language."
   },
   "Pay": {
     "readFromPdf": "read from the PDF",

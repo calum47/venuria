@@ -7,6 +7,7 @@
  * with nothing under it.
  */
 import type { Tr } from '@/i18n/types'
+import { pickText, type TranslationLang } from './rsvpTranslations'
 
 export const RSVP_MEDIA_BUCKET = 'rsvp-media'
 export const MAX_AREA_PHOTOS = 6
@@ -82,6 +83,7 @@ type CfgLike = {
   show_map: boolean
   map_lat: number | null
   map_lng: number | null
+  translations: unknown
 }
 
 /**
@@ -90,15 +92,17 @@ type CfgLike = {
  */
 export function buildPublicContent(
   cfg: CfgLike,
-  photos: { path: string; caption: string | null }[],
-  hotels: { id: string; name: string; address: string | null; url: string | null; booking_note: string | null; description: string | null; image_path: string | null; maps_url: string | null; lat: number | null; lng: number | null }[],
+  photos: { path: string; caption: string | null; translations: unknown }[],
+  hotels: { id: string; name: string; address: string | null; url: string | null; booking_note: string | null; description: string | null; image_path: string | null; maps_url: string | null; lat: number | null; lng: number | null; translations: unknown }[],
   urls: Record<string, string>,
+  lang: TranslationLang,
 ): PublicContent {
-  const lines = scheduleLines(cfg.schedule)
-  const dressCode = cfg.dress_code?.trim() || null
+  // The planner's own wording, in the guest's language when a translation is stored for it (migration 055).
+  const lines = scheduleLines(pickText(cfg.translations, lang, 'schedule', cfg.schedule))
+  const dressCode = pickText(cfg.translations, lang, 'dress_code', cfg.dress_code)?.trim() || null
   const mapUrl = cfg.map_url?.trim() || null
-  const areaText = cfg.area_text?.trim() || null
-  const areaPhotos = photos.filter((p) => urls[p.path]).map((p) => ({ url: urls[p.path], caption: p.caption?.trim() || null }))
+  const areaText = pickText(cfg.translations, lang, 'area_text', cfg.area_text)?.trim() || null
+  const areaPhotos = photos.filter((p) => urls[p.path]).map((p) => ({ url: urls[p.path], caption: pickText(p.translations, lang, 'caption', p.caption)?.trim() || null }))
 
   const hotelList = cfg.show_hotels
     ? hotels.map((h) => ({
@@ -106,8 +110,8 @@ export function buildPublicContent(
         name: h.name,
         address: h.address?.trim() || null,
         url: h.url?.trim() || null,
-        bookingNote: h.booking_note?.trim() || null,
-        description: h.description?.trim() || null,
+        bookingNote: pickText(h.translations, lang, 'booking_note', h.booking_note)?.trim() || null,
+        description: pickText(h.translations, lang, 'description', h.description)?.trim() || null,
         imageUrl: h.image_path ? urls[h.image_path] ?? null : null,
         mapsUrl: h.maps_url?.trim() || null,
         position: h.lat != null && h.lng != null ? { lat: h.lat, lng: h.lng } : null,

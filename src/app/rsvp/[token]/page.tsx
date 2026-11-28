@@ -2,8 +2,9 @@ import { normalizeSectionOrder } from '@/lib/rsvpSections'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 import { isPlausibleToken, rsvpOpen } from '@/lib/rsvp'
-import { RSVP_MEDIA_BUCKET, buildPublicContent } from '@/lib/rsvpContent'
-import { TEXT, pickLang } from '@/lib/rsvpText'
+import { RSVP_MEDIA_BUCKET, buildPublicContent, type PublicContent } from '@/lib/rsvpContent'
+import { LANGS, TEXT, pickLang, type Lang } from '@/lib/rsvpText'
+import { pickText } from '@/lib/rsvpTranslations'
 import type { DbProjectRsvp, DbRsvpHotel, DbRsvpPhoto } from '@/types/db'
 import RsvpForm from './RsvpForm'
 
@@ -85,13 +86,13 @@ export default async function RsvpPage({ params, searchParams }: Props) {
         <RsvpForm
           token={token}
           initialLang={lang}
-          welcome={cfg.welcome_message}
+          welcomes={Object.fromEntries(LANGS.map((l) => [l, pickText(cfg.translations, l, 'welcome_message', cfg.welcome_message)])) as Record<Lang, string | null>}
           coupleNames={project?.couple_names ?? null}
           deadline={cfg.deadline}
           allowPlusOne={cfg.allow_plus_one}
           venueName={venueName}
           eventDate={project?.event_date ?? null}
-          content={buildPublicContent(cfg, photos, hotels, urls)}
+          contents={Object.fromEntries(LANGS.map((l) => [l, buildPublicContent(cfg, photos, hotels, urls, l)])) as Record<Lang, PublicContent>}
           preview={previewOk ? (live ? 'live' : 'off') : null}
           sectionOrder={normalizeSectionOrder(cfg.section_order)}
           controllerName={controllerName}

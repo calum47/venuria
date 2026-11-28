@@ -11,6 +11,15 @@
 export type ChangelogText = { title: string; items: string[] }
 
 export const CHANGELOG_ES: Record<string, ChangelogText> = {
+  '2026-11-28-rsvp-translations': {
+    title: 'Página de confirmación: tu texto también cambia de idioma',
+    items: [
+      'Cuando un invitado cambia el idioma en la página de confirmación, el texto que escribiste cambia también: el mensaje de bienvenida, el programa, el código de vestimenta, el texto de la zona, los pies de foto y las descripciones y notas de reserva de los hoteles.',
+      'Las traducciones (español, inglés y francés) se hacen automáticamente al guardar. Puedes escribir en cualquiera de ellos. Los nombres y las direcciones se quedan como los escribiste. Abre Vista previa y cambia el idioma para revisar el resultado.',
+      'Si no se puede hacer una traducción, verás un aviso y los invitados verán tu texto original en todos los idiomas hasta que vuelvas a guardar.',
+      'Mejora pequeña: un poco más de espacio entre el panel del enlace de confirmación y la fila de añadir invitado.',
+    ],
+  },
   '2026-11-28-rsvp-map': {
     title: 'Página de confirmación: mapa opcional del lugar y los hoteles',
     items: [

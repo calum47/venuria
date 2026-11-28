@@ -12,13 +12,15 @@ import { lookupGuest, submitRsvp, type LookupResult, type SubmitResult } from '.
 type Props = {
   token: string
   initialLang: Lang
-  welcome: string | null
+  /** The welcome note in each language (the planner's own text where there is no translation). */
+  welcomes: Record<Lang, string | null>
   coupleNames: string | null
   deadline: string | null
   allowPlusOne: boolean
   venueName: string | null
   eventDate: string | null
-  content: PublicContent
+  /** The page content in each language, so switching language switches the planner's text too. */
+  contents: Record<Lang, PublicContent>
   /** Planner preview: 'live' = guests see the same page, 'off' = guests currently see "closed". */
   preview: 'live' | 'off' | null
   sectionOrder: RsvpSectionKey[]
@@ -38,10 +40,12 @@ function longDate(iso: string, lang: Lang): string {
   return new Date(`${iso}T12:00:00`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function RsvpForm({ token, initialLang, welcome, coupleNames, deadline, allowPlusOne, venueName, eventDate, content, preview, sectionOrder, controllerName, controllerEmail }: Props) {
+export default function RsvpForm({ token, initialLang, welcomes, coupleNames, deadline, allowPlusOne, venueName, eventDate, contents, preview, sectionOrder, controllerName, controllerEmail }: Props) {
   const [lang, setLang] = useState<Lang>(initialLang)
   const [mapSelected, setMapSelected] = useState<string | null>(null)
   const t = TEXT[lang]
+  const content = contents[lang]
+  const welcome = welcomes[lang]
 
   const [step, setStep] = useState<Step>('name')
   const [name, setName] = useState('')

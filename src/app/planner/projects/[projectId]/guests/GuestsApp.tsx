@@ -200,7 +200,7 @@ export default function GuestsApp({ projectId, teamId, eventDate, initialGuests,
     <div className="space-y-4">
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
 
-      <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
+      <fieldset disabled={readOnly} className="mx-0 mb-6 mt-0 min-w-0 border-0 p-0">
       <RsvpPanel
         projectId={projectId}
         origin={origin}

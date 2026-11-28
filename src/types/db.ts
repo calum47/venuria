@@ -130,9 +130,13 @@ export type DbProjectRsvp = {
   map_address: string | null
   map_lat: number | null
   map_lng: number | null
+  // Migration 055: translations of the text above (see rsvpTranslations.ts)
+  translations: unknown
 }
 
 export type DbRsvpPhoto = {
+  /** Migration 055 */
+  translations: unknown
   id: string
   project_id: string
   path: string
@@ -156,6 +160,7 @@ export type DbRsvpHotel = {
   maps_url: string | null
   lat: number | null
   lng: number | null
+  translations: unknown
 }
 
 export type DbGuestFamily = {

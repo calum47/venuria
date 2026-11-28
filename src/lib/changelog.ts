@@ -30,6 +30,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-28-rsvp-translations',
+    date: '2026-11-28',
+    title: 'RSVP page: your text now changes language too',
+    roles: ['planner'],
+    items: [
+      'When a guest switches the language on the RSVP page, the text you wrote switches too: the welcome note, schedule, dress code, area text, photo captions, and hotel descriptions and booking notes.',
+      'The translations (Spanish, English, French) are made automatically when you save. Write in any of them. Names and addresses stay as you wrote them. Open Preview page and switch the language to check the result.',
+      'If a translation cannot be made, you see a note and guests see your original text in every language until you save again.',
+      'Smaller fix: a bit more space between the Guest RSVP link panel and the Add a guest row.',
+    ],
+  },
+  {
     id: '2026-11-28-rsvp-map',
     date: '2026-11-28',
     title: 'RSVP page: an optional map of the venue and hotels',

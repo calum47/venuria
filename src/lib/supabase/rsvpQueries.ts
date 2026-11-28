@@ -220,3 +220,21 @@ export async function removeHotelImage(hotelId: string, path: string): Promise<D
   await removeFiles([path])
   return data as DbRsvpHotel
 }
+
+export type TranslateOutcome = 'ok' | 'not_configured' | 'failed'
+
+/**
+ * Asks the server to translate the page text that has no up-to-date translation (migration 055).
+ * Never throws: the planner's text is already saved, and a failed translation only means guests see that text
+ * as written in every language until the next save.
+ */
+export async function translateRsvpText(projectId: string): Promise<TranslateOutcome> {
+  try {
+    const res = await fetch('/api/rsvp/translate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ projectId }) })
+    if (res.status === 503) return 'not_configured'
+    const body = (await res.json().catch(() => null)) as { ok?: boolean } | null
+    return body?.ok ? 'ok' : 'failed'
+  } catch {
+    return 'failed'
+  }
+}

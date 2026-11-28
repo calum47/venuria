@@ -963,7 +963,10 @@
     "mapHotelNotFoundSaved": "Se ha guardado {name}, pero no se ha podido encontrar en el mapa. Revisa su enlace de Google Maps o su dirección.",
     "mapLookupUnreachable": "No se ha podido contactar con el servicio de búsqueda del mapa. Tus cambios están guardados; vuelve a guardar en un momento para situarlo en el mapa.",
     "hotelMapsUrl": "Enlace de Google Maps (opcional)",
-    "mapsLinkError": "Enlace de Google Maps: {error}"
+    "mapsLinkError": "Enlace de Google Maps: {error}",
+    "translateIntro": "El texto que escribes aquí (mensaje de bienvenida, programa, código de vestimenta, texto de la zona, pies de foto, descripciones de hoteles y notas de reserva) se traduce automáticamente al español, inglés y francés al guardar, para que los invitados lo vean en el idioma que elijan. Los nombres y las direcciones se quedan como los escribes. Revisa el resultado con Vista previa, cambiando el idioma arriba.",
+    "translateFailed": "Guardado, pero no se ha podido traducir en este momento. Los invitados verán este texto tal como lo escribiste, en todos los idiomas, hasta que vuelvas a guardar.",
+    "translateNotConfigured": "Guardado. La traducción automática aún no está configurada en este sitio, así que los invitados ven este texto tal como lo escribiste, en todos los idiomas."
   },
   "Pay": {
     "readFromPdf": "leído del PDF",

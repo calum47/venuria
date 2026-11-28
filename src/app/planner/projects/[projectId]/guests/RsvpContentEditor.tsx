@@ -13,6 +13,7 @@ import {
   setCoverPhoto,
   setHotelImage,
   updateAreaPhotoCaption,
+  translateRsvpText,
   updateHotel,
   type HotelInput,
   type RsvpContentPatch,
@@ -135,6 +136,11 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
   }
 
   const save = async (patch: RsvpContentPatch) => onCfg(await saveRsvpContent(projectId, patch))
+  /** Translates whatever text has no up-to-date translation. A failure never undoes the save. */
+  const translateAfter = async () => {
+    const r = await translateRsvpText(projectId)
+    if (r !== 'ok') setNotice(r === 'not_configured' ? t('translateNotConfigured') : t('translateFailed'))
+  }
   const addUrl = (path: string, url: string | null) => url && setUrls((u) => ({ ...u, [path]: url }))
 
   const saveDetails = () =>
@@ -151,6 +157,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       }
       await save({ schedule: schedule.trim() || null, dress_code: dress.trim() || null, map_url: link.url, ...position })
       setMapUrl(link.url ?? '')
+      await translateAfter()
     })
 
   /** Saves the venue address and finds the venue on the map (link first, address if the link gives nothing). */
@@ -186,7 +193,11 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       if (unreachable) setNotice(t('mapLookupUnreachable'))
     })
 
-  const saveArea = () => run('area', () => save({ area_text: areaText.trim() || null }))
+  const saveArea = () =>
+    run('area', async () => {
+      await save({ area_text: areaText.trim() || null })
+      await translateAfter()
+    })
 
   const toggle = (key: 'show_details' | 'show_area' | 'show_hotels', value: boolean) => run(`toggle-${key}`, () => save({ [key]: value }))
 
@@ -217,6 +228,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
     return run(`cap-${p.id}`, async () => {
       const u = await updateAreaPhotoCaption(p.id, caption)
       setPhotos((prev) => prev.map((x) => (x.id === u.id ? u : x)))
+      await translateAfter()
     })
   }
 
@@ -250,6 +262,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
         setHotels((prev) => [...prev, c])
         setAddingHotel(false)
       }
+      await translateAfter()
     })
 
   const dropHotel = (h: DbRsvpHotel) =>
@@ -293,6 +306,7 @@ export default function RsvpContentEditor({ projectId, teamId, origin, cfg, onCf
       <p className="text-xs text-gray-500">
         {t('sectionsIntro')}
       </p>
+      <p className="text-xs text-gray-500">{t('translateIntro')}</p>
 
       {error && <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{error}</p>}
       {notice && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800" role="status">{notice}</p>}
